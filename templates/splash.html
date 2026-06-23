@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mémoire</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #FAF6EF;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .splash {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      animation: fadeIn 1.5s ease-out forwards;
+    }
+
+    .title {
+      color: #1B3A5C;
+      font-weight: bold;
+      font-size: 2.8rem;
+      margin-top: 1rem;
+    }
+
+    .tagline {
+      color: #5F5E5A;
+      font-size: 1.1rem;
+      font-weight: normal;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="splash">
+    <img src="{{ url_for('static', filename='assets/memoire-icon.png') }}" alt="Mémoire forget-me-not flower" width="150" style="object-fit: contain;">
+    <h1 class="title">Mémoire</h1>
+    <p class="tagline">Your gentle memory companion</p>
+  </div>
+</body>
+</html>
