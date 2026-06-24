@@ -6,5 +6,13 @@ app = Flask(__name__)
 def splash():
     return render_template('splash.html')
 
+@app.route('/onboarding')
+def onboarding():
+    return render_template('onboarding.html')
+
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
