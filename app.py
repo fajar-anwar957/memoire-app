@@ -18,5 +18,9 @@ def profile():
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/companion')
+def companion():
+    return render_template('companion.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
