@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Today's Activities — Mémoire</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/activities.css') }}">
+</head>
+<body>
+  <main class="activities">
+    <header class="activities__header">
+      <a href="/dashboard" class="activities__back" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </a>
+      <h1 class="activities__title">Today's Activities</h1>
+    </header>
+
+    <div class="activities__content">
+      <p class="activities__intro">Choose an activity to get started</p>
+
+      <div class="activities__cards">
+        <article class="activities-card">
+          <span class="activities-card__accent" aria-hidden="true"></span>
+          <h2 class="activities-card__title">Word Association</h2>
+          <p class="activities-card__description">Find words that go together and spark new connections</p>
+          <a href="/activities/word-association" class="activities-card__button">Start Activity</a>
+        </article>
+
+        <article class="activities-card">
+          <span class="activities-card__accent" aria-hidden="true"></span>
+          <h2 class="activities-card__title">Photo Recall</h2>
+          <p class="activities-card__description">Look at familiar scenes and share what you remember</p>
+          <a href="/activities/photo-recall" class="activities-card__button">Start Activity</a>
+        </article>
+
+        <article class="activities-card">
+          <span class="activities-card__accent" aria-hidden="true"></span>
+          <h2 class="activities-card__title">Daily Quiz</h2>
+          <p class="activities-card__description">Answer gentle questions about the world around you</p>
+          <a href="/activities/daily-quiz" class="activities-card__button">Start Activity</a>
+        </article>
+      </div>
+    </div>
+  </main>
+
+  <nav class="dashboard-nav" aria-label="Main navigation">
+    <a href="/dashboard" class="dashboard-nav__item">
+      <span class="dashboard-nav__label">Home</span>
+    </a>
+    <a href="/companion" class="dashboard-nav__item">
+      <span class="dashboard-nav__label">Companion</span>
+    </a>
+    <a href="/activities" class="dashboard-nav__item dashboard-nav__item--active" aria-current="page">
+      <span class="dashboard-nav__label">Activities</span>
+    </a>
+    <a href="/profile" class="dashboard-nav__item">
+      <span class="dashboard-nav__label">Profile</span>
+    </a>
+  </nav>
+</body>
+</html>
