@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home — Mémoire</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+  <main class="dashboard">
+    <header class="dashboard__header">
+      <p class="dashboard__brand">Mémoire</p>
+      <time class="dashboard__date" id="dashboard-date" datetime=""></time>
+    </header>
+
+    <section class="dashboard__greeting" aria-labelledby="dashboard-greeting">
+      <h1 class="dashboard__greeting-text" id="dashboard-greeting">Good morning, Friend</h1>
+      <p class="dashboard__greeting-sub">How are you feeling today?</p>
+    </section>
+
+    <div class="dashboard__cards">
+      <a href="/companion" class="dashboard-card dashboard-card--companion">
+        <span class="dashboard-card__accent" aria-hidden="true"></span>
+        <h2 class="dashboard-card__title">Chat with Companion</h2>
+        <p class="dashboard-card__subtext">Talk, remember, and share stories</p>
+      </a>
+
+      <a href="/activities" class="dashboard-card dashboard-card--activities">
+        <span class="dashboard-card__accent" aria-hidden="true"></span>
+        <h2 class="dashboard-card__title">Today's Activities</h2>
+        <p class="dashboard-card__subtext">Word games, quizzes, and more</p>
+      </a>
+    </div>
+  </main>
+
+  <nav class="dashboard-nav" aria-label="Main navigation">
+    <a href="/dashboard" class="dashboard-nav__item dashboard-nav__item--active" aria-current="page">
+      <span class="dashboard-nav__label">Home</span>
+    </a>
+    <a href="/companion" class="dashboard-nav__item">
+      <span class="dashboard-nav__label">Companion</span>
+    </a>
+    <a href="/activities" class="dashboard-nav__item">
+      <span class="dashboard-nav__label">Activities</span>
+    </a>
+    <a href="/profile" class="dashboard-nav__item">
+      <span class="dashboard-nav__label">Profile</span>
+    </a>
+  </nav>
+
+  <script>
+    (function () {
+      var name = localStorage.getItem('memoire_patient_name') || 'Friend';
+      var now = new Date();
+      var hour = now.getHours();
+      var greeting;
+
+      if (hour < 12) {
+        greeting = 'Good morning';
+      } else if (hour < 18) {
+        greeting = 'Good afternoon';
+      } else {
+        greeting = 'Good evening';
+      }
+
+      document.getElementById('dashboard-greeting').textContent = greeting + ', ' + name;
+
+      var dateEl = document.getElementById('dashboard-date');
+      dateEl.textContent = now.toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+      dateEl.setAttribute('datetime', now.toISOString().split('T')[0]);
+    })();
+  </script>
+</body>
+</html>
