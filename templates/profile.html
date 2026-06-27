@@ -15,8 +15,8 @@
       <span class="header-brand">Mémoire</span>
     </header>
 
-    <h1 class="heading">Your Profile</h1>
-    <p class="subheading">Let's get to know you.</p>
+    <h1 class="heading" id="page-heading">Your Profile</h1>
+    <p class="subheading" id="page-subheading">Let's get to know you.</p>
 
     <div class="wizard">
       <input type="radio" name="wizard-step" id="wizard-step-1" class="wizard-input" checked>
@@ -49,7 +49,7 @@
             <div class="field">
               <label for="preferred-name">Preferred Name</label>
               <input type="text" id="preferred-name" name="preferred-name">
-              <p class="helper-text">What would you like to be called?</p>
+              <p class="helper-text" id="hint-preferred">What would you like to be called?</p>
             </div>
 
             <div class="field">
@@ -60,13 +60,13 @@
             <div class="field">
               <span class="field-label">Photo</span>
               <div class="photo-upload">
-                <div class="photo-preview">
+                <div class="photo-preview" id="profile-photo-preview">
                   <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <rect x="3" y="3" width="18" height="18" rx="2"/>
                     <circle cx="8.5" cy="8.5" r="1.75"/>
                     <path d="M21 15l-5-5L5 21"/>
                   </svg>
-                  <span class="photo-preview__text">Tap to add<br>your photo</span>
+                  <span class="photo-preview__text" id="photo-prompt">Tap to add<br>your photo</span>
                 </div>
                 <input type="file" id="profile-photo" name="profile-photo" accept="image/*">
               </div>
@@ -139,6 +139,40 @@
               <textarea id="topics-avoid" name="topics-avoid" rows="3" placeholder="Anything you'd rather not discuss…"></textarea>
               <p class="helper-text">We'll be mindful of these in conversation.</p>
             </div>
+
+            <div class="field">
+              <label for="favourite-food">Favourite Food</label>
+              <input type="text" id="favourite-food" name="favourite-food" placeholder="e.g. shepherd's pie, rice pudding…">
+            </div>
+
+            <div class="field">
+              <label for="pets">Pets</label>
+              <input type="text" id="pets" name="pets" placeholder="e.g. a dog named Biscuit, or none">
+            </div>
+
+            <div class="field">
+              <label for="family-members">Children and Grandchildren</label>
+              <input type="text" id="family-members" name="family-members" placeholder="e.g. two sons, three grandchildren, or none">
+            </div>
+
+            <div class="field">
+              <span class="field-label">Time of Day</span>
+              <p class="helper-text helper-text--spaced">Are you more of a morning or evening person?</p>
+              <div class="hobby-options">
+                <div class="hobby-option">
+                  <input type="radio" id="time-morning" name="time-preference" value="morning">
+                  <label for="time-morning">Morning person</label>
+                </div>
+                <div class="hobby-option">
+                  <input type="radio" id="time-evening" name="time-preference" value="evening">
+                  <label for="time-evening">Evening person</label>
+                </div>
+                <div class="hobby-option">
+                  <input type="radio" id="time-no-preference" name="time-preference" value="no preference">
+                  <label for="time-no-preference">No preference</label>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -151,7 +185,7 @@
                 <h2 class="person-card__title">Person 1</h2>
                 <div class="person-card__photo-row">
                   <div class="photo-upload photo-upload--small">
-                    <div class="photo-preview">
+                    <div class="photo-preview" id="contact-1-preview">
                       <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"/>
                         <circle cx="8.5" cy="8.5" r="1.75"/>
@@ -178,11 +212,11 @@
                 </div>
               </article>
 
-              <article class="person-card">
+              <article class="person-card person-card--hidden">
                 <h2 class="person-card__title">Person 2</h2>
                 <div class="person-card__photo-row">
                   <div class="photo-upload photo-upload--small">
-                    <div class="photo-preview">
+                    <div class="photo-preview" id="contact-2-preview">
                       <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"/>
                         <circle cx="8.5" cy="8.5" r="1.75"/>
@@ -209,11 +243,11 @@
                 </div>
               </article>
 
-              <article class="person-card">
+              <article class="person-card person-card--hidden">
                 <h2 class="person-card__title">Person 3</h2>
                 <div class="person-card__photo-row">
                   <div class="photo-upload photo-upload--small">
-                    <div class="photo-preview">
+                    <div class="photo-preview" id="contact-3-preview">
                       <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"/>
                         <circle cx="8.5" cy="8.5" r="1.75"/>
@@ -240,6 +274,7 @@
                 </div>
               </article>
             </div>
+            <button type="button" id="btn-add-person" class="btn-add-person">+ Add another person</button>
           </div>
         </section>
       </div>
@@ -247,7 +282,7 @@
       <nav class="wizard-nav" aria-label="Profile wizard navigation">
         <div class="wizard-nav__row">
           <label for="wizard-step-1" class="btn btn-back btn-back--2">Back</label>
-          <label for="wizard-step-2" class="btn btn-next btn-next--1">Next</label>
+          <button type="button" id="btn-next-1" class="btn btn-next btn-next--1">Next</button>
           <label for="wizard-step-2" class="btn btn-back btn-back--3">Back</label>
           <label for="wizard-step-3" class="btn btn-next btn-next--2">Next</label>
         </div>
@@ -255,5 +290,16 @@
       </nav>
     </div>
   </div>
+  <div id="contact-warning-modal" class="modal-overlay">
+    <div class="modal-card">
+      <p class="modal-title">No emergency contact added</p>
+      <p class="modal-body">We strongly recommend adding at least one person who can be contacted in an emergency. Would you like to go back and add one?</p>
+      <div class="modal-actions">
+        <button type="button" id="modal-go-back" class="modal-btn modal-btn--secondary">Go Back</button>
+        <button type="button" id="modal-continue" class="modal-btn modal-btn--primary">Continue Anyway</button>
+      </div>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
 </body>
 </html>

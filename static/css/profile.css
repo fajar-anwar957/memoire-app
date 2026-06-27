@@ -29,7 +29,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .header img {
@@ -77,7 +77,7 @@ body {
 }
 
 .progress-track {
-  height: 8px;
+  height: 12px;
   background-color: rgba(27, 58, 92, 0.15);
   border-radius: 999px;
   overflow: hidden;
@@ -361,6 +361,25 @@ body {
   margin-bottom: 0;
 }
 
+.person-card--hidden {
+  display: none;
+}
+
+.btn-add-person {
+  display: block;
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 1rem 1.5rem;
+  font-size: 1.15rem;
+  font-weight: bold;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--color-orange);
+  background-color: transparent;
+  border: 2px dashed var(--color-orange);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
 /*  Wizard navigation  */
 .wizard-nav {
   display: flex;
@@ -436,4 +455,85 @@ body {
     flex-direction: column;
     align-items: center;
   }
+}
+
+.field--error input,
+.field--error textarea {
+  border-color: #c0392b;
+}
+
+.field-error-msg {
+  color: #c0392b;
+  font-size: 0.95rem;
+  margin-top: 0.4rem;
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.modal-overlay.is-open {
+  display: flex;
+}
+
+.modal-card {
+  background: #ffffff;
+  border: 2px solid var(--color-navy);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 420px;
+  width: 100%;
+}
+
+.modal-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--color-navy);
+  margin-bottom: 0.75rem;
+}
+
+.modal-body {
+  font-size: 1.05rem;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+  margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 0.9rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  font-family: Georgia, serif;
+  border-radius: 12px;
+  cursor: pointer;
+  border: none;
+}
+
+.modal-btn--secondary {
+  background: #ffffff;
+  color: var(--color-navy);
+  border: 2px solid var(--color-navy);
+}
+
+.modal-btn--primary {
+  background: var(--color-orange);
+  color: #ffffff;
+}
+
+.helper-text--spaced {
+  margin-bottom: 0.75rem;
 }
