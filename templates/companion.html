@@ -18,21 +18,7 @@
       <h1 class="companion__title">Your Companion</h1>
     </header>
 
-    <div class="companion__chat" id="companion-chat" role="log" aria-live="polite" aria-label="Chat messages">
-      <div class="companion-message companion-message--companion">
-        <span class="companion-message__label">Mémoire</span>
-        <p class="companion-message__bubble">Hello! It is lovely to see you today. How are you feeling?</p>
-      </div>
-
-      <div class="companion-message companion-message--patient">
-        <p class="companion-message__bubble">I am feeling good, thank you.</p>
-      </div>
-
-      <div class="companion-message companion-message--companion">
-        <span class="companion-message__label">Mémoire</span>
-        <p class="companion-message__bubble">That is wonderful to hear. Would you like to chat or do an activity together?</p>
-      </div>
-    </div>
+    <div class="companion__chat" id="companion-chat" role="log" aria-live="polite" aria-label="Chat messages"></div>
 
     <form class="companion__input-bar" id="companion-form" action="#" method="post">
       <label class="companion__input-label" for="companion-input">Type a message</label>
@@ -50,16 +36,22 @@
         </svg>
       </button>
       <button type="button" class="companion__mic" id="companion-mic" aria-label="Voice input">
-        <svg class="companion__mic-flower" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <g transform="translate(60, 60)">
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(0)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(60)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(120)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(180)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(240)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(300)"/>
+        <svg class="companion__mic-flower" width="64" height="64" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g>
+            <ellipse cx="50" cy="20" rx="11" ry="20" fill="#1B3A5C" transform="rotate(0 50 50)"/>
+            <ellipse cx="50" cy="20" rx="11" ry="20" fill="#1B3A5C" transform="rotate(60 50 50)"/>
+            <ellipse cx="50" cy="20" rx="11" ry="20" fill="#1B3A5C" transform="rotate(120 50 50)"/>
+            <ellipse cx="50" cy="20" rx="11" ry="20" fill="#1B3A5C" transform="rotate(180 50 50)"/>
+            <ellipse cx="50" cy="20" rx="11" ry="20" fill="#1B3A5C" transform="rotate(240 50 50)"/>
+            <ellipse cx="50" cy="20" rx="11" ry="20" fill="#1B3A5C" transform="rotate(300 50 50)"/>
           </g>
-          <circle cx="60" cy="60" r="12" fill="#D9722C"/>
+          <circle cx="50" cy="50" r="24" fill="#D9722C"/>
+          <g stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <rect x="41" y="33" width="18" height="22" rx="9" fill="#ffffff" stroke="none"/>
+            <path d="M37,55 Q37,67 50,67 Q63,67 63,55"/>
+            <line x1="50" y1="67" x2="50" y2="75"/>
+            <line x1="42" y1="75" x2="58" y2="75"/>
+          </g>
         </svg>
       </button>
     </form>
@@ -80,47 +72,6 @@
     </a>
   </nav>
 
-  <script>
-    (function () {
-      var chat = document.getElementById('companion-chat');
-      var form = document.getElementById('companion-form');
-      var input = document.getElementById('companion-input');
-      var mic = document.getElementById('companion-mic');
-
-      function scrollChatToBottom() {
-        chat.scrollTop = chat.scrollHeight;
-      }
-
-      function appendPatientMessage(text) {
-        var message = document.createElement('div');
-        message.className = 'companion-message companion-message--patient';
-
-        var bubble = document.createElement('p');
-        bubble.className = 'companion-message__bubble';
-        bubble.textContent = text;
-
-        message.appendChild(bubble);
-        chat.appendChild(message);
-        scrollChatToBottom();
-      }
-
-      form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        var text = input.value.trim();
-        if (!text) {
-          return;
-        }
-        appendPatientMessage(text);
-        input.value = '';
-        input.focus();
-      });
-
-      mic.addEventListener('click', function () {
-        mic.classList.toggle('companion__mic--active');
-      });
-
-      scrollChatToBottom();
-    })();
-  </script>
+  <script src="{{ url_for('static', filename='js/companion.js') }}"></script>
 </body>
 </html>

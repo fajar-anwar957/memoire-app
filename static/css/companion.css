@@ -72,10 +72,14 @@ body {
 
 /* Chat area */
 .companion__chat {
-  flex: 1;
+  position: fixed;
+  top: 60px;
+  bottom: calc(64px + 72px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 5.5rem 1.25rem 9.5rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -124,10 +128,17 @@ body {
   border-bottom-right-radius: 6px;
 }
 
+.companion-typing {
+  align-self: flex-start;
+  margin: 0 0 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
 /* Input bar */
 .companion__input-bar {
   position: fixed;
-  bottom: calc(64px + env(safe-area-inset-bottom, 0));
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   z-index: 20;
@@ -176,8 +187,8 @@ body {
 
 .companion__input:focus {
   outline: none;
-  border-color: rgba(27, 58, 92, 0.35);
-  box-shadow: 0 2px 12px rgba(27, 58, 92, 0.1);
+  border-color: #D9722C;
+  box-shadow: 0 2px 12px rgba(217, 114, 44, 0.25);
 }
 
 .companion__send {
@@ -190,8 +201,8 @@ body {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgba(27, 58, 92, 0.08);
-  color: var(--color-navy);
+  background: #D9722C;
+  color: #ffffff;
   cursor: pointer;
   transition:
     background-color 0.2s ease,
@@ -238,13 +249,12 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   padding: 0;
   border: none;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 4px 16px rgba(27, 58, 92, 0.14);
+  background: transparent;
+  box-shadow: none;
   cursor: pointer;
   transition:
     transform 0.15s ease,
@@ -274,7 +284,7 @@ body {
   height: 36px;
 }
 
-/* Bottom navigation (matches dashboard) */
+/* Bottom navigation */
 .dashboard-nav {
   position: fixed;
   bottom: 0;
