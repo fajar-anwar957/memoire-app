@@ -1,10 +1,35 @@
 (function () {
+  var memoireConversationHistory = 'memoireConversationHistory';
+
   var chat = document.getElementById('companion-chat');
   var form = document.getElementById('companion-form');
   var input = document.getElementById('companion-input');
   var mic = document.getElementById('companion-mic');
 
   var conversationHistory = [];
+
+  function saveHistoryToStorage() {
+    var maxEntries = 40;
+    if (conversationHistory.length > maxEntries) {
+      conversationHistory = conversationHistory.slice(-maxEntries);
+    }
+    localStorage.setItem(memoireConversationHistory, JSON.stringify(conversationHistory));
+  }
+
+  function loadHistoryFromStorage() {
+    try {
+      var stored = localStorage.getItem(memoireConversationHistory);
+      if (!stored) {
+        return [];
+      }
+      var parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  conversationHistory = loadHistoryFromStorage();
   var isWaitingForReply = false;
   var loadingMessage = null;
   var recognition = null;
@@ -159,6 +184,7 @@
         var reply = cleanResponseText(result.data.reply);
         conversationHistory.push({ role: 'user', content: userText });
         conversationHistory.push({ role: 'assistant', content: reply });
+        saveHistoryToStorage();
         streamCompanionMessage(reply);
       })
       .catch(function () {
