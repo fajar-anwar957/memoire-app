@@ -49,6 +49,29 @@ def api_chat():
         if not isinstance(user_message, str) or not user_message.strip():
             return jsonify({'error': 'Message cannot be empty'}), 400
 
+        history = data.get('history') or []
+        if not isinstance(history, list):
+            history = []
+
+        memory_parts = []
+        for entry in history:
+            if not isinstance(entry, dict):
+                continue
+            role = entry.get('role', '')
+            content = entry.get('content', '')
+            if not content or not isinstance(content, str):
+                continue
+            speaker = 'Patient' if role == 'user' else 'Mémoire'
+            memory_parts.append(f'{speaker}: {content}')
+
+        system_prompt = SYSTEM_PROMPT
+        if memory_parts:
+            memory_string = '\n'.join(memory_parts)
+            system_prompt = (
+                f'{SYSTEM_PROMPT}\n\n'
+                f'Previous conversations with this patient: {memory_string}'
+            )
+
         api_key = os.environ.get('ANTHROPIC_API_KEY')
         if not api_key:
             return jsonify({'error': 'ANTHROPIC_API_KEY is not configured'}), 500
@@ -57,7 +80,7 @@ def api_chat():
         response = client.messages.create(
             model='claude-sonnet-4-6',
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=system_prompt,
             messages=[{'role': 'user', 'content': user_message.strip()}],
         )
 
