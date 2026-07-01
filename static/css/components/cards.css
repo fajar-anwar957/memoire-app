@@ -1,0 +1,16 @@
+/* Shared surface styles — apply .card-base in HTML when templates are updated */
+.card-base,
+.dashboard-card,
+.onboarding-card,
+.activities-card {
+  background: #ffffff;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-base,
+.dashboard-card,
+.activities-card {
+  box-shadow: 0 4px 18px rgba(27, 58, 92, 0.1);
+}
