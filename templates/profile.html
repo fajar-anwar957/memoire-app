@@ -19,7 +19,97 @@
     <h1 class="heading" id="page-heading">Your Profile</h1>
     <p class="subheading" id="page-subheading">Let's get to know you.</p>
 
-    <div class="wizard">
+    <section id="profile-summary" class="profile-summary" hidden>
+      <div class="card profile-summary__card">
+        <header class="profile-summary__hero">
+          <a href="/dashboard" class="profile-summary__back" aria-label="Back to home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </a>
+          <div class="profile-summary__photo-wrap">
+            <div class="profile-summary__photo" id="summary-photo">
+              <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.75"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+          </div>
+          <div class="profile-summary__identity">
+            <p class="profile-summary__display-name" id="summary-full-name">—</p>
+            <p class="profile-summary__known-as">
+              <span class="profile-summary__known-as-label">Known as</span>
+              <span id="summary-preferred-name">—</span>
+            </p>
+          </div>
+        </header>
+
+        <div class="profile-summary__layout">
+          <aside class="profile-summary__panel profile-summary__panel--facts" aria-labelledby="summary-section-about">
+            <h2 class="profile-summary__section-title" id="summary-section-about">About You</h2>
+            <dl class="profile-summary__facts">
+              <div class="profile-summary__fact">
+                <dt>Age</dt>
+                <dd id="summary-age">—</dd>
+              </div>
+              <div class="profile-summary__fact">
+                <dt>Hometown</dt>
+                <dd id="summary-hometown">—</dd>
+              </div>
+              <div class="profile-summary__fact">
+                <dt>Work</dt>
+                <dd id="summary-work">—</dd>
+              </div>
+              <div class="profile-summary__fact">
+                <dt>Favourite Food</dt>
+                <dd id="summary-favourite-food">—</dd>
+              </div>
+            </dl>
+          </aside>
+
+          <section class="profile-summary__panel profile-summary__panel--life" aria-labelledby="summary-section-life">
+            <h2 class="profile-summary__section-title" id="summary-section-life">Life &amp; Interests</h2>
+            <div class="profile-summary__life-grid">
+              <dl class="profile-summary__fields profile-summary__fields--interests">
+                <div class="profile-summary__row profile-summary__row--full">
+                  <dt>Hobbies</dt>
+                  <dd id="summary-hobbies" class="profile-summary__hobby-tags">—</dd>
+                </div>
+                <div class="profile-summary__row profile-summary__row--full">
+                  <dt>Favourite Music / TV</dt>
+                  <dd id="summary-favourite-media">—</dd>
+                </div>
+              </dl>
+              <div class="profile-summary__spotlight">
+                <dl class="profile-summary__memory-card">
+                  <dt class="profile-summary__memory-label">Happy Memory</dt>
+                  <dd id="summary-happy-memory" class="profile-summary__memory-text">—</dd>
+                </dl>
+                <dl class="profile-summary__fields">
+                  <div class="profile-summary__row profile-summary__row--full">
+                    <dt>Pets</dt>
+                    <dd id="summary-pets">—</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </section>
+
+          <section class="profile-summary__panel profile-summary__panel--people profile-summary__section profile-summary__section--people" id="summary-contacts-wrap" aria-labelledby="summary-section-people" hidden>
+            <h2 class="profile-summary__section-title" id="summary-section-people">Important People</h2>
+            <div id="summary-contacts" class="profile-summary__contacts-grid"></div>
+          </section>
+        </div>
+      </div>
+      <div class="profile-summary__actions">
+        <button type="button" id="btn-edit-profile" class="btn profile-summary-btn">Edit Profile</button>
+        <button type="button" id="btn-switch-profile" class="btn profile-summary-btn" hidden>Switch Profile</button>
+        <button type="button" id="btn-delete-profile" class="save-btn profile-summary-btn profile-summary-btn--delete">Delete Profile</button>
+      </div>
+    </section>
+
+    <div class="wizard" id="profile-wizard">
       <input type="radio" name="wizard-step" id="wizard-step-1" class="wizard-input" checked>
       <input type="radio" name="wizard-step" id="wizard-step-2" class="wizard-input">
       <input type="radio" name="wizard-step" id="wizard-step-3" class="wizard-input">
@@ -282,7 +372,7 @@
           <label for="wizard-step-2" class="btn btn-back btn-back--3">Back</label>
           <label for="wizard-step-3" class="btn btn-next btn-next--2">Next</label>
         </div>
-        <button type="button" class="save-btn">Save Profile</button>
+        <button type="button" id="btn-save-profile" class="save-btn">Save Profile</button>
       </nav>
     </div>
   </div>
@@ -296,6 +386,68 @@
       </div>
     </div>
   </div>
+
+  <div id="edit-profile-modal" class="modal-overlay">
+    <div class="modal-card">
+      <p class="modal-title">Edit profile</p>
+      <p class="modal-body">Are you sure you want to edit your profile?</p>
+      <div class="modal-actions">
+        <button type="button" id="edit-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+        <button type="button" id="edit-modal-continue" class="modal-btn modal-btn--primary">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-profile-modal" class="modal-overlay">
+    <div class="modal-card">
+      <p class="modal-title">Delete profile</p>
+      <p class="modal-body">Are you sure you want to delete this profile? This cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" id="delete-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+        <button type="button" id="delete-modal-confirm" class="modal-btn modal-btn--primary">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="switch-profile-modal" class="modal-overlay">
+    <div class="modal-card">
+      <p class="modal-title">Switch profile</p>
+      <p class="modal-body">Choose a profile to view:</p>
+      <ul id="switch-profile-list" class="switch-profile-list"></ul>
+      <div class="modal-actions">
+        <button type="button" id="switch-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
   <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+  <script>
+    (function () {
+      function pillifyHobbies(el) {
+        if (!el || el.querySelector('.profile-summary__hobby-tag')) return;
+        var text = el.textContent.trim();
+        if (!text || text === '—') return;
+        el.textContent = '';
+        text.split(',').forEach(function (part) {
+          var trimmed = part.trim();
+          if (!trimmed) return;
+          var tag = document.createElement('span');
+          tag.className = 'profile-summary__hobby-tag';
+          tag.textContent = trimmed;
+          el.appendChild(tag);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        var hobbiesEl = document.getElementById('summary-hobbies');
+        if (!hobbiesEl) return;
+        pillifyHobbies(hobbiesEl);
+        new MutationObserver(function () {
+          if (!hobbiesEl.querySelector('.profile-summary__hobby-tag')) {
+            pillifyHobbies(hobbiesEl);
+          }
+        }).observe(hobbiesEl, { childList: true, characterData: true, subtree: true });
+      });
+    })();
+  </script>
 </body>
 </html>
