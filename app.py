@@ -1,10 +1,11 @@
 import os
+import re
 
 from dotenv import load_dotenv
 load_dotenv()
 
 import anthropic
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 
 app = Flask(__name__)
 
@@ -12,6 +13,14 @@ SYSTEM_PROMPT = (
     "You are Mémoire, a warm and friendly AI companion for someone with "
     "early-stage dementia. Speak gently, use simple sentences, and be "
     "patient and encouraging.\n\n"
+    "Patient name token: This patient's name is represented by the token "
+    "[PATIENT] in this conversation. You know their name — it is exactly "
+    "this token. When asked their name or referring to them by name, always "
+    "respond using the literal text [PATIENT] (e.g. 'Yes, your name is "
+    "[PATIENT].'). Never say you don't know their name.\n\n"
+    "Important: [PATIENT] always refers to the person you are talking to, "
+    "themselves. Never describe [PATIENT] as someone else's relative or "
+    "as a different person (e.g. never say 'your mother [PATIENT]').\n\n"
     "Reply length and format:\n"
     "- Keep every reply to a maximum of 2-3 short sentences.\n"
     "- Avoid long explanations, lists, or multiple questions in one reply.\n"
@@ -26,7 +35,7 @@ def splash():
 
 @app.route('/onboarding')
 def onboarding():
-    return render_template('onboarding.html')
+    return redirect(url_for('profile'))
 
 @app.route('/profile')
 def profile():
@@ -78,6 +87,53 @@ def api_chat():
                 f'Previous conversations with this patient: {memory_string}'
             )
 
+        profile_facts = data.get('profileFacts') or {}
+        if not isinstance(profile_facts, dict):
+            profile_facts = {}
+
+        def _format_field_label(key):
+            label = re.sub(r'([A-Z])', r' \1', key)
+            return label.replace('_', ' ').strip().title()
+
+        def _format_fact_value(value):
+            if value is None:
+                return ''
+            if isinstance(value, list):
+                return ', '.join(str(item) for item in value if item)
+            if isinstance(value, str):
+                return value.strip()
+            if isinstance(value, (int, float, bool)):
+                return str(value)
+            return str(value)
+
+        fact_lines = []
+        topics_avoid = ''
+        for key, value in profile_facts.items():
+            formatted = _format_fact_value(value)
+            if not formatted:
+                continue
+            if key == 'topicsAvoid':
+                topics_avoid = formatted
+                continue
+            fact_lines.append(f'- {_format_field_label(key)}: {formatted}')
+
+        profile_sections = []
+        if fact_lines:
+            profile_sections.append(
+                'Facts about the patient — use naturally in conversation:\n'
+                + '\n'.join(fact_lines)
+            )
+        if topics_avoid:
+            profile_sections.append(
+                'Topics to avoid — never bring up or encourage discussion of this topic; '
+                'if the patient raises it, gently acknowledge and redirect without '
+                'dwelling on it.\n'
+                f'- Topics to avoid: {topics_avoid}'
+            )
+
+        if profile_sections:
+            system_prompt = system_prompt + '\n\n' + '\n\n'.join(profile_sections)
+
         api_key = os.environ.get('ANTHROPIC_API_KEY')
         if not api_key:
             return jsonify({'error': 'ANTHROPIC_API_KEY is not configured'}), 500
@@ -85,7 +141,7 @@ def api_chat():
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model='claude-sonnet-4-6',
-            max_tokens=1024,
+            max_tokens=200,
             system=system_prompt,
             messages=[{'role': 'user', 'content': user_message.strip()}],
         )

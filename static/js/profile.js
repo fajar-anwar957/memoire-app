@@ -212,7 +212,6 @@
           topicsAvoid: document.getElementById('topics-avoid').value.trim(),
           favouriteFood: document.getElementById('favourite-food').value.trim(),
           pets: document.getElementById('pets').value.trim(),
-          familyMembers: document.getElementById('family-members').value.trim(),
           timePreference: (document.querySelector('input[name="time-preference"]:checked') || { value: '' }).value,
           contacts: contactData
         };
