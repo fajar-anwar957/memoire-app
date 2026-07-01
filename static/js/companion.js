@@ -255,27 +255,37 @@
   // That backend change is flagged as a separate required fix and intentionally left
   // untouched here.
   function buildApiPayload(maskedUserText, nameTokens) {
-    var maskedHistory = conversationHistory.map(function (entry) {
+    var recentHistory = conversationHistory.slice(-8);
+    var maskedHistory = recentHistory.map(function (entry) {
       return {
         role: entry.role,
         content: maskMessage(entry.content, nameTokens)
       };
     });
 
-    var payload = {
-      message: maskedUserText,
-      history: maskedHistory
-    };
+    var profile = getActiveProfile();
+    var profileFacts = {};
+    var excludedKeys = { id: true, photo: true, contacts: true };
 
-    if (maskedHistory.length > 0) {
-      var transcript = maskedHistory.map(function (entry) {
-        var speaker = entry.role === 'user' ? 'Patient' : 'Mémoire';
-        return speaker + ': ' + entry.content;
-      }).join('\n');
-      payload.message = transcript + '\nPatient: ' + maskedUserText;
+    if (profile) {
+      for (var key in profile) {
+        if (!Object.prototype.hasOwnProperty.call(profile, key) || excludedKeys[key]) {
+          continue;
+        }
+        var value = profile[key];
+        if (typeof value === 'string') {
+          profileFacts[key] = maskMessage(value, nameTokens);
+        } else {
+          profileFacts[key] = value;
+        }
+      }
     }
 
-    return payload;
+    return {
+      message: maskedUserText,
+      history: maskedHistory,
+      profileFacts: profileFacts
+    };
   }
 
   // Fixed list of health/safety concern keywords and phrases. If a patient's message
@@ -404,7 +414,8 @@
           return;
         }
 
-        var reply = unmaskReply(cleanResponseText(result.data.reply), nameTokens);
+        console.log('Raw AI reply (before unmasking):', result.data.reply);
+        var reply = cleanResponseText(unmaskReply(result.data.reply, nameTokens));
         console.log('Unmasked reply:', reply);
         conversationHistory.push({ role: 'user', content: userText });
         conversationHistory.push({ role: 'assistant', content: reply });
