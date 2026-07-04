@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/cards.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/dashboard.css') }}">
 </head>
 <body>
@@ -76,6 +77,33 @@
       </a>
 
       <div class="dashboard__tile-grid">
+        <button type="button" class="dashboard-card dashboard-card--memory dashboard-card--tile" id="add-memory-card" aria-haspopup="dialog" aria-controls="add-memory-modal">
+          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--memory" aria-hidden="true">
+            <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </span>
+          <span class="dashboard-card__body">
+            <h2 class="dashboard-card__title">Add a Memory</h2>
+            <p class="dashboard-card__subtext">Capture a moment from today</p>
+          </span>
+        </button>
+
+        <a href="/memory-log" class="dashboard-card dashboard-card--tile">
+          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--memory" aria-hidden="true">
+            <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="M21 15l-5-5L5 21"/>
+            </svg>
+          </span>
+          <span class="dashboard-card__body">
+            <h2 class="dashboard-card__title">Memories &amp; People</h2>
+            <p class="dashboard-card__subtext">Add and revisit happy moments</p>
+          </span>
+        </a>
+
         <a href="/activities" class="dashboard-card dashboard-card--activities dashboard-card--tile">
           <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--activities" aria-hidden="true">
             <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -90,19 +118,6 @@
             <p class="dashboard-card__subtext">Word games, quizzes, and more</p>
           </span>
         </a>
-
-        <button type="button" class="dashboard-card dashboard-card--memory dashboard-card--tile" id="add-memory-card" aria-haspopup="dialog" aria-controls="add-memory-modal">
-          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--memory" aria-hidden="true">
-            <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20h9"/>
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-            </svg>
-          </span>
-          <span class="dashboard-card__body">
-            <h2 class="dashboard-card__title">Add a Memory</h2>
-            <p class="dashboard-card__subtext">Capture a moment from today</p>
-          </span>
-        </button>
       </div>
     </section>
   </main>
@@ -186,165 +201,8 @@
     </div>
   </div>
 
-  <script>
-    (function () {
-      function getActiveProfile() {
-        try {
-          var profileId = localStorage.getItem('activeProfileId');
-          if (!profileId) return null;
-          var stored = localStorage.getItem('patientProfiles');
-          if (!stored) return null;
-          var profiles = JSON.parse(stored);
-          if (!Array.isArray(profiles)) return null;
-          for (var i = 0; i < profiles.length; i++) {
-            if (profiles[i].id === profileId) return profiles[i];
-          }
-          return null;
-        } catch (e) {
-          return null;
-        }
-      }
-
-      function getPreferredName() {
-        var profile = getActiveProfile();
-        if (profile && profile.preferredName && String(profile.preferredName).trim()) {
-          return String(profile.preferredName).trim();
-        }
-        return 'Friend';
-      }
-
-      var now = new Date();
-      var hour = now.getHours();
-      var greeting;
-
-      if (hour < 12) {
-        greeting = 'Good morning';
-      } else if (hour < 18) {
-        greeting = 'Good afternoon';
-      } else {
-        greeting = 'Good evening';
-      }
-
-      var preferredName = getPreferredName();
-      document.getElementById('dashboard-greeting').textContent = greeting + ', ' + preferredName;
-
-      var avatarEl = document.getElementById('dashboard-avatar');
-      var activeProfile = getActiveProfile();
-      if (avatarEl && activeProfile && activeProfile.photo) {
-        avatarEl.innerHTML = '<img src="' + activeProfile.photo + '" alt="Photo of ' + preferredName + '">';
-        avatarEl.removeAttribute('aria-hidden');
-      }
-
-      var dateEl = document.getElementById('dashboard-date');
-      dateEl.textContent = now.toLocaleDateString('en-GB', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-      });
-      dateEl.setAttribute('datetime', now.toISOString().split('T')[0]);
-
-      function getCallableContacts(profile) {
-        if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
-          return [];
-        }
-        return profile.contacts.filter(function (contact) {
-          return contact && contact.phone && String(contact.phone).trim();
-        });
-      }
-
-      function escapeHtml(text) {
-        return String(text)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
-      }
-
-      function displayValue(value) {
-        var text = (value === null || value === undefined) ? '' : String(value).trim();
-        return text || '—';
-      }
-
-      var callSection = document.getElementById('dashboard-call-section');
-      var callBtn = document.getElementById('dashboard-call-btn');
-      var modal = document.getElementById('call-contacts-modal');
-      var contactsList = document.getElementById('call-contacts-list');
-      var cancelBtn = document.getElementById('call-modal-cancel');
-      var callableContacts = getCallableContacts(getActiveProfile());
-
-      if (!callableContacts.length || !callSection || !callBtn || !modal || !contactsList) {
-        return;
-      }
-
-      callSection.hidden = false;
-      callBtn.setAttribute('aria-label', 'Call a contact');
-
-      function openCallModal() {
-        contactsList.innerHTML = callableContacts.map(function (contact, index) {
-          var contactName = displayValue(contact.name);
-          var relationship = contact.relationship ? String(contact.relationship).trim() : '';
-          var ariaLabel = 'Call ' + contactName;
-          return (
-            '<li>' +
-              '<button type="button" class="call-contact-item" data-contact-index="' + index + '" aria-label="' + escapeHtml(ariaLabel) + '">' +
-                '<span class="call-contact-item__name">' + escapeHtml(contactName) + '</span>' +
-                (relationship
-                  ? '<span class="call-contact-item__relationship">' + escapeHtml(relationship) + '</span>'
-                  : '') +
-              '</button>' +
-            '</li>'
-          );
-        }).join('');
-
-        modal.hidden = false;
-        modal.classList.add('is-open');
-        var firstItem = contactsList.querySelector('.call-contact-item');
-        if (firstItem) firstItem.focus();
-      }
-
-      function closeCallModal() {
-        modal.classList.remove('is-open');
-        modal.hidden = true;
-        callBtn.focus();
-      }
-
-      function dialContact(contact) {
-        var phone = String(contact.phone).trim();
-        if (!phone) return;
-        closeCallModal();
-        var link = document.createElement('a');
-        link.href = 'tel:' + phone.replace(/\s/g, '');
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-
-      callBtn.addEventListener('click', openCallModal);
-
-      contactsList.addEventListener('click', function (event) {
-        var button = event.target.closest('.call-contact-item');
-        if (!button) return;
-        var index = parseInt(button.getAttribute('data-contact-index'), 10);
-        if (isNaN(index) || !callableContacts[index]) return;
-        dialContact(callableContacts[index]);
-      });
-
-      if (cancelBtn) {
-        cancelBtn.addEventListener('click', closeCallModal);
-      }
-
-      modal.addEventListener('click', function (event) {
-        if (event.target === modal) closeCallModal();
-      });
-
-      document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && modal.classList.contains('is-open')) {
-          closeCallModal();
-        }
-      });
-    })();
-  </script>
+  <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/add-memory.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>
