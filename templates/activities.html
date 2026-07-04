@@ -8,17 +8,18 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/cards.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/activities.css') }}">
 </head>
 <body>
   <main class="activities">
-    <header class="activities__header">
-      <a href="/dashboard" class="activities__back" aria-label="Back to home">
+    <header class="activities__header page-header">
+      <a href="/dashboard" class="activities__back page-header__back" aria-label="Back to home">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M15 18l-6-6 6-6"/>
         </svg>
       </a>
-      <h1 class="activities__title">Today's Activities</h1>
+      <h1 class="activities__title page-header__title">Today's Activities</h1>
     </header>
 
     <div class="activities__content">

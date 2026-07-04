@@ -1,4 +1,7 @@
 (function () {
+  var getActiveProfile = window.MemoireCore.getActiveProfile;
+  var contactIsEmergency = window.MemoireCore.contactIsEmergency;
+
   var memoireConversationHistory = 'memoireConversationHistory';
 
   var chat = document.getElementById('companion-chat');
@@ -42,31 +45,6 @@
     setTimeout(function () {
       chat.scrollTop = chat.scrollHeight;
     }, 0);
-  }
-
-  function getActiveProfile() {
-    try {
-      var profileId = localStorage.getItem('activeProfileId');
-      if (!profileId) {
-        return null;
-      }
-      var stored = localStorage.getItem('patientProfiles');
-      if (!stored) {
-        return null;
-      }
-      var profiles = JSON.parse(stored);
-      if (!Array.isArray(profiles)) {
-        return null;
-      }
-      for (var i = 0; i < profiles.length; i++) {
-        if (profiles[i].id === profileId) {
-          return profiles[i];
-        }
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
   }
 
   function buildNameTokens(profile) {
@@ -320,18 +298,15 @@
     return false;
   }
 
-  // Returns the contact we should surface in an emergency. The profile form
-  // (profile.js) stores contacts as an array of { name, relationship, phone, photo }.
-  // There is no explicit "isEmergencyContact" flag in the saved data, and contact #1
-  // is the primary contact in the form, so we use the first contact that has a usable
-  // phone number. Returns null if no contact with a phone number exists.
+  // Returns the contact we should surface in an emergency. Contacts saved before the
+  // isEmergency flag was added are treated as emergency contacts for backwards compatibility.
   function getEmergencyContact(profile) {
     if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
       return null;
     }
     for (var i = 0; i < profile.contacts.length; i++) {
       var contact = profile.contacts[i];
-      if (contact && contact.phone && ('' + contact.phone).trim()) {
+      if (contactIsEmergency(contact) && contact.phone && ('' + contact.phone).trim()) {
         return contact;
       }
     }
