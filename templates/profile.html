@@ -7,6 +7,7 @@
   <title>Your Profile — Mémoire</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/profile.css') }}">
 </head>
 <body>
@@ -94,11 +95,6 @@
           <section class="profile-summary__panel profile-summary__panel--people profile-summary__section profile-summary__section--people" id="summary-contacts-wrap" aria-labelledby="summary-section-people" hidden>
             <h2 class="profile-summary__section-title" id="summary-section-people">Important People</h2>
             <div id="summary-contacts" class="profile-summary__contacts-grid"></div>
-          </section>
-
-          <section class="profile-summary__panel profile-summary__panel--memories profile-summary__section" id="summary-memories-wrap" aria-labelledby="summary-section-memories" hidden>
-            <h2 class="profile-summary__section-title" id="summary-section-memories">Recent Memories</h2>
-            <ul id="summary-memories" class="profile-summary__memories-list"></ul>
           </section>
         </div>
       </div>
@@ -263,9 +259,10 @@
         </section>
 
         <!-- Step 3: Important people -->
-        <section class="wizard-panel wizard-panel--3" aria-label="Step 3 of 3">
+        <section class="wizard-panel wizard-panel--3" id="important-people" aria-label="Step 3 of 3">
           <div class="card">
-            <p class="helper-text" style="margin-bottom: 1.5rem;">Add up to three people who are important to you.</p>
+            <h2 class="person-cards__heading">Important People</h2>
+            <p class="helper-text person-cards__intro">Add family and friends. Tick the box for anyone who should be contacted in an emergency.</p>
             <div class="person-cards">
               <article class="person-card">
                 <h2 class="person-card__title">Person 1</h2>
@@ -293,6 +290,11 @@
                     <div class="field">
                       <label for="contact-1-phone">Phone Number</label>
                       <input type="tel" id="contact-1-phone" name="contact-1-phone">
+                      <p class="helper-text person-card__phone-hint" id="contact-1-phone-hint" hidden>Add a phone number so they can be reached quickly in an emergency.</p>
+                    </div>
+                    <div class="person-card__emergency">
+                      <input type="checkbox" id="contact-1-emergency" name="contact-1-emergency">
+                      <label for="contact-1-emergency">Emergency contact</label>
                     </div>
                   </div>
                 </div>
@@ -324,6 +326,11 @@
                     <div class="field">
                       <label for="contact-2-phone">Phone Number</label>
                       <input type="tel" id="contact-2-phone" name="contact-2-phone">
+                      <p class="helper-text person-card__phone-hint" id="contact-2-phone-hint" hidden>Add a phone number so they can be reached quickly in an emergency.</p>
+                    </div>
+                    <div class="person-card__emergency">
+                      <input type="checkbox" id="contact-2-emergency" name="contact-2-emergency">
+                      <label for="contact-2-emergency">Emergency contact</label>
                     </div>
                   </div>
                 </div>
@@ -355,6 +362,11 @@
                     <div class="field">
                       <label for="contact-3-phone">Phone Number</label>
                       <input type="tel" id="contact-3-phone" name="contact-3-phone">
+                      <p class="helper-text person-card__phone-hint" id="contact-3-phone-hint" hidden>Add a phone number so they can be reached quickly in an emergency.</p>
+                    </div>
+                    <div class="person-card__emergency">
+                      <input type="checkbox" id="contact-3-emergency" name="contact-3-emergency">
+                      <label for="contact-3-emergency">Emergency contact</label>
                     </div>
                   </div>
                 </div>
@@ -419,6 +431,7 @@
       </div>
     </div>
   </div>
+  <script src="{{ url_for('static', filename='js/core.js') }}"></script>
   <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
   <script>
     (function () {
