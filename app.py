@@ -85,6 +85,10 @@ def profile():
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/memory-log')
+def memory_log():
+    return render_template('memory-log.html')
+
 @app.route('/companion')
 def companion():
     return render_template('companion.html')
@@ -99,6 +103,10 @@ def word_association():
     _agent_log('app.py:word_association', 'route hit', {'path': request.path}, 'H1')
     # #endregion
     return render_template('word-association.html')
+
+@app.route('/activities/photo-recall')
+def photo_recall():
+    return render_template('photo-recall.html')
 
 @app.route('/api/chat', methods=['POST'])
 def api_chat():

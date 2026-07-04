@@ -7,19 +7,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     body {
       height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #FAF6EF;
-      font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--color-cream);
     }
 
     @keyframes fadeIn {
@@ -60,28 +53,10 @@
     <h1 class="title">Mémoire</h1>
     <p class="tagline">Your gentle memory companion</p>
   </div>
+  <script src="{{ url_for('static', filename='js/core.js') }}"></script>
   <script>
-    function getProfiles() {
-      try {
-        var profiles = JSON.parse(localStorage.getItem('patientProfiles')) || [];
-        return Array.isArray(profiles) ? profiles : [];
-      } catch (err) {
-        return [];
-      }
-    }
-
-    function getActiveProfile() {
-      var profileId = localStorage.getItem('activeProfileId');
-      if (!profileId) return null;
-      var profiles = getProfiles();
-      for (var i = 0; i < profiles.length; i++) {
-        if (profiles[i].id === profileId) return profiles[i];
-      }
-      return null;
-    }
-
-    setTimeout(function() {
-      window.location.href = getActiveProfile() ? '/dashboard' : '/profile';
+    setTimeout(function () {
+      window.location.href = window.MemoireCore.getActiveProfile() ? '/dashboard' : '/profile';
     }, 2500);
   </script>
 </body>

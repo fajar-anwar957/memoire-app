@@ -7,17 +7,18 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/companion.css') }}">
 </head>
 <body>
   <div class="companion">
-    <header class="companion__header">
-      <a href="/dashboard" class="companion__back" aria-label="Back to home">
+    <header class="companion__header page-header">
+      <a href="/dashboard" class="companion__back page-header__back" aria-label="Back to home">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M15 18l-6-6 6-6"/>
         </svg>
       </a>
-      <h1 class="companion__title">Your Companion</h1>
+      <h1 class="companion__title page-header__title">Your Companion</h1>
     </header>
 
     <div class="companion__chat" id="companion-chat" role="log" aria-live="polite" aria-label="Chat messages"></div>
@@ -90,6 +91,7 @@
     </a>
   </nav>
 
+  <script src="{{ url_for('static', filename='js/core.js') }}"></script>
   <script src="{{ url_for('static', filename='js/text-utils.js') }}"></script>
   <script src="{{ url_for('static', filename='js/companion.js') }}"></script>
 </body>

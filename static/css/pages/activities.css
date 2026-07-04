@@ -16,6 +16,7 @@ body {
   flex-direction: column;
 }
 
+/* TODO: retire per-page header rules after visual verification */
 /* Header */
 .activities__header {
   position: fixed;

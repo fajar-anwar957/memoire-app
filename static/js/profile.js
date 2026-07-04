@@ -1,5 +1,11 @@
 (function () {
   document.addEventListener('DOMContentLoaded', function () {
+  var getProfiles = window.MemoireCore.getProfiles;
+  var getActiveProfile = window.MemoireCore.getActiveProfile;
+  var displayValue = window.MemoireCore.displayValue;
+  var escapeHtml = window.MemoireCore.escapeHtml;
+  var readFileAsDataURL = window.MemoireCore.readFileAsDataURL;
+
   var urlParams = new URLSearchParams(window.location.search);
   var profileMode = urlParams.get('mode') || localStorage.getItem('profileContext') || 'self';
   localStorage.setItem('profileContext', profileMode);
@@ -19,40 +25,8 @@
     if (byId('photo-prompt'))    byId('photo-prompt').innerHTML      = 'Tap to add<br>their photo';
   }
 
-  function getProfiles() {
-    try {
-      var profiles = JSON.parse(localStorage.getItem('patientProfiles')) || [];
-      return Array.isArray(profiles) ? profiles : [];
-    } catch (err) {
-      return [];
-    }
-  }
-
   function saveProfiles(profiles) {
     localStorage.setItem('patientProfiles', JSON.stringify(profiles));
-  }
-
-  function getActiveProfile() {
-    var profileId = localStorage.getItem('activeProfileId');
-    if (!profileId) return null;
-    var profiles = getProfiles();
-    for (var i = 0; i < profiles.length; i++) {
-      if (profiles[i].id === profileId) return profiles[i];
-    }
-    return null;
-  }
-
-  function displayValue(value) {
-    var text = (value === null || value === undefined) ? '' : String(value).trim();
-    return text || '—';
-  }
-
-  function escapeHtml(text) {
-    return String(text)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
   }
 
   function formatHobbies(profile) {
@@ -64,26 +38,6 @@
       parts.push(profile.hobbyOther);
     }
     return parts.length ? parts.join(', ') : '—';
-  }
-
-  function getDashboardMemories() {
-    try {
-      var stored = localStorage.getItem('dashboardMemories');
-      if (!stored) return [];
-      var memories = JSON.parse(stored);
-      return Array.isArray(memories) ? memories : [];
-    } catch (err) {
-      return [];
-    }
-  }
-
-  function formatMemoryDate(isoDate) {
-    if (!isoDate) return '—';
-    var d = new Date(isoDate);
-    if (isNaN(d.getTime())) return '—';
-    var datePart = d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
-    var timePart = d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
-    return datePart + ' · ' + timePart;
   }
 
   function renderSummary(profile) {
@@ -131,37 +85,6 @@
     } else if (contactsWrap) {
       contactsWrap.hidden = true;
       if (contactsEl) contactsEl.innerHTML = '';
-    }
-
-    var memoriesWrap = document.getElementById('summary-memories-wrap');
-    var memoriesEl = document.getElementById('summary-memories');
-    var memories = getDashboardMemories()
-      .filter(function (m) { return m && String(m.text || '').trim(); })
-      .sort(function (a, b) {
-        var timeA = a.date ? new Date(a.date).getTime() : 0;
-        var timeB = b.date ? new Date(b.date).getTime() : 0;
-        return timeB - timeA;
-      });
-
-    if (memories.length && memoriesEl && memoriesWrap) {
-      memoriesWrap.hidden = false;
-      memoriesEl.innerHTML = memories.map(function (memory) {
-        var photoHtml = memory.photo
-          ? '<div class="profile-summary__memory-photo"><img src="' + memory.photo + '" alt="Memory photo"></div>'
-          : '';
-        return (
-          '<li class="profile-summary__memory-item">' +
-            '<p class="profile-summary__memory-date">' + escapeHtml(formatMemoryDate(memory.date)) + '</p>' +
-            '<div class="profile-summary__memory-body">' +
-              photoHtml +
-              '<p class="profile-summary__memory-content">' + escapeHtml(String(memory.text).trim()) + '</p>' +
-            '</div>' +
-          '</li>'
-        );
-      }).join('');
-    } else if (memoriesWrap) {
-      memoriesWrap.hidden = true;
-      if (memoriesEl) memoriesEl.innerHTML = '';
     }
 
     var switchBtn = document.getElementById('btn-switch-profile');
@@ -239,12 +162,16 @@
       var nameInput = document.getElementById('contact-' + i + '-name');
       var relInput = document.getElementById('contact-' + i + '-relationship');
       var phoneInput = document.getElementById('contact-' + i + '-phone');
+      var emergencyInput = document.getElementById('contact-' + i + '-emergency');
+      var phoneHint = document.getElementById('contact-' + i + '-phone-hint');
       var photoInput = document.getElementById('contact-' + i + '-photo');
       var preview = document.getElementById('contact-' + i + '-preview');
 
       if (nameInput) nameInput.value = '';
       if (relInput) relInput.value = '';
       if (phoneInput) phoneInput.value = '';
+      if (emergencyInput) emergencyInput.checked = false;
+      if (phoneHint) phoneHint.hidden = true;
       if (photoInput) photoInput.value = '';
       if (preview) {
         preview.innerHTML =
@@ -319,6 +246,14 @@
       document.getElementById('contact-' + slot + '-relationship').value = contact.relationship || '';
       document.getElementById('contact-' + slot + '-phone').value = contact.phone || '';
 
+      var emergencyInput = document.getElementById('contact-' + slot + '-emergency');
+      if (emergencyInput) {
+        emergencyInput.checked = typeof contact.isEmergency === 'boolean'
+          ? contact.isEmergency
+          : true;
+        updatePhoneHintForContact(slot);
+      }
+
       if (contact.photo) {
         var preview = document.getElementById('contact-' + slot + '-preview');
         if (preview) {
@@ -347,7 +282,27 @@
   }
 
   var activeProfile = getActiveProfile();
-  if (activeProfile) {
+
+  function openImportantPeopleWizard() {
+    var profile = getActiveProfile();
+    if (profile) {
+      editingProfileId = profile.id;
+      populateWizardFromProfile(profile);
+    }
+    showWizardView();
+    var step3 = document.getElementById('wizard-step-3');
+    if (step3) step3.checked = true;
+    var section = document.getElementById('important-people');
+    if (section) {
+      window.requestAnimationFrame(function () {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }
+
+  if (window.location.hash === '#important-people') {
+    openImportantPeopleWizard();
+  } else if (activeProfile) {
     showSummaryView(activeProfile);
   }
 
@@ -499,6 +454,42 @@
   setupContactPhoto('contact-2-photo', 'contact-2-preview');
   setupContactPhoto('contact-3-photo', 'contact-3-preview');
 
+  function updatePhoneHintForContact(index) {
+    var emergencyInput = document.getElementById('contact-' + index + '-emergency');
+    var phoneHint = document.getElementById('contact-' + index + '-phone-hint');
+    if (!emergencyInput || !phoneHint) {
+      return;
+    }
+    phoneHint.hidden = !emergencyInput.checked;
+  }
+
+  for (var contactIndex = 1; contactIndex <= 3; contactIndex++) {
+    (function (index) {
+      var emergencyInput = document.getElementById('contact-' + index + '-emergency');
+      if (!emergencyInput) {
+        return;
+      }
+      emergencyInput.addEventListener('change', function () {
+        updatePhoneHintForContact(index);
+      });
+    })(contactIndex);
+  }
+
+  function hasEmergencyContactInWizard() {
+    for (var i = 1; i <= 3; i++) {
+      var card = document.querySelector('.person-card:nth-child(' + i + ')');
+      if (!card || card.classList.contains('person-card--hidden')) {
+        continue;
+      }
+      var nameInput = document.getElementById('contact-' + i + '-name');
+      var emergencyInput = document.getElementById('contact-' + i + '-emergency');
+      if (nameInput && nameInput.value.trim() && emergencyInput && emergencyInput.checked) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function clearFieldError(fieldEl) {
     var wrapper = fieldEl.closest('.field');
     if (!wrapper) return;
@@ -561,19 +552,6 @@
     });
   }
 
-  function readFileAsDataURL(fileInput) {
-    return new Promise(function (resolve) {
-      var file = fileInput && fileInput.files[0];
-      if (!file) {
-        resolve(null);
-        return;
-      }
-      var reader = new FileReader();
-      reader.onload = function () { resolve(reader.result); };
-      reader.readAsDataURL(file);
-    });
-  }
-
   function getExistingPhotoFromPreview(previewId) {
     var preview = document.getElementById(previewId);
     if (!preview) return null;
@@ -609,16 +587,15 @@
                 name: document.getElementById('contact-' + index + '-name').value.trim(),
                 relationship: document.getElementById('contact-' + index + '-relationship').value.trim(),
                 phone: document.getElementById('contact-' + index + '-phone').value.trim(),
-                photo: photo
+                photo: photo,
+                isEmergency: document.getElementById('contact-' + index + '-emergency').checked
               });
             })
           );
         })(i);
       }
 
-      var contact1Name = document.getElementById('contact-1-name').value.trim();
-      var contact1Phone = document.getElementById('contact-1-phone').value.trim();
-      if (!contact1Name && !contact1Phone) {
+      if (!hasEmergencyContactInWizard()) {
         var modal = document.getElementById('contact-warning-modal');
         modal.classList.add('is-open');
         document.getElementById('modal-go-back').onclick = function () {

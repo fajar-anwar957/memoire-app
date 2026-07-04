@@ -17,6 +17,7 @@ body {
   flex-direction: column;
 }
 
+/* TODO: retire per-page header rules after visual verification */
 /* Header */
 .companion__header {
   position: fixed;
