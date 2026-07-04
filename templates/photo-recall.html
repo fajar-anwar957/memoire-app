@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Word Association — Mémoire</title>
+  <title>Photo Recall — Mémoire</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
@@ -11,32 +11,43 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/cst-activities.css') }}">
 </head>
-<body data-cst-activity="word-association">
-  <main class="cst-activity cst-wa">
+<body data-cst-activity="photo-recall">
+  <main class="cst-activity cst-pr">
     <header class="cst-activity__header page-header">
       <a href="/activities" class="cst-activity__back page-header__back" aria-label="Back to activities">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M15 18l-6-6 6-6"/>
         </svg>
       </a>
-      <h1 class="cst-activity__title page-header__title">Word Association</h1>
+      <h1 class="cst-activity__title page-header__title">Photo Recall</h1>
     </header>
 
     <div class="cst-activity__content">
-      <section class="cst-wa__card card-base" id="wa-game" aria-live="polite">
-        <div class="cst-wa__prompt-zone is-visible" id="wa-prompt-zone">
-          <div class="cst-wa__illustration" id="wa-prompt-image" aria-hidden="true"></div>
-          <p class="cst-wa__intro">What word goes with&hellip;</p>
-          <h2 class="cst-wa__word" id="wa-prompt-word"></h2>
-          <button type="button" class="cst-wa__replay" id="wa-replay-word">
-            <span class="cst-wa__replay-icon" aria-hidden="true">🔊</span>
-            Hear the word
-          </button>
+      <section class="cst-pr__empty card-base" id="pr-empty" hidden>
+        <p class="cst-pr__empty-message">Add photos of your favourite people and happy moments, and this activity will fill with your memories &#127804;</p>
+        <div class="cst-pr__empty-actions">
+          <a href="/profile" class="cst-wa__done-btn">Add People</a>
+          <a href="/activities" class="cst-wa__more-btn">Back to Activities</a>
         </div>
-        <div class="cst-wa__options" id="wa-options" role="group" aria-label="Word choices"></div>
       </section>
 
-      <section class="cst-wa__done card-base" id="wa-session-done" hidden>
+      <section class="cst-wa__card card-base" id="pr-game" aria-live="polite" hidden>
+        <div class="cst-wa__prompt-zone is-visible" id="pr-people-round" hidden>
+          <div class="cst-wa__illustration" id="pr-photo"></div>
+          <p class="cst-wa__intro" id="pr-cue"></p>
+          <h2 class="cst-pr__question">Who is this?</h2>
+          <div class="cst-pr__options" id="pr-name-options" role="group" aria-label="Name choices"></div>
+        </div>
+
+        <div class="cst-wa__prompt-zone is-visible" id="pr-memory-round" hidden>
+          <div class="cst-wa__illustration" id="pr-memory-photo"></div>
+          <p class="cst-pr__caption" id="pr-memory-caption"></p>
+          <p class="cst-pr__date" id="pr-memory-date"></p>
+          <button type="button" class="cst-pr__continue cst-wa__option" id="pr-memory-next">That was lovely</button>
+        </div>
+      </section>
+
+      <section class="cst-wa__done card-base" id="pr-session-done" hidden>
         <div class="cst-wa__done-visual" aria-hidden="true">
           <svg class="cst-wa__done-stars" viewBox="0 0 120 32" xmlns="http://www.w3.org/2000/svg">
             <polygon points="16,4 18,10 24,10 19,14 21,20 16,16 11,20 13,14 8,10 14,10" fill="var(--color-orange)"/>
@@ -54,33 +65,32 @@
             <circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>
           </svg>
         </div>
-        <p class="cst-wa__done-message">That&rsquo;s all for today&rsquo;s word game &mdash; well done!</p>
+        <p class="cst-wa__done-message">That&rsquo;s all for today&rsquo;s photo recall &mdash; well done!</p>
         <div class="cst-wa__done-actions">
           <a href="/activities" class="cst-wa__done-btn">Done for Today</a>
-          <button type="button" class="cst-wa__more-btn" id="wa-done-more">I&rsquo;d like a few more</button>
+          <button type="button" class="cst-wa__more-btn" id="pr-done-more">I&rsquo;d like a few more</button>
         </div>
       </section>
     </div>
   </main>
 
   <div
-    id="wa-feedback-modal"
+    id="pr-feedback-modal"
     class="cst-wa-modal"
     role="dialog"
     aria-modal="true"
-    aria-labelledby="wa-modal-heading"
+    aria-labelledby="pr-modal-heading"
     hidden
   >
     <div class="cst-wa-modal__card">
-      <div id="wa-modal-body">
-        <h2 class="cst-wa-modal__heading" id="wa-modal-heading">Lovely!</h2>
-        <p class="cst-wa-modal__choice" id="wa-modal-choice"></p>
-        <p class="cst-wa-modal__warm" id="wa-modal-warm"></p>
+      <div id="pr-modal-body">
+        <h2 class="cst-wa-modal__heading" id="pr-modal-heading">Lovely!</h2>
+        <p class="cst-wa-modal__warm" id="pr-modal-warm"></p>
       </div>
-      <div class="cst-wa-modal__actions" id="wa-modal-actions">
-        <button type="button" class="cst-wa-modal__next" id="wa-next-word">Next Word</button>
+      <div class="cst-wa-modal__actions" id="pr-modal-actions">
+        <button type="button" class="cst-wa-modal__next" id="pr-next-round">Next Photo</button>
       </div>
-      <div class="cst-wa-modal__closing" id="wa-modal-closing" hidden>
+      <div class="cst-wa-modal__closing" id="pr-modal-closing" hidden>
         <div class="cst-wa__done-visual cst-wa__done-visual--compact" aria-hidden="true">
           <svg class="cst-wa__done-stars" viewBox="0 0 120 32" xmlns="http://www.w3.org/2000/svg">
             <polygon points="16,4 18,10 24,10 19,14 21,20 16,16 11,20 13,14 8,10 14,10" fill="var(--color-orange)"/>
@@ -98,10 +108,10 @@
             <circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>
           </svg>
         </div>
-        <p class="cst-wa-modal__closing-text">That&rsquo;s all for today&rsquo;s word game &mdash; well done!</p>
+        <p class="cst-wa-modal__closing-text">That&rsquo;s all for today&rsquo;s photo recall &mdash; well done!</p>
         <div class="cst-wa__done-actions">
           <a href="/activities" class="cst-wa__done-btn">Done for Today</a>
-          <button type="button" class="cst-wa__more-btn" id="wa-modal-more">I&rsquo;d like a few more</button>
+          <button type="button" class="cst-wa__more-btn" id="pr-modal-more">I&rsquo;d like a few more</button>
         </div>
       </div>
     </div>
@@ -109,6 +119,6 @@
 
   <script src="{{ url_for('static', filename='js/core.js') }}"></script>
   <script src="{{ url_for('static', filename='js/activities/shared.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/activities/word-association.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/activities/photo-recall.js') }}"></script>
 </body>
 </html>
