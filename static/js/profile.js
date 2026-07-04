@@ -66,6 +66,26 @@
     return parts.length ? parts.join(', ') : '—';
   }
 
+  function getDashboardMemories() {
+    try {
+      var stored = localStorage.getItem('dashboardMemories');
+      if (!stored) return [];
+      var memories = JSON.parse(stored);
+      return Array.isArray(memories) ? memories : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function formatMemoryDate(isoDate) {
+    if (!isoDate) return '—';
+    var d = new Date(isoDate);
+    if (isNaN(d.getTime())) return '—';
+    var datePart = d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+    var timePart = d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+    return datePart + ' · ' + timePart;
+  }
+
   function renderSummary(profile) {
     var photoEl = document.getElementById('summary-photo');
     if (photoEl) {
@@ -111,6 +131,37 @@
     } else if (contactsWrap) {
       contactsWrap.hidden = true;
       if (contactsEl) contactsEl.innerHTML = '';
+    }
+
+    var memoriesWrap = document.getElementById('summary-memories-wrap');
+    var memoriesEl = document.getElementById('summary-memories');
+    var memories = getDashboardMemories()
+      .filter(function (m) { return m && String(m.text || '').trim(); })
+      .sort(function (a, b) {
+        var timeA = a.date ? new Date(a.date).getTime() : 0;
+        var timeB = b.date ? new Date(b.date).getTime() : 0;
+        return timeB - timeA;
+      });
+
+    if (memories.length && memoriesEl && memoriesWrap) {
+      memoriesWrap.hidden = false;
+      memoriesEl.innerHTML = memories.map(function (memory) {
+        var photoHtml = memory.photo
+          ? '<div class="profile-summary__memory-photo"><img src="' + memory.photo + '" alt="Memory photo"></div>'
+          : '';
+        return (
+          '<li class="profile-summary__memory-item">' +
+            '<p class="profile-summary__memory-date">' + escapeHtml(formatMemoryDate(memory.date)) + '</p>' +
+            '<div class="profile-summary__memory-body">' +
+              photoHtml +
+              '<p class="profile-summary__memory-content">' + escapeHtml(String(memory.text).trim()) + '</p>' +
+            '</div>' +
+          '</li>'
+        );
+      }).join('');
+    } else if (memoriesWrap) {
+      memoriesWrap.hidden = true;
+      if (memoriesEl) memoriesEl.innerHTML = '';
     }
 
     var switchBtn = document.getElementById('btn-switch-profile');

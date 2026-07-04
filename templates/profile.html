@@ -46,59 +46,59 @@
         </header>
 
         <div class="profile-summary__layout">
-          <aside class="profile-summary__panel profile-summary__panel--facts" aria-labelledby="summary-section-about">
-            <h2 class="profile-summary__section-title" id="summary-section-about">About You</h2>
-            <dl class="profile-summary__facts">
-              <div class="profile-summary__fact">
-                <dt>Age</dt>
-                <dd id="summary-age">—</dd>
-              </div>
-              <div class="profile-summary__fact">
-                <dt>Hometown</dt>
-                <dd id="summary-hometown">—</dd>
-              </div>
-              <div class="profile-summary__fact">
-                <dt>Work</dt>
-                <dd id="summary-work">—</dd>
-              </div>
-              <div class="profile-summary__fact">
-                <dt>Favourite Food</dt>
-                <dd id="summary-favourite-food">—</dd>
-              </div>
-            </dl>
-          </aside>
+          <section class="profile-summary__panel profile-summary__panel--overview" aria-label="Profile overview">
+            <div class="profile-summary__detail-sheet">
+              <h2 class="profile-summary__section-title" id="summary-section-about">About You</h2>
+              <dl class="profile-summary__detail-grid" aria-labelledby="summary-section-about">
+                <div class="profile-summary__detail">
+                  <dt>Age</dt>
+                  <dd id="summary-age">—</dd>
+                </div>
+                <div class="profile-summary__detail">
+                  <dt>Hometown</dt>
+                  <dd id="summary-hometown">—</dd>
+                </div>
+                <div class="profile-summary__detail">
+                  <dt>Work</dt>
+                  <dd id="summary-work">—</dd>
+                </div>
+                <div class="profile-summary__detail">
+                  <dt>Favourite Food</dt>
+                  <dd id="summary-favourite-food">—</dd>
+                </div>
+              </dl>
 
-          <section class="profile-summary__panel profile-summary__panel--life" aria-labelledby="summary-section-life">
-            <h2 class="profile-summary__section-title" id="summary-section-life">Life &amp; Interests</h2>
-            <div class="profile-summary__life-grid">
-              <dl class="profile-summary__fields profile-summary__fields--interests">
-                <div class="profile-summary__row profile-summary__row--full">
+              <h2 class="profile-summary__section-title" id="summary-section-life">Life &amp; Interests</h2>
+              <dl class="profile-summary__detail-grid" aria-labelledby="summary-section-life">
+                <div class="profile-summary__detail profile-summary__detail--wide profile-summary__detail--stacked">
                   <dt>Hobbies</dt>
                   <dd id="summary-hobbies" class="profile-summary__hobby-tags">—</dd>
                 </div>
-                <div class="profile-summary__row profile-summary__row--full">
+                <div class="profile-summary__detail profile-summary__detail--wide profile-summary__detail--stacked">
                   <dt>Favourite Music / TV</dt>
                   <dd id="summary-favourite-media">—</dd>
                 </div>
+                <div class="profile-summary__detail">
+                  <dt>Pets</dt>
+                  <dd id="summary-pets">—</dd>
+                </div>
               </dl>
-              <div class="profile-summary__spotlight">
-                <dl class="profile-summary__memory-card">
-                  <dt class="profile-summary__memory-label">Happy Memory</dt>
-                  <dd id="summary-happy-memory" class="profile-summary__memory-text">—</dd>
-                </dl>
-                <dl class="profile-summary__fields">
-                  <div class="profile-summary__row profile-summary__row--full">
-                    <dt>Pets</dt>
-                    <dd id="summary-pets">—</dd>
-                  </div>
-                </dl>
-              </div>
             </div>
+
+            <dl class="profile-summary__happy-memory">
+              <dt>Happy Memory</dt>
+              <dd id="summary-happy-memory">—</dd>
+            </dl>
           </section>
 
           <section class="profile-summary__panel profile-summary__panel--people profile-summary__section profile-summary__section--people" id="summary-contacts-wrap" aria-labelledby="summary-section-people" hidden>
             <h2 class="profile-summary__section-title" id="summary-section-people">Important People</h2>
             <div id="summary-contacts" class="profile-summary__contacts-grid"></div>
+          </section>
+
+          <section class="profile-summary__panel profile-summary__panel--memories profile-summary__section" id="summary-memories-wrap" aria-labelledby="summary-section-memories" hidden>
+            <h2 class="profile-summary__section-title" id="summary-section-memories">Recent Memories</h2>
+            <ul id="summary-memories" class="profile-summary__memories-list"></ul>
           </section>
         </div>
       </div>

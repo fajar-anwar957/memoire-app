@@ -1,7 +1,7 @@
 body {
   min-height: 100vh;
   background-color: var(--color-cream);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-family);
   color: var(--color-navy);
   padding: 2.5rem 1.5rem 3rem;
 }
@@ -186,7 +186,7 @@ body {
   width: 100%;
   padding: 0.85rem 1rem;
   font-size: 1.15rem;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-family);
   color: var(--color-text);
   background-color: var(--color-cream);
   border: 2px solid var(--color-navy);
@@ -302,7 +302,7 @@ body {
   margin-left: 2.2rem;
   padding: 0.75rem 1rem;
   font-size: 1.05rem;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-family);
   color: var(--color-text);
   background-color: var(--color-cream);
   border: 2px solid var(--color-navy);
@@ -358,7 +358,7 @@ body {
   padding: 1rem 1.5rem;
   font-size: 1.15rem;
   font-weight: bold;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-family);
   color: var(--color-orange);
   background-color: transparent;
   border: 2px dashed var(--color-orange);
@@ -384,7 +384,7 @@ body {
   padding: 1.1rem 1.5rem;
   font-size: 1.25rem;
   font-weight: bold;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-family);
   text-align: center;
   border-radius: 14px;
   border: 2px solid var(--color-navy);
@@ -410,7 +410,7 @@ body {
   padding: 1.15rem 1.5rem;
   font-size: 1.35rem;
   font-weight: bold;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-family);
   color: #FFFFFF;
   background-color: var(--color-orange);
   border: none;
@@ -503,7 +503,7 @@ body {
   padding: 0.9rem;
   font-size: 1.1rem;
   font-weight: bold;
-  font-family: Georgia, serif;
+  font-family: var(--font-family);
   border-radius: 12px;
   cursor: pointer;
   border: none;
@@ -669,71 +669,99 @@ body {
   margin: 0 0 1.25rem;
 }
 
-/* At-a-glance fact tiles */
-.profile-summary__facts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.85rem;
+/* Profile overview — compact tabular field sheet */
+.profile-summary__detail-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.profile-summary__detail-sheet > .profile-summary__section-title + .profile-summary__detail-grid {
+  margin-bottom: 0.25rem;
+}
+
+.profile-summary__detail-sheet > .profile-summary__section-title:not(:first-child) {
+  margin-top: 1.5rem;
+}
+
+.profile-summary__detail-grid {
   margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 
-.profile-summary__fact {
-  background-color: var(--color-cream);
-  border: 1px solid rgba(27, 58, 92, 0.14);
-  border-radius: 12px;
-  padding: 1rem 1.1rem;
+.profile-summary__detail {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 38%) 1fr;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(27, 58, 92, 0.08);
 }
 
-.profile-summary__fact dt {
+.profile-summary__detail-grid > .profile-summary__detail:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.profile-summary__detail-grid > .profile-summary__detail:first-child {
+  padding-top: 0;
+}
+
+.profile-summary__detail dt {
   font-size: 0.8rem;
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
-  margin-bottom: 0.35rem;
+  margin: 0;
 }
 
-.profile-summary__fact dd {
+.profile-summary__detail dd {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: bold;
   color: var(--color-navy);
-  line-height: 1.35;
+  line-height: 1.45;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
-/* Life & interests */
-.profile-summary__life-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.profile-summary__detail--stacked {
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+  align-items: start;
 }
 
-.profile-summary__fields {
-  margin: 0;
-}
-
-.profile-summary__row {
-  margin-bottom: 1.25rem;
-}
-
-.profile-summary__row:last-child,
-.profile-summary__row--full:last-child {
-  margin-bottom: 0;
-}
-
-.profile-summary__row dt {
-  font-size: 1rem;
-  font-weight: bold;
-  color: var(--color-navy);
-  margin-bottom: 0.4rem;
-}
-
-.profile-summary__row dd {
-  margin: 0;
-  font-size: 1.1rem;
+.profile-summary__detail--stacked dd {
+  font-weight: normal;
   color: var(--color-text);
   line-height: 1.5;
+}
+
+.profile-summary__happy-memory {
+  margin: 1.25rem 0 0;
+  padding: 1rem 0 0 1rem;
+  border-top: 1px solid rgba(27, 58, 92, 0.1);
+  border-left: 4px solid var(--color-orange);
+}
+
+.profile-summary__happy-memory dt {
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-orange);
+  margin-bottom: 0.45rem;
+}
+
+.profile-summary__happy-memory dd {
+  margin: 0;
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--color-text);
+  line-height: 1.55;
   white-space: pre-wrap;
 }
 
@@ -754,34 +782,6 @@ body {
   border: 1px solid rgba(27, 58, 92, 0.12);
   border-radius: 999px;
   white-space: nowrap;
-}
-
-/* Happy memory spotlight card */
-.profile-summary__memory-card {
-  background-color: var(--color-cream);
-  border-left: 4px solid var(--color-orange);
-  border-radius: 0 12px 12px 0;
-  padding: 1.15rem 1.25rem 1.2rem;
-  margin: 0 0 1.25rem;
-}
-
-.profile-summary__memory-label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-orange);
-  margin-bottom: 0.5rem;
-}
-
-.profile-summary__memory-text {
-  margin: 0;
-  font-size: 1.15rem;
-  font-style: italic;
-  color: var(--color-text);
-  line-height: 1.55;
-  white-space: pre-wrap;
 }
 
 /* Important people */
@@ -809,6 +809,64 @@ body {
   font-size: 1rem;
   color: var(--color-text-muted);
   line-height: 1.45;
+}
+
+/* Recent memories (from dashboard) */
+.profile-summary__memories-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.profile-summary__memory-item {
+  background-color: var(--color-cream);
+  border: 1px solid rgba(27, 58, 92, 0.14);
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+}
+
+.profile-summary__memory-date {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+
+.profile-summary__memory-body {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.profile-summary__memory-photo {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: var(--color-cream);
+}
+
+.profile-summary__memory-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.profile-summary__memory-content {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 1.05rem;
+  color: var(--color-text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .profile-summary__actions {
@@ -843,48 +901,25 @@ body {
   }
 }
 
-/* Desktop: two-column body + contact grid */
+/* Desktop: two-column field grid within each section */
 @media (min-width: 720px) {
-  .profile-summary__layout {
-    grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.4fr);
-    grid-template-rows: auto auto;
+  .profile-summary__detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 2.5rem;
   }
 
-  .profile-summary__panel--facts {
-    grid-column: 1;
-    grid-row: 1;
-    border-right: 1px solid rgba(27, 58, 92, 0.1);
-    background-color: rgba(250, 246, 239, 0.45);
-    padding: 2rem 1.75rem;
-  }
-
-  .profile-summary__panel--life {
-    grid-column: 2;
-    grid-row: 1;
-    padding: 2rem 2rem 2.25rem;
-    border-top: none;
-  }
-
-  .profile-summary__panel--people {
+  .profile-summary__detail--wide {
     grid-column: 1 / -1;
-    grid-row: 2;
+  }
+
+  .profile-summary__panel--overview {
+    padding: 2rem 2rem 2.25rem;
+    background-color: rgba(250, 246, 239, 0.35);
+  }
+
+  .profile-summary__panel--people,
+  .profile-summary__panel--memories {
     padding: 1.75rem 2rem 2.25rem;
-    background: linear-gradient(to bottom, rgba(250, 246, 239, 0.35), #ffffff);
-  }
-
-  .profile-summary__panel--life + .profile-summary__panel--people {
-    border-top: 1px solid rgba(27, 58, 92, 0.1);
-  }
-
-  .profile-summary__facts {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-summary__life-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.75rem 2rem;
-    align-items: start;
   }
 
   .profile-summary__contacts-grid {
@@ -937,7 +972,7 @@ body {
   padding: 0.9rem 1rem;
   font-size: 1.1rem;
   font-weight: bold;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-family);
   text-align: left;
   color: var(--color-navy);
   background-color: var(--color-cream);

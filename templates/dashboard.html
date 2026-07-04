@@ -13,48 +13,206 @@
 <body>
   <main class="dashboard">
     <header class="dashboard__header">
-      <p class="dashboard__brand">Mémoire</p>
+      <div class="dashboard__brand-group">
+        <svg class="dashboard__flower" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g transform="translate(60, 60)">
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(0)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(60)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(120)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(180)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(240)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(300)"/>
+          </g>
+          <circle cx="60" cy="60" r="12" fill="#D9722C"/>
+        </svg>
+        <p class="dashboard__brand">Mémoire</p>
+      </div>
       <time class="dashboard__date" id="dashboard-date" datetime=""></time>
     </header>
 
-    <section class="dashboard__greeting" aria-labelledby="dashboard-greeting">
-      <h1 class="dashboard__greeting-text" id="dashboard-greeting">Good morning, Friend</h1>
-      <p class="dashboard__greeting-sub">How are you feeling today?</p>
+    <section class="dashboard__welcome" aria-labelledby="dashboard-greeting">
+      <div class="dashboard__greeting-row">
+        <div class="dashboard__avatar" id="dashboard-avatar" aria-hidden="true">
+          <svg class="dashboard__avatar-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+          </svg>
+        </div>
+        <div class="dashboard__greeting-copy">
+          <h1 class="dashboard__greeting-text" id="dashboard-greeting">Good morning, Friend</h1>
+          <p class="dashboard__greeting-sub">How are you feeling today?</p>
+        </div>
+      </div>
     </section>
 
-    <div class="dashboard__cards">
-      <a href="/companion" class="dashboard-card dashboard-card--companion">
-        <span class="dashboard-card__accent" aria-hidden="true"></span>
-        <h2 class="dashboard-card__title">Chat with Companion</h2>
-        <p class="dashboard-card__subtext">Talk, remember, and share stories</p>
+    <section class="dashboard__actions" aria-label="Quick actions">
+      <div class="dashboard__call" id="dashboard-call-section" hidden>
+        <p class="dashboard__section-label" id="dashboard-call-label">Stay in touch</p>
+        <button type="button" class="dashboard-call" id="dashboard-call-btn" aria-haspopup="dialog" aria-controls="call-contacts-modal" aria-labelledby="dashboard-call-label">
+          <span class="dashboard-call__icon-wrap" aria-hidden="true">
+            <svg class="dashboard-call__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </span>
+          <span class="dashboard-call__text">
+            <span class="dashboard-call__label">Call someone</span>
+            <span class="dashboard-call__hint">Tap to choose a contact</span>
+          </span>
+        </button>
+      </div>
+
+      <h2 class="dashboard__section-title">What would you like to do?</h2>
+
+      <a href="/companion" class="dashboard-card dashboard-card--companion dashboard-card--featured">
+        <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--companion" aria-hidden="true">
+          <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        <span class="dashboard-card__body">
+          <h2 class="dashboard-card__title">Chat with Companion</h2>
+          <p class="dashboard-card__subtext">Talk, remember, and share stories</p>
+        </span>
       </a>
 
-      <a href="/activities" class="dashboard-card dashboard-card--activities">
-        <span class="dashboard-card__accent" aria-hidden="true"></span>
-        <h2 class="dashboard-card__title">Today's Activities</h2>
-        <p class="dashboard-card__subtext">Word games, quizzes, and more</p>
-      </a>
-    </div>
+      <div class="dashboard__tile-grid">
+        <a href="/activities" class="dashboard-card dashboard-card--activities dashboard-card--tile">
+          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--activities" aria-hidden="true">
+            <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+            </svg>
+          </span>
+          <span class="dashboard-card__body">
+            <h2 class="dashboard-card__title">Today's Activities</h2>
+            <p class="dashboard-card__subtext">Word games, quizzes, and more</p>
+          </span>
+        </a>
+
+        <button type="button" class="dashboard-card dashboard-card--memory dashboard-card--tile" id="add-memory-card" aria-haspopup="dialog" aria-controls="add-memory-modal">
+          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--memory" aria-hidden="true">
+            <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </span>
+          <span class="dashboard-card__body">
+            <h2 class="dashboard-card__title">Add a Memory</h2>
+            <p class="dashboard-card__subtext">Capture a moment from today</p>
+          </span>
+        </button>
+      </div>
+    </section>
   </main>
 
   <nav class="dashboard-nav" aria-label="Main navigation">
     <a href="/dashboard" class="dashboard-nav__item dashboard-nav__item--active" aria-current="page">
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/>
+      </svg>
       <span class="dashboard-nav__label">Home</span>
     </a>
     <a href="/companion" class="dashboard-nav__item">
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
       <span class="dashboard-nav__label">Companion</span>
     </a>
     <a href="/activities" class="dashboard-nav__item">
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
       <span class="dashboard-nav__label">Activities</span>
     </a>
     <a href="/profile" class="dashboard-nav__item">
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+      </svg>
       <span class="dashboard-nav__label">Profile</span>
     </a>
   </nav>
 
+  <a href="/companion" class="dashboard-fab" aria-label="Chat with Companion">
+    <svg class="dashboard-fab__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  </a>
+
+  <div id="memory-toast" class="dashboard-toast" role="status" aria-live="polite" hidden>Memory saved!</div>
+
+  <div id="add-memory-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="memory-modal-title" hidden>
+    <div class="modal-card">
+      <p class="modal-title" id="memory-modal-title">Add a Memory</p>
+      <form id="add-memory-form" class="memory-form">
+        <div class="memory-form__field">
+          <label for="memory-text">What happened today?</label>
+          <textarea id="memory-text" name="memory-text" rows="3" placeholder="A short note about your day…" required></textarea>
+        </div>
+        <div class="memory-form__field">
+          <span class="memory-form__label">Photo <span class="memory-form__optional">(optional)</span></span>
+          <div class="photo-upload">
+            <div class="photo-preview photo-preview--memory" id="memory-photo-preview">
+              <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.75"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+              <span class="photo-preview__text">Tap to add<br>a photo</span>
+            </div>
+            <input type="file" id="memory-photo" name="memory-photo" accept="image/*">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="memory-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+          <button type="submit" class="modal-btn modal-btn--primary">Save Memory</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="call-contacts-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="call-modal-title" hidden>
+    <div class="modal-card">
+      <p class="modal-title" id="call-modal-title">Who would you like to call?</p>
+      <ul id="call-contacts-list" class="call-contacts-list"></ul>
+      <div class="modal-actions">
+        <button type="button" id="call-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
-      var name = localStorage.getItem('memoire_patient_name') || 'Friend';
+      function getActiveProfile() {
+        try {
+          var profileId = localStorage.getItem('activeProfileId');
+          if (!profileId) return null;
+          var stored = localStorage.getItem('patientProfiles');
+          if (!stored) return null;
+          var profiles = JSON.parse(stored);
+          if (!Array.isArray(profiles)) return null;
+          for (var i = 0; i < profiles.length; i++) {
+            if (profiles[i].id === profileId) return profiles[i];
+          }
+          return null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function getPreferredName() {
+        var profile = getActiveProfile();
+        if (profile && profile.preferredName && String(profile.preferredName).trim()) {
+          return String(profile.preferredName).trim();
+        }
+        return 'Friend';
+      }
+
       var now = new Date();
       var hour = now.getHours();
       var greeting;
@@ -67,7 +225,15 @@
         greeting = 'Good evening';
       }
 
-      document.getElementById('dashboard-greeting').textContent = greeting + ', ' + name;
+      var preferredName = getPreferredName();
+      document.getElementById('dashboard-greeting').textContent = greeting + ', ' + preferredName;
+
+      var avatarEl = document.getElementById('dashboard-avatar');
+      var activeProfile = getActiveProfile();
+      if (avatarEl && activeProfile && activeProfile.photo) {
+        avatarEl.innerHTML = '<img src="' + activeProfile.photo + '" alt="Photo of ' + preferredName + '">';
+        avatarEl.removeAttribute('aria-hidden');
+      }
 
       var dateEl = document.getElementById('dashboard-date');
       dateEl.textContent = now.toLocaleDateString('en-GB', {
@@ -76,7 +242,109 @@
         month: 'long'
       });
       dateEl.setAttribute('datetime', now.toISOString().split('T')[0]);
+
+      function getCallableContacts(profile) {
+        if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
+          return [];
+        }
+        return profile.contacts.filter(function (contact) {
+          return contact && contact.phone && String(contact.phone).trim();
+        });
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function displayValue(value) {
+        var text = (value === null || value === undefined) ? '' : String(value).trim();
+        return text || '—';
+      }
+
+      var callSection = document.getElementById('dashboard-call-section');
+      var callBtn = document.getElementById('dashboard-call-btn');
+      var modal = document.getElementById('call-contacts-modal');
+      var contactsList = document.getElementById('call-contacts-list');
+      var cancelBtn = document.getElementById('call-modal-cancel');
+      var callableContacts = getCallableContacts(getActiveProfile());
+
+      if (!callableContacts.length || !callSection || !callBtn || !modal || !contactsList) {
+        return;
+      }
+
+      callSection.hidden = false;
+      callBtn.setAttribute('aria-label', 'Call a contact');
+
+      function openCallModal() {
+        contactsList.innerHTML = callableContacts.map(function (contact, index) {
+          var contactName = displayValue(contact.name);
+          var relationship = contact.relationship ? String(contact.relationship).trim() : '';
+          var ariaLabel = 'Call ' + contactName;
+          return (
+            '<li>' +
+              '<button type="button" class="call-contact-item" data-contact-index="' + index + '" aria-label="' + escapeHtml(ariaLabel) + '">' +
+                '<span class="call-contact-item__name">' + escapeHtml(contactName) + '</span>' +
+                (relationship
+                  ? '<span class="call-contact-item__relationship">' + escapeHtml(relationship) + '</span>'
+                  : '') +
+              '</button>' +
+            '</li>'
+          );
+        }).join('');
+
+        modal.hidden = false;
+        modal.classList.add('is-open');
+        var firstItem = contactsList.querySelector('.call-contact-item');
+        if (firstItem) firstItem.focus();
+      }
+
+      function closeCallModal() {
+        modal.classList.remove('is-open');
+        modal.hidden = true;
+        callBtn.focus();
+      }
+
+      function dialContact(contact) {
+        var phone = String(contact.phone).trim();
+        if (!phone) return;
+        closeCallModal();
+        var link = document.createElement('a');
+        link.href = 'tel:' + phone.replace(/\s/g, '');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      callBtn.addEventListener('click', openCallModal);
+
+      contactsList.addEventListener('click', function (event) {
+        var button = event.target.closest('.call-contact-item');
+        if (!button) return;
+        var index = parseInt(button.getAttribute('data-contact-index'), 10);
+        if (isNaN(index) || !callableContacts[index]) return;
+        dialContact(callableContacts[index]);
+      });
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeCallModal);
+      }
+
+      modal.addEventListener('click', function (event) {
+        if (event.target === modal) closeCallModal();
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+          closeCallModal();
+        }
+      });
     })();
   </script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>
