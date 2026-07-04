@@ -1,4 +1,5 @@
 :root {
+  --font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --color-navy: #1B3A5C;
   --color-orange: #D9722C;
   --color-cream: #FAF6EF;
