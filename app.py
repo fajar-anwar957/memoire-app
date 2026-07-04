@@ -1,10 +1,7 @@
 import json
 import os
 import re
-<<<<<<< Updated upstream
-=======
 import time
->>>>>>> Stashed changes
 
 from dotenv import load_dotenv
 load_dotenv()
