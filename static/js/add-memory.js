@@ -1,7 +1,9 @@
 (function (window) {
-  var readFileAsDataURL = window.MemoireCore.readFileAsDataURL;
+  var compressImageToDataURL = window.MemoireCore.compressImageToDataURL;
 
   var STORAGE_KEY = 'dashboardMemories';
+  var SAVE_ERROR_MESSAGE =
+    "We couldn't save this photo — storage is full. Try removing an older memory first.";
 
   function getMemories() {
     try {
@@ -15,10 +17,14 @@
   }
 
   function saveMemory(entry) {
-    var memories = getMemories();
-    memories.push(entry);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
-    return memories.length;
+    try {
+      var memories = getMemories();
+      memories.push(entry);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
+      return { ok: true, count: memories.length };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
   }
 
   function resetMemoryForm(form, photoPreview, photoInput) {
@@ -33,6 +39,33 @@
         '<span class="photo-preview__text">Tap to add<br>a photo</span>';
     }
     if (photoInput) photoInput.value = '';
+    hideSaveError();
+  }
+
+  function getSaveErrorEl(form) {
+    var el = document.getElementById('memory-save-error');
+    if (!el && form) {
+      el = document.createElement('p');
+      el.id = 'memory-save-error';
+      el.className = 'memory-form__error';
+      el.setAttribute('role', 'alert');
+      el.hidden = true;
+      var actions = form.querySelector('.modal-actions');
+      if (actions) actions.parentNode.insertBefore(el, actions);
+    }
+    return el;
+  }
+
+  function showSaveError(form) {
+    var el = getSaveErrorEl(form);
+    if (!el) return;
+    el.textContent = SAVE_ERROR_MESSAGE;
+    el.hidden = false;
+  }
+
+  function hideSaveError() {
+    var el = document.getElementById('memory-save-error');
+    if (el) el.hidden = true;
   }
 
   function resolveTrigger(trigger) {
@@ -49,6 +82,9 @@
 
     var memoryForm = document.getElementById('add-memory-form');
     var memoryCancel = document.getElementById('memory-modal-cancel');
+    var memorySaveBtn = memoryForm
+      ? memoryForm.querySelector('.modal-btn--primary')
+      : null;
     var memoryPhotoInput = document.getElementById('memory-photo');
     var memoryPhotoPreview = document.getElementById('memory-photo-preview');
     var memoryToast = options.toastId
@@ -61,6 +97,7 @@
       lastTrigger = triggerEl || lastTrigger;
       memoryModal.hidden = false;
       memoryModal.classList.add('is-open');
+      hideSaveError();
       var textInput = document.getElementById('memory-text');
       if (textInput) textInput.focus();
     }
@@ -84,6 +121,36 @@
         memoryToast.classList.remove('is-visible');
         memoryToast.hidden = true;
       }, 2800);
+    }
+
+    function handleMemorySave() {
+      hideSaveError();
+
+      var textInput = document.getElementById('memory-text');
+      var text = textInput ? String(textInput.value).trim() : '';
+      if (!text) {
+        if (textInput) textInput.focus();
+        return;
+      }
+
+      compressImageToDataURL(memoryPhotoInput).then(function (photo) {
+        var result = saveMemory({
+          text: text,
+          photo: photo,
+          date: new Date().toISOString()
+        });
+
+        if (!result.ok) {
+          showSaveError(memoryForm);
+          return;
+        }
+
+        closeMemoryModal();
+        if (typeof options.onSaved === 'function') {
+          options.onSaved();
+        }
+        showToast(options.toastMessage || 'Memory saved!');
+      });
     }
 
     var triggers = [];
@@ -114,7 +181,7 @@
       memoryPhotoInput.addEventListener('change', function () {
         var file = memoryPhotoInput.files[0];
         if (!file) return;
-        readFileAsDataURL(memoryPhotoInput).then(function (dataUrl) {
+        compressImageToDataURL(memoryPhotoInput).then(function (dataUrl) {
           if (!dataUrl) return;
           memoryPhotoPreview.innerHTML = '<img src="' + dataUrl + '" alt="Memory photo preview">';
         });
@@ -124,26 +191,12 @@
     if (memoryForm) {
       memoryForm.addEventListener('submit', function (event) {
         event.preventDefault();
-        var textInput = document.getElementById('memory-text');
-        var text = textInput ? String(textInput.value).trim() : '';
-        if (!text) {
-          if (textInput) textInput.focus();
-          return;
-        }
-
-        readFileAsDataURL(memoryPhotoInput).then(function (photo) {
-          saveMemory({
-            text: text,
-            photo: photo,
-            date: new Date().toISOString()
-          });
-          closeMemoryModal();
-          if (typeof options.onSaved === 'function') {
-            options.onSaved();
-          }
-          showToast(options.toastMessage || 'Memory saved!');
-        });
       });
+    }
+
+    if (memorySaveBtn) {
+      memorySaveBtn.type = 'button';
+      memorySaveBtn.addEventListener('click', handleMemorySave);
     }
 
     document.addEventListener('keydown', function (event) {
