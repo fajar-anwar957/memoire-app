@@ -64,12 +64,64 @@
     });
   }
 
+  function compressImageToDataURL(fileInput, maxDim, quality) {
+    maxDim = maxDim || 800;
+    quality = quality === undefined ? 0.7 : quality;
+
+    return new Promise(function (resolve) {
+      var file = fileInput && fileInput.files[0];
+      if (!file) {
+        resolve(null);
+        return;
+      }
+
+      var reader = new FileReader();
+      reader.onerror = function () { resolve(null); };
+      reader.onload = function () {
+        var img = new Image();
+        img.onerror = function () { resolve(null); };
+        img.onload = function () {
+          var width = img.naturalWidth || img.width;
+          var height = img.naturalHeight || img.height;
+          if (!width || !height) {
+            resolve(null);
+            return;
+          }
+
+          var scale = Math.min(1, maxDim / Math.max(width, height));
+          var targetWidth = Math.round(width * scale);
+          var targetHeight = Math.round(height * scale);
+          var canvas = document.createElement('canvas');
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+
+          var ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(null);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+          try {
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          } catch (err) {
+            resolve(null);
+          }
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   window.MemoireCore = {
     getProfiles: getProfiles,
     getActiveProfile: getActiveProfile,
     escapeHtml: escapeHtml,
     displayValue: displayValue,
     contactIsEmergency: contactIsEmergency,
-    readFileAsDataURL: readFileAsDataURL
+    readFileAsDataURL: readFileAsDataURL,
+    compressImageToDataURL: compressImageToDataURL
   };
 })();

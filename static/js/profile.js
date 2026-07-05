@@ -4,7 +4,7 @@
   var getActiveProfile = window.MemoireCore.getActiveProfile;
   var displayValue = window.MemoireCore.displayValue;
   var escapeHtml = window.MemoireCore.escapeHtml;
-  var readFileAsDataURL = window.MemoireCore.readFileAsDataURL;
+  var compressImageToDataURL = window.MemoireCore.compressImageToDataURL;
 
   var urlParams = new URLSearchParams(window.location.search);
   var profileMode = urlParams.get('mode') || localStorage.getItem('profileContext') || 'self';
@@ -428,11 +428,11 @@
     patientPhotoInput.addEventListener('change', function () {
       var file = patientPhotoInput.files[0];
       if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        patientPhotoPreview.innerHTML = '<img src="' + e.target.result + '" alt="Your photo" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
-      };
-      reader.readAsDataURL(file);
+      compressImageToDataURL(patientPhotoInput).then(function (dataUrl) {
+        if (!dataUrl) return;
+        patientPhotoPreview.innerHTML =
+          '<img src="' + dataUrl + '" alt="Your photo" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
+      });
     });
   }
 
@@ -443,11 +443,11 @@
     input.addEventListener('change', function () {
       var file = input.files[0];
       if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        preview.innerHTML = '<img src="' + e.target.result + '" alt="Contact photo" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
-      };
-      reader.readAsDataURL(file);
+      compressImageToDataURL(input).then(function (dataUrl) {
+        if (!dataUrl) return;
+        preview.innerHTML =
+          '<img src="' + dataUrl + '" alt="Contact photo" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
+      });
     });
   }
   setupContactPhoto('contact-1-photo', 'contact-1-preview');
@@ -564,7 +564,7 @@
     saveBtn.addEventListener('click', function () {
       var profilePhoto = document.getElementById('profile-photo');
       var photoPromise = profilePhoto.files.length
-        ? readFileAsDataURL(profilePhoto)
+        ? compressImageToDataURL(profilePhoto)
         : Promise.resolve(getExistingPhotoFromPreview('profile-photo-preview'));
 
       var contactPromises = [];
@@ -578,7 +578,7 @@
         (function (index) {
           var photoInput = document.getElementById('contact-' + index + '-photo');
           var photoPromise = photoInput.files.length
-            ? readFileAsDataURL(photoInput)
+            ? compressImageToDataURL(photoInput)
             : Promise.resolve(getExistingPhotoFromPreview('contact-' + index + '-preview'));
 
           contactPromises.push(
