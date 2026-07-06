@@ -23,6 +23,26 @@
     });
   }
 
+  function getContactInitial(name) {
+    var trimmed = String(name || '').trim();
+    return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
+  }
+
+  function renderContactAvatar(contact) {
+    if (contact.photo && String(contact.photo).trim()) {
+      return (
+        '<span class="call-contact-item__avatar">' +
+          '<img src="' + escapeHtml(contact.photo) + '" alt="">' +
+        '</span>'
+      );
+    }
+    return (
+      '<span class="call-contact-item__avatar call-contact-item__avatar--initial">' +
+        escapeHtml(getContactInitial(contact.name)) +
+      '</span>'
+    );
+  }
+
   function initDashboardHeader() {
     var now = new Date();
     var hour = now.getHours();
@@ -62,39 +82,58 @@
   }
 
   function initQuickCall() {
-    var callSection = document.getElementById('dashboard-call-section');
-    var callBtn = document.getElementById('dashboard-call-btn');
+    var callCard = document.getElementById('dashboard-call-card');
+    var callFab = document.getElementById('dashboard-call-fab');
     var modal = document.getElementById('call-contacts-modal');
     var contactsList = document.getElementById('call-contacts-list');
     var cancelBtn = document.getElementById('call-modal-cancel');
 
-    if (!callSection || !callBtn || !modal || !contactsList) {
+    if (!modal || !contactsList) {
       return;
     }
 
     var callableContacts = getEmergencyCallableContacts(getActiveProfile());
+    var lastTrigger = null;
 
     if (!callableContacts.length) {
-      callSection.hidden = true;
+      if (callCard) {
+        callCard.hidden = true;
+      }
+      if (callFab) {
+        callFab.hidden = true;
+      }
       return;
     }
 
-    callSection.hidden = false;
-    callBtn.setAttribute('aria-label', 'Call an emergency contact');
+    if (callCard) {
+      callCard.hidden = false;
+    }
+    if (callFab) {
+      callFab.hidden = false;
+    }
 
-    function openCallModal() {
-      contactsList.innerHTML = callableContacts.map(function (contact, index) {
+    function openCallModal(trigger) {
+      lastTrigger = trigger || null;
+
+      contactsList.innerHTML = callableContacts.map(function (contact) {
         var contactName = displayValue(contact.name);
         var relationship = contact.relationship ? String(contact.relationship).trim() : '';
-        var ariaLabel = 'Call ' + contactName;
+        var phone = String(contact.phone).trim();
+        var telHref = 'tel:' + phone.replace(/\s/g, '');
+        var ariaLabel = 'Call ' + contactName + ', ' + phone;
+
         return (
           '<li>' +
-            '<button type="button" class="call-contact-item" data-contact-index="' + index + '" aria-label="' + escapeHtml(ariaLabel) + '">' +
-              '<span class="call-contact-item__name">' + escapeHtml(contactName) + '</span>' +
-              (relationship
-                ? '<span class="call-contact-item__relationship">' + escapeHtml(relationship) + '</span>'
-                : '') +
-            '</button>' +
+            '<a class="call-contact-item" href="' + escapeHtml(telHref) + '" aria-label="' + escapeHtml(ariaLabel) + '">' +
+              renderContactAvatar(contact) +
+              '<span class="call-contact-item__details">' +
+                '<span class="call-contact-item__name">' + escapeHtml(contactName) + '</span>' +
+                (relationship
+                  ? '<span class="call-contact-item__relationship">' + escapeHtml(relationship) + '</span>'
+                  : '') +
+                '<span class="call-contact-item__phone">' + escapeHtml(phone) + '</span>' +
+              '</span>' +
+            '</a>' +
           '</li>'
         );
       }).join('');
@@ -110,35 +149,25 @@
     function closeCallModal() {
       modal.classList.remove('is-open');
       modal.hidden = true;
-      callBtn.focus();
+      if (lastTrigger && typeof lastTrigger.focus === 'function') {
+        lastTrigger.focus();
+      }
     }
 
-    function dialContact(contact) {
-      var phone = String(contact.phone).trim();
-      if (!phone) {
-        return;
-      }
+    if (callCard) {
+      callCard.addEventListener('click', function () {
+        openCallModal(callCard);
+      });
+    }
+
+    if (callFab) {
+      callFab.addEventListener('click', function () {
+        openCallModal(callFab);
+      });
+    }
+
+    contactsList.addEventListener('click', function () {
       closeCallModal();
-      var link = document.createElement('a');
-      link.href = 'tel:' + phone.replace(/\s/g, '');
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    callBtn.addEventListener('click', openCallModal);
-
-    contactsList.addEventListener('click', function (event) {
-      var button = event.target.closest('.call-contact-item');
-      if (!button) {
-        return;
-      }
-      var index = parseInt(button.getAttribute('data-contact-index'), 10);
-      if (isNaN(index) || !callableContacts[index]) {
-        return;
-      }
-      dialContact(callableContacts[index]);
     });
 
     if (cancelBtn) {

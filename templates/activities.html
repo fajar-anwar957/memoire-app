@@ -23,28 +23,107 @@
     </header>
 
     <div class="activities__content">
-      <p class="activities__intro">Choose an activity to get started</p>
+      <div class="activities__intro-block">
+        <div class="activities__intro-heading">
+          <svg class="activities__intro-flower" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g transform="translate(16, 16)">
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(0)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(60)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(180)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(240)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(300)"/>
+            </g>
+            <circle cx="16" cy="16" r="4" fill="#E8954F"/>
+          </svg>
+          <h2 class="activities__intro-title">Time for something enjoyable</h2>
+        </div>
+        <p class="activities__intro-sub">A few gentle activities, made just for you.</p>
+      </div>
 
       <div class="activities__cards">
-        <article class="activities-card">
+        <article class="activities-card activities-card--word">
           <span class="activities-card__accent" aria-hidden="true"></span>
-          <h2 class="activities-card__title">Word Association</h2>
-          <p class="activities-card__description">Find words that go together and spark new connections</p>
-          <a href="/activities/word-association" class="activities-card__button">Start Activity</a>
+          <svg class="activities-card__ornament" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="18" y="28" width="52" height="34" rx="10" fill="#D9722C" opacity="0.55"/>
+            <rect x="42" y="48" width="56" height="36" rx="10" fill="#E8954F" opacity="0.7"/>
+            <rect x="64" y="22" width="50" height="32" rx="10" fill="#F0B07A" opacity="0.5"/>
+            <rect x="26" y="38" width="22" height="4" rx="2" fill="#fff" opacity="0.55"/>
+            <rect x="50" y="58" width="28" height="4" rx="2" fill="#fff" opacity="0.55"/>
+          </svg>
+          <div class="activities-card__body">
+            <h2 class="activities-card__title">
+              <svg class="activities-card__glyph" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M3 5.5a2.5 2.5 0 0 1 2.5-2.5h9A2.5 2.5 0 0 1 17 5.5v4.3a2.5 2.5 0 0 1-2.5 2.5H9.2L5 16.5V12.3A2.5 2.5 0 0 1 3 9.8V5.5z" fill="currentColor"/>
+              </svg>
+              Word Association
+            </h2>
+            <p class="activities-card__description">Find words that go together and spark new connections</p>
+            <a href="/activities/word-association" class="activities-card__button activities-card__button--orange">Let's play</a>
+          </div>
         </article>
 
-        <article class="activities-card">
+        <article class="activities-card activities-card--photo">
           <span class="activities-card__accent" aria-hidden="true"></span>
-          <h2 class="activities-card__title">Photo Recall</h2>
-          <p class="activities-card__description">Look at familiar scenes and share what you remember</p>
-          <a href="/activities/photo-recall" class="activities-card__button">Start Activity</a>
+          <svg class="activities-card__ornament" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="16" y="30" width="58" height="46" rx="6" fill="none" stroke="#1B3A5C" stroke-width="3" opacity="0.5"/>
+            <rect x="38" y="48" width="58" height="46" rx="6" fill="#fff" stroke="#1B3A5C" stroke-width="3" opacity="0.65"/>
+            <rect x="60" y="24" width="54" height="42" rx="6" fill="none" stroke="#2E5A82" stroke-width="2.5" opacity="0.4"/>
+            <circle cx="88" cy="88" r="14" fill="#1B3A5C" opacity="0.35"/>
+            <path d="M88 80.5c-2.8 0-5 2.5-5 5.5 0 4.2 5 8.5 5 8.5s5-4.3 5-8.5c0-3-2.2-5.5-5-5.5z" fill="#fff" opacity="0.7"/>
+          </svg>
+          <div class="activities-card__body">
+            <h2 class="activities-card__title">
+              <svg class="activities-card__glyph" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="2.5" y="4" width="15" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.75"/>
+                <circle cx="7" cy="8.5" r="1.5" fill="currentColor"/>
+                <path d="M2.5 13l4-3.5 3 2.5 3.5-4.5 4.5 5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Photo Recall
+            </h2>
+            <p class="activities-card__description">Look at familiar scenes and share what you remember</p>
+            <a href="/activities/photo-recall" class="activities-card__button activities-card__button--navy">Look together</a>
+          </div>
         </article>
 
-        <article class="activities-card">
+        <article class="activities-card activities-card--quiz">
           <span class="activities-card__accent" aria-hidden="true"></span>
-          <h2 class="activities-card__title">Daily Quiz</h2>
-          <p class="activities-card__description">Answer gentle questions about the world around you</p>
-          <a href="/activities/daily-quiz" class="activities-card__button">Start Activity</a>
+          <svg class="activities-card__ornament" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="78" cy="52" r="26" fill="#E8954F" opacity="0.45"/>
+            <g stroke="#D9722C" stroke-width="2.5" stroke-linecap="round" opacity="0.5">
+              <line x1="78" y1="14" x2="78" y2="22"/>
+              <line x1="78" y1="82" x2="78" y2="90"/>
+              <line x1="40" y1="52" x2="48" y2="52"/>
+              <line x1="108" y1="52" x2="116" y2="52"/>
+              <line x1="51" y1="25" x2="57" y2="31"/>
+              <line x1="99" y1="73" x2="105" y2="79"/>
+              <line x1="105" y1="25" x2="99" y2="31"/>
+              <line x1="57" y1="73" x2="51" y2="79"/>
+            </g>
+            <ellipse cx="78" cy="88" rx="8" ry="10" fill="#1B3A5C" opacity="0.35" transform="rotate(0 78 88)"/>
+            <ellipse cx="78" cy="88" rx="8" ry="10" fill="#1B3A5C" opacity="0.35" transform="rotate(60 78 88)"/>
+            <ellipse cx="78" cy="88" rx="8" ry="10" fill="#1B3A5C" opacity="0.35" transform="rotate(120 78 88)"/>
+            <ellipse cx="78" cy="88" rx="8" ry="10" fill="#1B3A5C" opacity="0.35" transform="rotate(180 78 88)"/>
+            <ellipse cx="78" cy="88" rx="8" ry="10" fill="#1B3A5C" opacity="0.35" transform="rotate(240 78 88)"/>
+            <ellipse cx="78" cy="88" rx="8" ry="10" fill="#1B3A5C" opacity="0.35" transform="rotate(300 78 88)"/>
+            <circle cx="78" cy="88" r="5" fill="#D9722C" opacity="0.5"/>
+          </svg>
+          <div class="activities-card__body">
+            <h2 class="activities-card__title">
+              <svg class="activities-card__glyph" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="10" cy="8" r="4.5" fill="currentColor"/>
+                <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                  <line x1="10" y1="1" x2="10" y2="2.5"/>
+                  <line x1="10" y1="13.5" x2="10" y2="15"/>
+                  <line x1="3" y1="8" x2="4.5" y2="8"/>
+                  <line x1="15.5" y1="8" x2="17" y2="8"/>
+                </g>
+              </svg>
+              Daily Quiz
+            </h2>
+            <p class="activities-card__description">Answer gentle questions about the world around you</p>
+            <span class="activities-card__button activities-card__button--soon" aria-disabled="true">Coming soon</span>
+          </div>
         </article>
       </div>
     </div>
