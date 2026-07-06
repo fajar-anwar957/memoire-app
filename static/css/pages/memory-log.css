@@ -238,7 +238,16 @@ body {
   border-radius: 12px;
   text-decoration: none;
   text-align: center;
+  cursor: pointer;
   transition: background-color 0.15s ease;
+}
+
+button.memory-log__add-person-chip {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .memory-log__add-person-btn:hover {
@@ -426,8 +435,75 @@ body {
 #memory-log-memories-empty[hidden],
 #memory-log-people-quiet[hidden],
 #memory-toast[hidden],
-#add-memory-modal[hidden] {
+#add-memory-modal[hidden],
+#add-person-modal[hidden] {
   display: none !important;
+}
+
+/* Add-person modal — fields not covered by modals.css */
+.memory-form__field input[type="text"],
+.memory-form__field input[type="tel"] {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 1.1rem;
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background-color: var(--color-cream);
+  border: 2px solid var(--color-navy);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.memory-form__field--error input[type="text"] {
+  border-color: #c0392b;
+}
+
+.memory-form__error {
+  margin: 0.4rem 0 0;
+  font-size: 0.95rem;
+  color: #c0392b;
+}
+
+.memory-form__helper {
+  margin: 0.45rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.memory-form__emergency {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.memory-form__emergency input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--color-navy);
+  cursor: pointer;
+}
+
+.memory-form__emergency label {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  cursor: pointer;
+}
+
+.photo-upload--small .photo-preview {
+  width: 100px;
+  height: 100px;
+}
+
+.photo-upload--small .photo-preview__icon {
+  width: 28px;
+  height: 28px;
+}
+
+.photo-upload--small .photo-preview__text {
+  font-size: 0.85rem;
 }
 
 /* Add-memory modal + toast */
