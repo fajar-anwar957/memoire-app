@@ -162,6 +162,12 @@ body {
   margin-bottom: 2rem;
 }
 
+.wizard-panel .card {
+  max-height: 85vh;
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
 .field {
   margin-bottom: 1.75rem;
 }
@@ -290,6 +296,13 @@ body {
 
 .person-cards__intro {
   margin-bottom: 1.5rem;
+}
+
+.person-cards__memory-log-note {
+  margin-top: 1.25rem;
+  margin-bottom: 0;
+  text-align: center;
+  font-style: italic;
 }
 
 .person-cards {

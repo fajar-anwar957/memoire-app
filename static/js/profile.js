@@ -33,6 +33,50 @@
     localStorage.setItem('patientProfiles', JSON.stringify(profiles));
   }
 
+  function contactSource(contact) {
+    if (contact && contact.source === 'memory-log') {
+      return 'memory-log';
+    }
+    return 'profile';
+  }
+
+  function isProfileSourcedContact(contact) {
+    return contactSource(contact) === 'profile';
+  }
+
+  function getMemoryLogContacts(contacts) {
+    if (!contacts || !Array.isArray(contacts)) {
+      return [];
+    }
+    return contacts.filter(function (contact) {
+      return contact && contactSource(contact) === 'memory-log';
+    });
+  }
+
+  function getProfileSourcedContacts(contacts) {
+    if (!contacts || !Array.isArray(contacts)) {
+      return [];
+    }
+    return contacts.filter(function (contact) {
+      return contact && isProfileSourcedContact(contact);
+    });
+  }
+
+  function updateMemoryLogContactsNote(profile) {
+    var note = document.getElementById('memory-log-contacts-note');
+    if (!note) {
+      return;
+    }
+    var count = getMemoryLogContacts(profile && profile.contacts).length;
+    if (count > 0) {
+      note.textContent = count + ' more ' + (count === 1 ? 'person' : 'people') + ' added from Memories & People';
+      note.hidden = false;
+    } else {
+      note.textContent = '';
+      note.hidden = true;
+    }
+  }
+
   function formatHobbies(profile) {
     var parts = [];
     if (profile.hobbies && profile.hobbies.length) {
@@ -190,6 +234,8 @@
 
     var step1 = document.getElementById('wizard-step-1');
     if (step1) step1.checked = true;
+
+    updateMemoryLogContactsNote(null);
   }
 
   function populateWizardFromProfile(profile) {
@@ -236,7 +282,9 @@
       }
     }
 
-    var contacts = profile.contacts && Array.isArray(profile.contacts) ? profile.contacts : [];
+    var contacts = getProfileSourcedContacts(
+      profile.contacts && Array.isArray(profile.contacts) ? profile.contacts : []
+    );
     var btnAddPerson = document.getElementById('btn-add-person');
 
     contacts.forEach(function (contact, index) {
@@ -273,6 +321,8 @@
 
     var step1 = document.getElementById('wizard-step-1');
     if (step1) step1.checked = true;
+
+    updateMemoryLogContactsNote(profile);
   }
 
   function openModal(id) {
@@ -634,7 +684,8 @@
                 relationship: document.getElementById('contact-' + index + '-relationship').value.trim(),
                 phone: document.getElementById('contact-' + index + '-phone').value.trim(),
                 photo: photo,
-                isEmergency: document.getElementById('contact-' + index + '-emergency').checked
+                isEmergency: document.getElementById('contact-' + index + '-emergency').checked,
+                source: 'profile'
               });
             })
           );
@@ -666,6 +717,18 @@
         var wasEditing = !!editingProfileId;
 
         var profileId = editingProfileId || ('profile-' + Date.now());
+
+        var memoryLogContacts = [];
+        if (editingProfileId) {
+          var existingProfiles = getProfiles();
+          for (var p = 0; p < existingProfiles.length; p++) {
+            if (existingProfiles[p].id === editingProfileId) {
+              memoryLogContacts = getMemoryLogContacts(existingProfiles[p].contacts);
+              break;
+            }
+          }
+        }
+
         var profile = {
           id: profileId,
           fullName: document.getElementById('full-name').value.trim(),
@@ -682,7 +745,7 @@
           favouriteFood: document.getElementById('favourite-food').value.trim(),
           pets: document.getElementById('pets').value.trim(),
           timePreference: (document.querySelector('input[name="time-preference"]:checked') || { value: '' }).value,
-          contacts: contactData
+          contacts: memoryLogContacts.concat(contactData)
         };
 
         var profiles = getProfiles();

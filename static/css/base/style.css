@@ -17,3 +17,8 @@ label,
 .card-base {
   touch-action: manipulation;
 }
+
+input,
+textarea {
+  scroll-margin-block: 20vh;
+}
