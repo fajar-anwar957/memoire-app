@@ -11,16 +11,38 @@
     return 'Friend';
   }
 
-  function getEmergencyCallableContacts(profile) {
+  function getEmergencyContacts(profile) {
     if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
       return [];
     }
     return profile.contacts.filter(function (contact) {
-      return contact
-        && contactIsEmergency(contact)
-        && contact.phone
-        && String(contact.phone).trim();
+      return contact && contactIsEmergency(contact);
     });
+  }
+
+  function sanitizePhoneForDial(phone) {
+    var raw = String(phone).trim();
+    if (!raw) {
+      return '';
+    }
+
+    var hasLeadingPlus = raw.charAt(0) === '+';
+    var digits = hasLeadingPlus
+      ? raw.slice(1).replace(/\D/g, '')
+      : raw.replace(/\D/g, '');
+
+    if (digits.length < 5) {
+      return '';
+    }
+
+    return hasLeadingPlus ? '+' + digits : digits;
+  }
+
+  function buildTelHref(sanitized) {
+    if (!sanitized) {
+      return '';
+    }
+    return 'tel:' + sanitized;
   }
 
   function getContactInitial(name) {
@@ -43,14 +65,54 @@
     );
   }
 
+  function renderContactRow(contact) {
+    var contactName = displayValue(contact.name);
+    var relationship = contact.relationship ? String(contact.relationship).trim() : '';
+    var phone = contact.phone ? String(contact.phone).trim() : '';
+    var dialNumber = phone ? sanitizePhoneForDial(phone) : '';
+    var telHref = dialNumber ? buildTelHref(dialNumber) : '';
+
+    var detailsHtml =
+      '<span class="call-contact-item__name">' + escapeHtml(contactName) + '</span>' +
+      (relationship
+        ? '<span class="call-contact-item__relationship">' + escapeHtml(relationship) + '</span>'
+        : '');
+
+    if (telHref) {
+      var ariaLabel = 'Call ' + contactName + ', ' + phone;
+      return (
+        '<li>' +
+          '<a class="call-contact-item" href="' + escapeHtml(telHref) + '" aria-label="' + escapeHtml(ariaLabel) + '">' +
+            renderContactAvatar(contact) +
+            '<span class="call-contact-item__details">' +
+              detailsHtml +
+              '<span class="call-contact-item__phone">' + escapeHtml(phone) + '</span>' +
+            '</span>' +
+          '</a>' +
+        '</li>'
+      );
+    }
+
+    return (
+      '<li>' +
+        '<div class="call-contact-item call-contact-item--no-phone">' +
+          renderContactAvatar(contact) +
+          '<span class="call-contact-item__details">' +
+            detailsHtml +
+            '<span class="call-contact-item__no-number">No number saved</span>' +
+          '</span>' +
+        '</div>' +
+      '</li>'
+    );
+  }
+
   function initDashboardHeader() {
-    var now = new Date();
-    var hour = now.getHours();
+    var hour = new Date().getHours();
     var greeting;
 
-    if (hour < 12) {
+    if (hour >= 5 && hour <= 11) {
       greeting = 'Good morning';
-    } else if (hour < 18) {
+    } else if (hour >= 12 && hour <= 16) {
       greeting = 'Good afternoon';
     } else {
       greeting = 'Good evening';
@@ -72,6 +134,7 @@
 
     var dateEl = document.getElementById('dashboard-date');
     if (dateEl) {
+      var now = new Date();
       dateEl.textContent = now.toLocaleDateString('en-GB', {
         weekday: 'long',
         day: 'numeric',
@@ -92,10 +155,10 @@
       return;
     }
 
-    var callableContacts = getEmergencyCallableContacts(getActiveProfile());
+    var emergencyContacts = getEmergencyContacts(getActiveProfile());
     var lastTrigger = null;
 
-    if (!callableContacts.length) {
+    if (!emergencyContacts.length) {
       if (callCard) {
         callCard.hidden = true;
       }
@@ -115,32 +178,11 @@
     function openCallModal(trigger) {
       lastTrigger = trigger || null;
 
-      contactsList.innerHTML = callableContacts.map(function (contact) {
-        var contactName = displayValue(contact.name);
-        var relationship = contact.relationship ? String(contact.relationship).trim() : '';
-        var phone = String(contact.phone).trim();
-        var telHref = 'tel:' + phone.replace(/\s/g, '');
-        var ariaLabel = 'Call ' + contactName + ', ' + phone;
-
-        return (
-          '<li>' +
-            '<a class="call-contact-item" href="' + escapeHtml(telHref) + '" aria-label="' + escapeHtml(ariaLabel) + '">' +
-              renderContactAvatar(contact) +
-              '<span class="call-contact-item__details">' +
-                '<span class="call-contact-item__name">' + escapeHtml(contactName) + '</span>' +
-                (relationship
-                  ? '<span class="call-contact-item__relationship">' + escapeHtml(relationship) + '</span>'
-                  : '') +
-                '<span class="call-contact-item__phone">' + escapeHtml(phone) + '</span>' +
-              '</span>' +
-            '</a>' +
-          '</li>'
-        );
-      }).join('');
+      contactsList.innerHTML = emergencyContacts.map(renderContactRow).join('');
 
       modal.hidden = false;
       modal.classList.add('is-open');
-      var firstItem = contactsList.querySelector('.call-contact-item');
+      var firstItem = contactsList.querySelector('.call-contact-item[href]');
       if (firstItem) {
         firstItem.focus();
       }
@@ -166,10 +208,6 @@
       });
     }
 
-    contactsList.addEventListener('click', function () {
-      closeCallModal();
-    });
-
     if (cancelBtn) {
       cancelBtn.addEventListener('click', closeCallModal);
     }
@@ -190,13 +228,5 @@
   document.addEventListener('DOMContentLoaded', function () {
     initDashboardHeader();
     initQuickCall();
-
-    var memoryCard = document.getElementById('add-memory-card');
-    if (memoryCard && window.MemoireAddMemory) {
-      window.MemoireAddMemory.init({
-        triggers: [memoryCard],
-        toastId: 'memory-toast'
-      });
-    }
   });
 })();

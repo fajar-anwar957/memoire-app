@@ -5,7 +5,7 @@ body {
   color: var(--color-text);
   font-size: 1.125rem;
   line-height: 1.5;
-  padding: 1.25rem 1.25rem 6.25rem;
+  padding: 1.25rem 1.25rem calc(7.5rem + env(safe-area-inset-bottom, 0));
 }
 
 .dashboard {
@@ -140,6 +140,7 @@ body {
   text-decoration: none;
   color: inherit;
   overflow: hidden;
+  border-radius: 24px;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
@@ -150,8 +151,10 @@ body {
   -webkit-appearance: none;
 }
 
-.dashboard-card:hover {
-  box-shadow: 0 6px 22px rgba(27, 58, 92, 0.14);
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-card:hover {
+    box-shadow: 0 6px 22px rgba(27, 58, 92, 0.14);
+  }
 }
 
 .dashboard-card:active {
@@ -179,8 +182,8 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
 }
 
@@ -203,7 +206,9 @@ body {
 .dashboard-card__body {
   display: flex;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
+  width: 100%;
 }
 
 .dashboard-card__title {
@@ -241,17 +246,17 @@ body {
   font-size: 1rem;
 }
 
-/* Tile cards — icon top-left, equal height grid */
+/* Tile cards — icon centred above title, equal height grid */
 .dashboard-card--tile {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
   gap: 0.85rem;
-  min-height: 148px;
+  min-height: 168px;
   height: 100%;
-  padding: 1.25rem 1.15rem;
-  text-align: left;
+  padding: 1.35rem 1.15rem 1.25rem;
+  text-align: center;
   background: #ffffff;
 }
 
@@ -259,11 +264,11 @@ button.dashboard-card {
   width: 100%;
 }
 
-/* Call FAB */
+/* Call FAB — below modals (z-index 1000), above nav */
 .dashboard-fab {
   position: fixed;
   right: 1.25rem;
-  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0));
+  bottom: calc(6.25rem + env(safe-area-inset-bottom, 0));
   z-index: 90;
   display: flex;
   align-items: center;
@@ -282,8 +287,10 @@ button.dashboard-card {
     box-shadow 0.15s ease;
 }
 
-.dashboard-fab:hover {
-  box-shadow: 0 6px 22px rgba(217, 114, 44, 0.5);
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-fab:hover {
+    box-shadow: 0 6px 22px rgba(217, 114, 44, 0.5);
+  }
 }
 
 .dashboard-fab:focus-visible {
@@ -364,8 +371,10 @@ button.dashboard-card {
     transform 0.15s ease;
 }
 
-.call-contact-item:hover {
-  background-color: rgba(27, 58, 92, 0.08);
+@media (hover: hover) and (pointer: fine) {
+  .call-contact-item:hover {
+    background-color: rgba(27, 58, 92, 0.08);
+  }
 }
 
 .call-contact-item:active {
@@ -425,9 +434,21 @@ button.dashboard-card {
   letter-spacing: 0.02em;
 }
 
+.call-contact-item--no-phone {
+  cursor: default;
+  border-color: rgba(27, 58, 92, 0.25);
+}
+
+.call-contact-item__no-number {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  line-height: 1.35;
+}
+
 @media (min-width: 480px) {
   body {
-    padding: 1.5rem 1.5rem 6.75rem;
+    padding: 1.5rem 1.5rem calc(8rem + env(safe-area-inset-bottom, 0));
   }
 
   .dashboard__greeting-text {
@@ -440,7 +461,7 @@ button.dashboard-card {
   }
 
   .dashboard__tile-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .dashboard-card--primary {
@@ -449,11 +470,21 @@ button.dashboard-card {
   }
 
   .dashboard-card--tile {
-    min-height: 156px;
-    padding: 1.35rem 1.25rem;
+    min-height: 172px;
+    padding: 1.4rem 1.25rem 1.3rem;
   }
 
   .dashboard-card--tile .dashboard-card__title {
     font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 720px) {
+  .dashboard__tile-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .dashboard-card--tile {
+    min-height: 180px;
   }
 }

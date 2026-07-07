@@ -47,7 +47,12 @@ body {
   transition: background-color 0.2s ease;
 }
 
-.memory-log__back:hover,
+@media (hover: hover) and (pointer: fine) {
+  .memory-log__back:hover {
+    background-color: rgba(27, 58, 92, 0.08);
+  }
+}
+
 .memory-log__back:focus-visible {
   background-color: rgba(27, 58, 92, 0.08);
 }
@@ -250,8 +255,10 @@ button.memory-log__add-person-chip {
   font-family: inherit;
 }
 
-.memory-log__add-person-btn:hover {
-  background-color: rgba(27, 58, 92, 0.06);
+@media (hover: hover) and (pointer: fine) {
+  .memory-log__add-person-btn:hover {
+    background-color: rgba(27, 58, 92, 0.06);
+  }
 }
 
 .memory-log__add-person-btn:focus-visible {
@@ -295,8 +302,10 @@ button.memory-log__add-person-chip {
   white-space: nowrap;
 }
 
-.memory-log__add-memory-btn:hover {
-  box-shadow: 0 6px 18px rgba(217, 114, 44, 0.38);
+@media (hover: hover) and (pointer: fine) {
+  .memory-log__add-memory-btn:hover {
+    box-shadow: 0 6px 18px rgba(217, 114, 44, 0.38);
+  }
 }
 
 .memory-log__add-memory-btn:focus-visible {

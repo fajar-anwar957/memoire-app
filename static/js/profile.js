@@ -7,8 +7,12 @@
   var compressImageToDataURL = window.MemoireCore.compressImageToDataURL;
 
   var urlParams = new URLSearchParams(window.location.search);
-  var profileMode = urlParams.get('mode') || localStorage.getItem('profileContext') || 'self';
-  localStorage.setItem('profileContext', profileMode);
+  var profileMode = urlParams.get('mode') === 'new'
+    ? 'new'
+    : (urlParams.get('mode') || localStorage.getItem('profileContext') || 'self');
+  if (profileMode !== 'new') {
+    localStorage.setItem('profileContext', profileMode);
+  }
 
   var editingProfileId = null;
 
@@ -89,7 +93,7 @@
 
     var switchBtn = document.getElementById('btn-switch-profile');
     if (switchBtn) {
-      switchBtn.hidden = getProfiles().length <= 1;
+      switchBtn.hidden = getProfiles().length === 0;
     }
   }
 
@@ -300,8 +304,32 @@
     }
   }
 
+  function getProfileInitial(profile) {
+    var name = (profile.fullName || profile.preferredName || '').trim();
+    return name ? name.charAt(0).toUpperCase() : '?';
+  }
+
+  function renderSwitchProfileAvatar(profile) {
+    if (profile.photo && String(profile.photo).trim()) {
+      return (
+        '<span class="switch-profile-item__avatar">' +
+          '<img src="' + escapeHtml(profile.photo) + '" alt="">' +
+        '</span>'
+      );
+    }
+    return (
+      '<span class="switch-profile-item__avatar">' +
+        escapeHtml(getProfileInitial(profile)) +
+      '</span>'
+    );
+  }
+
   if (window.location.hash === '#important-people') {
     openImportantPeopleWizard();
+  } else if (profileMode === 'new') {
+    editingProfileId = null;
+    resetWizardForm();
+    showWizardView();
   } else if (activeProfile) {
     showSummaryView(activeProfile);
   }
@@ -340,21 +368,39 @@
       var list = document.getElementById('switch-profile-list');
       if (!list) return;
 
-      list.innerHTML = profiles
-        .filter(function (p) { return p.id !== activeId; })
-        .map(function (p) {
-          var label = p.preferredName || p.fullName || 'Unnamed profile';
-          return '<li><button type="button" class="switch-profile-item" data-profile-id="' + escapeHtml(p.id) + '">' + escapeHtml(label) + '</button></li>';
-        })
-        .join('');
+      list.innerHTML = profiles.map(function (p) {
+        var isActive = p.id === activeId;
+        var fullName = displayValue(p.fullName);
+        var preferred = p.preferredName ? String(p.preferredName).trim() : '';
+        return (
+          '<li>' +
+            '<button type="button" class="switch-profile-item' + (isActive ? ' switch-profile-item--active' : '') + '" data-profile-id="' + escapeHtml(p.id) + '"' + (isActive ? ' aria-current="true"' : '') + '>' +
+              renderSwitchProfileAvatar(p) +
+              '<span class="switch-profile-item__copy">' +
+                '<span class="switch-profile-item__name">' + escapeHtml(fullName) + '</span>' +
+                (preferred ? '<span class="switch-profile-item__preferred">' + escapeHtml(preferred) + '</span>' : '') +
+              '</span>' +
+            '</button>' +
+          '</li>'
+        );
+      }).join('') +
+        '<li>' +
+          '<a href="/profile?mode=new" class="switch-profile-add">+ Add a new profile</a>' +
+        '</li>';
 
       list.querySelectorAll('.switch-profile-item').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var chosenId = btn.getAttribute('data-profile-id');
+          if (!chosenId || chosenId === localStorage.getItem('activeProfileId')) {
+            closeModal('switch-profile-modal');
+            return;
+          }
           localStorage.setItem('activeProfileId', chosenId);
           closeModal('switch-profile-modal');
-          var chosen = getActiveProfile();
-          if (chosen) showSummaryView(chosen);
+          var chosen = getProfiles().find(function (p) { return p.id === chosenId; });
+          if (chosen) {
+            showSummaryView(chosen);
+          }
         });
       });
 

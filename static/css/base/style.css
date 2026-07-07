@@ -9,3 +9,11 @@
 body {
   font-family: var(--font-family);
 }
+
+a,
+button,
+input,
+label,
+.card-base {
+  touch-action: manipulation;
+}

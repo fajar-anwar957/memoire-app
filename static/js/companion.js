@@ -3,6 +3,8 @@
   var contactIsEmergency = window.MemoireCore.contactIsEmergency;
 
   var memoireConversationHistory = 'memoireConversationHistory';
+  var memoireChatSession = 'memoireChatSession';
+  var CHAT_SESSION_MAX = 40;
 
   var chat = document.getElementById('companion-chat');
   var form = document.getElementById('companion-form');
@@ -32,7 +34,52 @@
     }
   }
 
+  function loadChatSessionFromStorage() {
+    try {
+      var stored = sessionStorage.getItem(memoireChatSession);
+      if (!stored) {
+        return [];
+      }
+      var parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveChatSessionToStorage() {
+    var capped = chatSessionMessages.slice(-CHAT_SESSION_MAX);
+    chatSessionMessages = capped;
+    sessionStorage.setItem(memoireChatSession, JSON.stringify(capped));
+  }
+
+  function appendToChatSession(role, text) {
+    chatSessionMessages.push({
+      role: role,
+      text: text,
+      time: new Date().toISOString()
+    });
+    saveChatSessionToStorage();
+  }
+
+  function renderStoredChatSession() {
+    if (!chat || !chatSessionMessages.length) {
+      return;
+    }
+
+    chatSessionMessages.forEach(function (entry) {
+      if (entry.role === 'user') {
+        appendPatientMessage(entry.text, true);
+      } else if (entry.role === 'assistant') {
+        appendCompanionMessage(entry.text, true);
+      }
+    });
+
+    scrollChatToBottom();
+  }
+
   conversationHistory = loadHistoryFromStorage();
+  var chatSessionMessages = loadChatSessionFromStorage();
   var isWaitingForReply = false;
   var loadingMessage = null;
   var recognition = null;
@@ -146,7 +193,7 @@
     return unmasked;
   }
 
-  function appendPatientMessage(text) {
+  function appendPatientMessage(text, skipSessionSave) {
     var message = document.createElement('div');
     message.className = 'companion-message companion-message--patient';
 
@@ -157,6 +204,10 @@
     message.appendChild(bubble);
     chat.appendChild(message);
     scrollChatToBottom();
+
+    if (!skipSessionSave) {
+      appendToChatSession('user', text);
+    }
   }
 
   function createCompanionBubble() {
@@ -173,10 +224,14 @@
     return bubble;
   }
 
-  function appendCompanionMessage(text) {
+  function appendCompanionMessage(text, skipSessionSave) {
     var bubble = createCompanionBubble();
     bubble.textContent = text;
     scrollChatToBottom();
+
+    if (!skipSessionSave) {
+      appendToChatSession('assistant', text);
+    }
   }
 
   function streamCompanionMessage(text) {
@@ -189,6 +244,7 @@
 
     function revealNextWord() {
       if (index >= words.length) {
+        appendToChatSession('assistant', text);
         return;
       }
 
@@ -470,4 +526,5 @@
   });
 
   setupSpeechRecognition();
+  renderStoredChatSession();
 })();
