@@ -9,3 +9,16 @@
 body {
   font-family: var(--font-family);
 }
+
+a,
+button,
+input,
+label,
+.card-base {
+  touch-action: manipulation;
+}
+
+input,
+textarea {
+  scroll-margin-block: 20vh;
+}

@@ -51,7 +51,12 @@ body {
   transition: background-color 0.2s ease;
 }
 
-.cst-activity__back:hover,
+@media (hover: hover) and (pointer: fine) {
+  .cst-activity__back:hover {
+    background-color: rgba(27, 58, 92, 0.08);
+  }
+}
+
 .cst-activity__back:focus-visible {
   background-color: rgba(27, 58, 92, 0.08);
 }
@@ -171,9 +176,11 @@ body {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.cst-wa__replay:hover:not(:disabled) {
-  border-color: var(--color-navy);
-  background: rgba(27, 58, 92, 0.04);
+@media (hover: hover) and (pointer: fine) {
+  .cst-wa__replay:hover:not(:disabled) {
+    border-color: var(--color-navy);
+    background: rgba(27, 58, 92, 0.04);
+  }
 }
 
 .cst-wa__replay-icon {
@@ -209,7 +216,12 @@ body {
     box-shadow 0.12s ease;
 }
 
-.cst-wa__option:hover:not(:disabled),
+@media (hover: hover) and (pointer: fine) {
+  .cst-wa__option:hover:not(:disabled) {
+    border-color: var(--color-navy);
+  }
+}
+
 .cst-wa__option:focus-visible:not(:disabled) {
   border-color: var(--color-navy);
 }
@@ -461,8 +473,10 @@ body {
   transition: transform 0.12s ease, background-color 0.2s ease;
 }
 
-.cst-wa__more-btn:hover {
-  background: rgba(27, 58, 92, 0.04);
+@media (hover: hover) and (pointer: fine) {
+  .cst-wa__more-btn:hover {
+    background: rgba(27, 58, 92, 0.04);
+  }
 }
 
 .cst-wa__more-btn:active {

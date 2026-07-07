@@ -47,7 +47,12 @@ body {
   transition: background-color 0.2s ease;
 }
 
-.activities__back:hover,
+@media (hover: hover) and (pointer: fine) {
+  .activities__back:hover {
+    background-color: rgba(27, 58, 92, 0.08);
+  }
+}
+
 .activities__back:focus-visible {
   background-color: rgba(27, 58, 92, 0.08);
 }
@@ -154,9 +159,11 @@ body {
   animation-delay: 0.16s;
 }
 
-.activities-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(27, 58, 92, 0.16);
+@media (hover: hover) and (pointer: fine) {
+  .activities-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(27, 58, 92, 0.16);
+  }
 }
 
 .activities-card:active {
@@ -288,9 +295,14 @@ body {
   background-color: var(--color-navy);
 }
 
-.activities-card__button--orange:hover,
+@media (hover: hover) and (pointer: fine) {
+  .activities-card__button--orange:hover,
+  .activities-card__button--navy:hover {
+    filter: brightness(0.95);
+  }
+}
+
 .activities-card__button--orange:focus-visible,
-.activities-card__button--navy:hover,
 .activities-card__button--navy:focus-visible {
   filter: brightness(0.95);
 }
@@ -318,7 +330,12 @@ body {
     transition: box-shadow 0.2s ease;
   }
 
-  .activities-card:hover,
+  @media (hover: hover) and (pointer: fine) {
+    .activities-card:hover {
+      transform: none;
+    }
+  }
+
   .activities-card:active {
     transform: none;
   }

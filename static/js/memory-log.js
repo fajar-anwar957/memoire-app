@@ -388,7 +388,8 @@
           relationship: relationshipInput ? relationshipInput.value.trim() : '',
           phone: '',
           photo: photo,
-          isEmergency: false
+          isEmergency: false,
+          source: 'memory-log'
         };
 
         if (!appendContactToActiveProfile(contact)) {

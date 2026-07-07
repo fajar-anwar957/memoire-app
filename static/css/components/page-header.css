@@ -28,7 +28,12 @@
   transition: background-color 0.2s ease;
 }
 
-.page-header__back:hover,
+@media (hover: hover) and (pointer: fine) {
+  .page-header__back:hover {
+    background-color: rgba(27, 58, 92, 0.08);
+  }
+}
+
 .page-header__back:focus-visible {
   background-color: rgba(27, 58, 92, 0.08);
 }

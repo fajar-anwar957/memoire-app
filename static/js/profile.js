@@ -7,8 +7,12 @@
   var compressImageToDataURL = window.MemoireCore.compressImageToDataURL;
 
   var urlParams = new URLSearchParams(window.location.search);
-  var profileMode = urlParams.get('mode') || localStorage.getItem('profileContext') || 'self';
-  localStorage.setItem('profileContext', profileMode);
+  var profileMode = urlParams.get('mode') === 'new'
+    ? 'new'
+    : (urlParams.get('mode') || localStorage.getItem('profileContext') || 'self');
+  if (profileMode !== 'new') {
+    localStorage.setItem('profileContext', profileMode);
+  }
 
   var editingProfileId = null;
 
@@ -27,6 +31,50 @@
 
   function saveProfiles(profiles) {
     localStorage.setItem('patientProfiles', JSON.stringify(profiles));
+  }
+
+  function contactSource(contact) {
+    if (contact && contact.source === 'memory-log') {
+      return 'memory-log';
+    }
+    return 'profile';
+  }
+
+  function isProfileSourcedContact(contact) {
+    return contactSource(contact) === 'profile';
+  }
+
+  function getMemoryLogContacts(contacts) {
+    if (!contacts || !Array.isArray(contacts)) {
+      return [];
+    }
+    return contacts.filter(function (contact) {
+      return contact && contactSource(contact) === 'memory-log';
+    });
+  }
+
+  function getProfileSourcedContacts(contacts) {
+    if (!contacts || !Array.isArray(contacts)) {
+      return [];
+    }
+    return contacts.filter(function (contact) {
+      return contact && isProfileSourcedContact(contact);
+    });
+  }
+
+  function updateMemoryLogContactsNote(profile) {
+    var note = document.getElementById('memory-log-contacts-note');
+    if (!note) {
+      return;
+    }
+    var count = getMemoryLogContacts(profile && profile.contacts).length;
+    if (count > 0) {
+      note.textContent = count + ' more ' + (count === 1 ? 'person' : 'people') + ' added from Memories & People';
+      note.hidden = false;
+    } else {
+      note.textContent = '';
+      note.hidden = true;
+    }
   }
 
   function formatHobbies(profile) {
@@ -89,7 +137,7 @@
 
     var switchBtn = document.getElementById('btn-switch-profile');
     if (switchBtn) {
-      switchBtn.hidden = getProfiles().length <= 1;
+      switchBtn.hidden = getProfiles().length === 0;
     }
   }
 
@@ -186,6 +234,8 @@
 
     var step1 = document.getElementById('wizard-step-1');
     if (step1) step1.checked = true;
+
+    updateMemoryLogContactsNote(null);
   }
 
   function populateWizardFromProfile(profile) {
@@ -232,7 +282,9 @@
       }
     }
 
-    var contacts = profile.contacts && Array.isArray(profile.contacts) ? profile.contacts : [];
+    var contacts = getProfileSourcedContacts(
+      profile.contacts && Array.isArray(profile.contacts) ? profile.contacts : []
+    );
     var btnAddPerson = document.getElementById('btn-add-person');
 
     contacts.forEach(function (contact, index) {
@@ -269,6 +321,8 @@
 
     var step1 = document.getElementById('wizard-step-1');
     if (step1) step1.checked = true;
+
+    updateMemoryLogContactsNote(profile);
   }
 
   function openModal(id) {
@@ -300,8 +354,32 @@
     }
   }
 
+  function getProfileInitial(profile) {
+    var name = (profile.fullName || profile.preferredName || '').trim();
+    return name ? name.charAt(0).toUpperCase() : '?';
+  }
+
+  function renderSwitchProfileAvatar(profile) {
+    if (profile.photo && String(profile.photo).trim()) {
+      return (
+        '<span class="switch-profile-item__avatar">' +
+          '<img src="' + escapeHtml(profile.photo) + '" alt="">' +
+        '</span>'
+      );
+    }
+    return (
+      '<span class="switch-profile-item__avatar">' +
+        escapeHtml(getProfileInitial(profile)) +
+      '</span>'
+    );
+  }
+
   if (window.location.hash === '#important-people') {
     openImportantPeopleWizard();
+  } else if (profileMode === 'new') {
+    editingProfileId = null;
+    resetWizardForm();
+    showWizardView();
   } else if (activeProfile) {
     showSummaryView(activeProfile);
   }
@@ -340,21 +418,39 @@
       var list = document.getElementById('switch-profile-list');
       if (!list) return;
 
-      list.innerHTML = profiles
-        .filter(function (p) { return p.id !== activeId; })
-        .map(function (p) {
-          var label = p.preferredName || p.fullName || 'Unnamed profile';
-          return '<li><button type="button" class="switch-profile-item" data-profile-id="' + escapeHtml(p.id) + '">' + escapeHtml(label) + '</button></li>';
-        })
-        .join('');
+      list.innerHTML = profiles.map(function (p) {
+        var isActive = p.id === activeId;
+        var fullName = displayValue(p.fullName);
+        var preferred = p.preferredName ? String(p.preferredName).trim() : '';
+        return (
+          '<li>' +
+            '<button type="button" class="switch-profile-item' + (isActive ? ' switch-profile-item--active' : '') + '" data-profile-id="' + escapeHtml(p.id) + '"' + (isActive ? ' aria-current="true"' : '') + '>' +
+              renderSwitchProfileAvatar(p) +
+              '<span class="switch-profile-item__copy">' +
+                '<span class="switch-profile-item__name">' + escapeHtml(fullName) + '</span>' +
+                (preferred ? '<span class="switch-profile-item__preferred">' + escapeHtml(preferred) + '</span>' : '') +
+              '</span>' +
+            '</button>' +
+          '</li>'
+        );
+      }).join('') +
+        '<li>' +
+          '<a href="/profile?mode=new" class="switch-profile-add">+ Add a new profile</a>' +
+        '</li>';
 
       list.querySelectorAll('.switch-profile-item').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var chosenId = btn.getAttribute('data-profile-id');
+          if (!chosenId || chosenId === localStorage.getItem('activeProfileId')) {
+            closeModal('switch-profile-modal');
+            return;
+          }
           localStorage.setItem('activeProfileId', chosenId);
           closeModal('switch-profile-modal');
-          var chosen = getActiveProfile();
-          if (chosen) showSummaryView(chosen);
+          var chosen = getProfiles().find(function (p) { return p.id === chosenId; });
+          if (chosen) {
+            showSummaryView(chosen);
+          }
         });
       });
 
@@ -588,7 +684,8 @@
                 relationship: document.getElementById('contact-' + index + '-relationship').value.trim(),
                 phone: document.getElementById('contact-' + index + '-phone').value.trim(),
                 photo: photo,
-                isEmergency: document.getElementById('contact-' + index + '-emergency').checked
+                isEmergency: document.getElementById('contact-' + index + '-emergency').checked,
+                source: 'profile'
               });
             })
           );
@@ -620,6 +717,18 @@
         var wasEditing = !!editingProfileId;
 
         var profileId = editingProfileId || ('profile-' + Date.now());
+
+        var memoryLogContacts = [];
+        if (editingProfileId) {
+          var existingProfiles = getProfiles();
+          for (var p = 0; p < existingProfiles.length; p++) {
+            if (existingProfiles[p].id === editingProfileId) {
+              memoryLogContacts = getMemoryLogContacts(existingProfiles[p].contacts);
+              break;
+            }
+          }
+        }
+
         var profile = {
           id: profileId,
           fullName: document.getElementById('full-name').value.trim(),
@@ -636,7 +745,7 @@
           favouriteFood: document.getElementById('favourite-food').value.trim(),
           pets: document.getElementById('pets').value.trim(),
           timePreference: (document.querySelector('input[name="time-preference"]:checked') || { value: '' }).value,
-          contacts: contactData
+          contacts: memoryLogContacts.concat(contactData)
         };
 
         var profiles = getProfiles();

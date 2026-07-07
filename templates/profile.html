@@ -3,7 +3,7 @@
 <head>
   <!-- unicode transformation format -->
   <meta charset="UTF-8"> 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>Your Profile — Mémoire</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
@@ -373,6 +373,7 @@
               </article>
             </div>
             <button type="button" id="btn-add-person" class="btn-add-person">+ Add another person</button>
+            <p id="memory-log-contacts-note" class="helper-text person-cards__memory-log-note" hidden></p>
           </div>
         </section>
       </div>

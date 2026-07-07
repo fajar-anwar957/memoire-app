@@ -124,4 +124,29 @@
     readFileAsDataURL: readFileAsDataURL,
     compressImageToDataURL: compressImageToDataURL
   };
+
+  document.addEventListener('focusin', function (event) {
+    var target = event.target;
+    if (!target || !target.tagName) {
+      return;
+    }
+    var tag = target.tagName;
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+      return;
+    }
+    setTimeout(function () {
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 300);
+  });
+
+  if (window.visualViewport) {
+    function syncKeyboardOpenClass() {
+      var keyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
+      document.body.classList.toggle('keyboard-open', keyboardOpen);
+    }
+
+    window.visualViewport.addEventListener('resize', syncKeyboardOpenClass);
+    window.visualViewport.addEventListener('scroll', syncKeyboardOpenClass);
+    syncKeyboardOpenClass();
+  }
 })();
