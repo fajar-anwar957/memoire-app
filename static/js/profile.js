@@ -3,8 +3,11 @@
   var getProfiles = window.MemoireCore.getProfiles;
   var getActiveProfile = window.MemoireCore.getActiveProfile;
   var displayValue = window.MemoireCore.displayValue;
+  var formatDisplayName = window.MemoireCore.formatDisplayName;
+  var normalizeRelationship = window.MemoireCore.normalizeRelationship;
   var escapeHtml = window.MemoireCore.escapeHtml;
   var compressImageToDataURL = window.MemoireCore.compressImageToDataURL;
+  var contactIsEmergency = window.MemoireCore.contactIsEmergency;
 
   var urlParams = new URLSearchParams(window.location.search);
   var profileMode = urlParams.get('mode') === 'new'
@@ -62,18 +65,137 @@
     });
   }
 
-  function updateMemoryLogContactsNote(profile) {
-    var note = document.getElementById('memory-log-contacts-note');
-    if (!note) {
+  var CONTACT_PHOTO_PREVIEW_DEFAULT =
+    '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.75"/><path d="M21 15l-5-5L5 21"/></svg>' +
+    '<span class="photo-preview__text">Add photo</span>';
+
+  function getPersonCardsContainer() {
+    return document.getElementById('person-cards');
+  }
+
+  function getPersonCards() {
+    var container = getPersonCardsContainer();
+    if (!container) return [];
+    return Array.prototype.slice.call(container.querySelectorAll('.person-card'));
+  }
+
+  function getNextContactIndex() {
+    var max = 0;
+    getPersonCards().forEach(function (card) {
+      var index = parseInt(card.getAttribute('data-contact-index'), 10);
+      if (!isNaN(index) && index > max) max = index;
+    });
+    return max + 1;
+  }
+
+  function updatePhoneHintForContact(index) {
+    var phoneHint = document.getElementById('contact-' + index + '-phone-hint');
+    if (!phoneHint) {
       return;
     }
-    var count = getMemoryLogContacts(profile && profile.contacts).length;
-    if (count > 0) {
-      note.textContent = count + ' more ' + (count === 1 ? 'person' : 'people') + ' added from Memories & People';
-      note.hidden = false;
+    phoneHint.hidden = false;
+  }
+
+  function setupContactPhoto(inputId, previewId) {
+    var input = document.getElementById(inputId);
+    var preview = document.getElementById(previewId);
+    if (!input || !preview) return;
+    input.addEventListener('change', function () {
+      var file = input.files[0];
+      if (!file) return;
+      compressImageToDataURL(input).then(function (dataUrl) {
+        if (!dataUrl) return;
+        preview.innerHTML =
+          '<img src="' + dataUrl + '" alt="Contact photo" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
+      });
+    });
+  }
+
+  function wirePersonCard(index) {
+    setupContactPhoto('contact-' + index + '-photo', 'contact-' + index + '-preview');
+    updatePhoneHintForContact(index);
+  }
+
+  function clearPersonCardFields(index) {
+    var nameInput = document.getElementById('contact-' + index + '-name');
+    var relInput = document.getElementById('contact-' + index + '-relationship');
+    var phoneInput = document.getElementById('contact-' + index + '-phone');
+    var phoneHint = document.getElementById('contact-' + index + '-phone-hint');
+    var photoInput = document.getElementById('contact-' + index + '-photo');
+    var preview = document.getElementById('contact-' + index + '-preview');
+
+    if (nameInput) nameInput.value = '';
+    if (relInput) relInput.value = '';
+    if (phoneInput) phoneInput.value = '';
+    if (phoneHint) phoneHint.hidden = false;
+    if (photoInput) photoInput.value = '';
+    if (preview) preview.innerHTML = CONTACT_PHOTO_PREVIEW_DEFAULT;
+  }
+
+  function createPersonCard(index) {
+    var container = getPersonCardsContainer();
+    if (!container) return null;
+
+    var card = document.createElement('article');
+    card.className = 'person-card';
+    card.setAttribute('data-contact-index', String(index));
+    card.innerHTML =
+      '<h2 class="person-card__title">Person ' + index + '</h2>' +
+      '<div class="person-card__photo-row">' +
+        '<div class="photo-upload photo-upload--small">' +
+          '<div class="photo-preview" id="contact-' + index + '-preview">' +
+            CONTACT_PHOTO_PREVIEW_DEFAULT +
+          '</div>' +
+          '<input type="file" id="contact-' + index + '-photo" name="contact-' + index + '-photo" accept="image/*">' +
+        '</div>' +
+        '<div class="person-card__fields" style="flex: 1;">' +
+          '<div class="field">' +
+            '<label for="contact-' + index + '-name">Name</label>' +
+            '<input type="text" id="contact-' + index + '-name" name="contact-' + index + '-name">' +
+          '</div>' +
+          '<div class="field">' +
+            '<label for="contact-' + index + '-relationship">Relationship</label>' +
+            '<input type="text" id="contact-' + index + '-relationship" name="contact-' + index + '-relationship" placeholder="e.g. Daughter, Friend">' +
+          '</div>' +
+          '<div class="field">' +
+            '<label for="contact-' + index + '-phone">Phone Number</label>' +
+            '<input type="tel" id="contact-' + index + '-phone" name="contact-' + index + '-phone">' +
+            '<p class="helper-text person-card__phone-hint" id="contact-' + index + '-phone-hint">Add a phone number so they can be reached quickly in an emergency.</p>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    container.appendChild(card);
+    wirePersonCard(index);
+    return card;
+  }
+
+  function ensurePersonCardCount(count) {
+    var cards = getPersonCards();
+    while (cards.length < count) {
+      createPersonCard(getNextContactIndex());
+      cards = getPersonCards();
+    }
+  }
+
+  function resetPersonCards() {
+    var container = getPersonCardsContainer();
+    if (!container) return;
+
+    var cards = getPersonCards();
+    for (var i = 1; i < cards.length; i++) {
+      cards[i].remove();
+    }
+
+    var firstCard = container.querySelector('.person-card');
+    if (!firstCard) {
+      createPersonCard(1);
     } else {
-      note.textContent = '';
-      note.hidden = true;
+      firstCard.setAttribute('data-contact-index', '1');
+      var title = firstCard.querySelector('.person-card__title');
+      if (title) title.textContent = 'Person 1';
+      clearPersonCardFields(1);
     }
   }
 
@@ -111,21 +233,23 @@
 
     var contactsWrap = document.getElementById('summary-contacts-wrap');
     var contactsEl = document.getElementById('summary-contacts');
-    var contacts = profile.contacts && Array.isArray(profile.contacts)
-      ? profile.contacts.filter(function (c) {
-          return c && (c.name || c.relationship || c.phone);
-        })
-      : [];
+    var contacts = getProfileSourcedContacts(
+      profile.contacts && Array.isArray(profile.contacts) ? profile.contacts : []
+    ).filter(function (c) {
+      return c && (c.name || c.relationship || c.phone) && contactIsEmergency(c);
+    });
 
     if (contacts.length && contactsEl && contactsWrap) {
       contactsWrap.hidden = false;
       contactsEl.innerHTML = contacts.map(function (contact) {
         var details = [];
-        if (contact.relationship) details.push(contact.relationship);
+        if (contact.relationship) {
+          details.push(normalizeRelationship(contact.relationship) || contact.relationship);
+        }
         if (contact.phone) details.push(contact.phone);
         return (
           '<article class="profile-summary__contact">' +
-            '<p class="profile-summary__contact-name">' + escapeHtml(displayValue(contact.name)) + '</p>' +
+            '<p class="profile-summary__contact-name">' + escapeHtml(formatDisplayName(contact.name) || displayValue(contact.name)) + '</p>' +
             (details.length ? '<p class="profile-summary__contact-detail">' + escapeHtml(details.join(' · ')) + '</p>' : '') +
           '</article>'
         );
@@ -203,39 +327,13 @@
     var profilePhoto = document.getElementById('profile-photo');
     if (profilePhoto) profilePhoto.value = '';
 
-    for (var i = 1; i <= 3; i++) {
-      var card = document.querySelector('.person-card:nth-child(' + i + ')');
-      if (card && i > 1) card.classList.add('person-card--hidden');
-
-      var nameInput = document.getElementById('contact-' + i + '-name');
-      var relInput = document.getElementById('contact-' + i + '-relationship');
-      var phoneInput = document.getElementById('contact-' + i + '-phone');
-      var emergencyInput = document.getElementById('contact-' + i + '-emergency');
-      var phoneHint = document.getElementById('contact-' + i + '-phone-hint');
-      var photoInput = document.getElementById('contact-' + i + '-photo');
-      var preview = document.getElementById('contact-' + i + '-preview');
-
-      if (nameInput) nameInput.value = '';
-      if (relInput) relInput.value = '';
-      if (phoneInput) phoneInput.value = '';
-      if (emergencyInput) emergencyInput.checked = false;
-      if (phoneHint) phoneHint.hidden = true;
-      if (photoInput) photoInput.value = '';
-      if (preview) {
-        preview.innerHTML =
-          '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-          '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.75"/><path d="M21 15l-5-5L5 21"/></svg>' +
-          '<span class="photo-preview__text">Add photo</span>';
-      }
-    }
+    resetPersonCards();
 
     var btnAddPerson = document.getElementById('btn-add-person');
     if (btnAddPerson) btnAddPerson.style.display = '';
 
     var step1 = document.getElementById('wizard-step-1');
     if (step1) step1.checked = true;
-
-    updateMemoryLogContactsNote(null);
   }
 
   function populateWizardFromProfile(profile) {
@@ -285,29 +383,27 @@
     var contacts = getProfileSourcedContacts(
       profile.contacts && Array.isArray(profile.contacts) ? profile.contacts : []
     );
-    var btnAddPerson = document.getElementById('btn-add-person');
+
+    if (contacts.length > 0) {
+      ensurePersonCardCount(contacts.length);
+    }
 
     contacts.forEach(function (contact, index) {
       var slot = index + 1;
-      if (slot > 3) return;
+      var cards = getPersonCards();
+      var card = cards[index];
+      if (!card) return;
 
-      var card = document.querySelector('.person-card:nth-child(' + slot + ')');
-      if (card) card.classList.remove('person-card--hidden');
+      var contactIndex = parseInt(card.getAttribute('data-contact-index'), 10) || slot;
 
-      document.getElementById('contact-' + slot + '-name').value = contact.name || '';
-      document.getElementById('contact-' + slot + '-relationship').value = contact.relationship || '';
-      document.getElementById('contact-' + slot + '-phone').value = contact.phone || '';
-
-      var emergencyInput = document.getElementById('contact-' + slot + '-emergency');
-      if (emergencyInput) {
-        emergencyInput.checked = typeof contact.isEmergency === 'boolean'
-          ? contact.isEmergency
-          : true;
-        updatePhoneHintForContact(slot);
-      }
+      document.getElementById('contact-' + contactIndex + '-name').value = contact.name || '';
+      document.getElementById('contact-' + contactIndex + '-relationship').value =
+        normalizeRelationship(contact.relationship) || contact.relationship || '';
+      document.getElementById('contact-' + contactIndex + '-phone').value = contact.phone || '';
+      updatePhoneHintForContact(contactIndex);
 
       if (contact.photo) {
-        var preview = document.getElementById('contact-' + slot + '-preview');
+        var preview = document.getElementById('contact-' + contactIndex + '-preview');
         if (preview) {
           preview.innerHTML =
             '<img src="' + contact.photo + '" alt="Contact photo" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
@@ -315,14 +411,8 @@
       }
     });
 
-    if (btnAddPerson && !document.querySelector('.person-card--hidden')) {
-      btnAddPerson.style.display = 'none';
-    }
-
     var step1 = document.getElementById('wizard-step-1');
     if (step1) step1.checked = true;
-
-    updateMemoryLogContactsNote(profile);
   }
 
   function openModal(id) {
@@ -498,13 +588,7 @@
   var btnAddPerson = document.getElementById('btn-add-person');
   if (btnAddPerson) {
     btnAddPerson.addEventListener('click', function () {
-      var hidden = document.querySelector('.person-card--hidden');
-      if (hidden) {
-        hidden.classList.remove('person-card--hidden');
-      }
-      if (!document.querySelector('.person-card--hidden')) {
-        btnAddPerson.style.display = 'none';
-      }
+      createPersonCard(getNextContactIndex());
     });
   }
 
@@ -532,54 +616,15 @@
     });
   }
 
-  function setupContactPhoto(inputId, previewId) {
-    var input = document.getElementById(inputId);
-    var preview = document.getElementById(previewId);
-    if (!input || !preview) return;
-    input.addEventListener('change', function () {
-      var file = input.files[0];
-      if (!file) return;
-      compressImageToDataURL(input).then(function (dataUrl) {
-        if (!dataUrl) return;
-        preview.innerHTML =
-          '<img src="' + dataUrl + '" alt="Contact photo" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
-      });
-    });
-  }
-  setupContactPhoto('contact-1-photo', 'contact-1-preview');
-  setupContactPhoto('contact-2-photo', 'contact-2-preview');
-  setupContactPhoto('contact-3-photo', 'contact-3-preview');
-
-  function updatePhoneHintForContact(index) {
-    var emergencyInput = document.getElementById('contact-' + index + '-emergency');
-    var phoneHint = document.getElementById('contact-' + index + '-phone-hint');
-    if (!emergencyInput || !phoneHint) {
-      return;
-    }
-    phoneHint.hidden = !emergencyInput.checked;
-  }
-
-  for (var contactIndex = 1; contactIndex <= 3; contactIndex++) {
-    (function (index) {
-      var emergencyInput = document.getElementById('contact-' + index + '-emergency');
-      if (!emergencyInput) {
-        return;
-      }
-      emergencyInput.addEventListener('change', function () {
-        updatePhoneHintForContact(index);
-      });
-    })(contactIndex);
-  }
+  wirePersonCard(1);
 
   function hasEmergencyContactInWizard() {
-    for (var i = 1; i <= 3; i++) {
-      var card = document.querySelector('.person-card:nth-child(' + i + ')');
-      if (!card || card.classList.contains('person-card--hidden')) {
-        continue;
-      }
-      var nameInput = document.getElementById('contact-' + i + '-name');
-      var emergencyInput = document.getElementById('contact-' + i + '-emergency');
-      if (nameInput && nameInput.value.trim() && emergencyInput && emergencyInput.checked) {
+    var cards = getPersonCards();
+    for (var i = 0; i < cards.length; i++) {
+      var index = parseInt(cards[i].getAttribute('data-contact-index'), 10);
+      if (isNaN(index)) continue;
+      var nameInput = document.getElementById('contact-' + index + '-name');
+      if (nameInput && nameInput.value.trim()) {
         return true;
       }
     }
@@ -665,32 +710,31 @@
 
       var contactPromises = [];
       var contactData = [];
-      for (var i = 1; i <= 3; i++) {
-        var card = document.getElementById('contact-' + i + '-name');
-        if (!card) continue;
-        card = card.closest('.person-card');
-        if (!card || card.classList.contains('person-card--hidden')) continue;
+      var cards = getPersonCards();
+      cards.forEach(function (card, orderIndex) {
+        var index = parseInt(card.getAttribute('data-contact-index'), 10);
+        if (isNaN(index)) return;
 
-        (function (index) {
-          var photoInput = document.getElementById('contact-' + index + '-photo');
-          var photoPromise = photoInput.files.length
-            ? compressImageToDataURL(photoInput)
-            : Promise.resolve(getExistingPhotoFromPreview('contact-' + index + '-preview'));
+        var photoInput = document.getElementById('contact-' + index + '-photo');
+        var photoPromise = photoInput && photoInput.files.length
+          ? compressImageToDataURL(photoInput)
+          : Promise.resolve(getExistingPhotoFromPreview('contact-' + index + '-preview'));
 
-          contactPromises.push(
-            photoPromise.then(function (photo) {
-              contactData.push({
-                name: document.getElementById('contact-' + index + '-name').value.trim(),
-                relationship: document.getElementById('contact-' + index + '-relationship').value.trim(),
-                phone: document.getElementById('contact-' + index + '-phone').value.trim(),
-                photo: photo,
-                isEmergency: document.getElementById('contact-' + index + '-emergency').checked,
-                source: 'profile'
-              });
-            })
-          );
-        })(i);
-      }
+        contactPromises.push(
+          photoPromise.then(function (photo) {
+            contactData[orderIndex] = {
+              name: document.getElementById('contact-' + index + '-name').value.trim(),
+              relationship: normalizeRelationship(
+                document.getElementById('contact-' + index + '-relationship').value
+              ),
+              phone: document.getElementById('contact-' + index + '-phone').value.trim(),
+              photo: photo,
+              isEmergency: true,
+              source: 'profile'
+            };
+          })
+        );
+      });
 
       if (!hasEmergencyContactInWizard()) {
         var modal = document.getElementById('contact-warning-modal');
@@ -745,7 +789,9 @@
           favouriteFood: document.getElementById('favourite-food').value.trim(),
           pets: document.getElementById('pets').value.trim(),
           timePreference: (document.querySelector('input[name="time-preference"]:checked') || { value: '' }).value,
-          contacts: memoryLogContacts.concat(contactData)
+          contacts: memoryLogContacts.concat(
+            contactData.filter(function (contact) { return !!contact; })
+          )
         };
 
         var profiles = getProfiles();

@@ -25,27 +25,52 @@
     <div class="memory-log__shell">
       <div class="memory-log__layout">
       <aside class="memory-log__people-panel" aria-labelledby="memory-log-people-heading">
-        <h2 class="memory-log__panel-title" id="memory-log-people-heading">
-          <span class="memory-log__panel-accent" aria-hidden="true">♥</span>
-          Your People
-        </h2>
+        <div class="memory-log__panel-toolbar">
+          <div class="memory-log__panel-heading">
+            <div class="memory-log__panel-title-row">
+              <h2 class="memory-log__panel-title" id="memory-log-people-heading">
+                <span class="memory-log__panel-accent" aria-hidden="true">♥</span>
+                Your People
+              </h2>
+              <div class="memory-log__panel-actions">
+                <button type="button" class="memory-log__edit-btn" id="memory-log-edit-people-btn" aria-pressed="false" hidden>Edit</button>
+                <button type="button" class="memory-log__primary-btn" id="memory-log-add-person-btn" aria-haspopup="dialog" aria-controls="add-person-modal">+ Add a person</button>
+              </div>
+            </div>
+            <p class="memory-log__panel-desc">The special people in your life</p>
+          </div>
+        </div>
 
-        <p id="memory-log-people-quiet" class="memory-log__people-quiet" hidden>No people added yet</p>
+        <div id="memory-log-people-empty" class="memory-log__people-empty" hidden>
+          <span class="memory-log__empty-icon" aria-hidden="true">♥</span>
+          <p class="memory-log__empty-text">No people added yet — start with someone special</p>
+          <button type="button" class="memory-log__primary-btn memory-log__primary-btn--empty" id="memory-log-empty-person-btn" aria-haspopup="dialog" aria-controls="add-person-modal">
+            + Add a person
+          </button>
+        </div>
 
-        <div id="memory-log-people-list" class="memory-log__people-list"></div>
-
-        <button type="button" class="memory-log__add-person-btn" id="memory-log-add-person-btn" aria-haspopup="dialog" aria-controls="add-person-modal">+ Add a person</button>
+        <div class="memory-log__people-scroll" id="memory-log-people-scroll">
+          <div id="memory-log-people-list" class="memory-log__people-list"></div>
+        </div>
       </aside>
 
       <section class="memory-log__memories-panel" aria-labelledby="memory-log-memories-heading">
-        <div class="memory-log__memories-toolbar">
-          <h2 class="memory-log__panel-title" id="memory-log-memories-heading">
-            <span class="memory-log__panel-accent" aria-hidden="true">✿</span>
-            Your Memories
-          </h2>
-          <button type="button" class="memory-log__add-memory-btn" id="memory-log-add-btn" aria-haspopup="dialog" aria-controls="add-memory-modal">
-            + Add a memory
-          </button>
+        <div class="memory-log__panel-toolbar">
+          <div class="memory-log__panel-heading">
+            <div class="memory-log__panel-title-row">
+              <h2 class="memory-log__panel-title" id="memory-log-memories-heading">
+                <span class="memory-log__panel-accent" aria-hidden="true">✿</span>
+                Your Memories
+              </h2>
+              <div class="memory-log__panel-actions">
+                <button type="button" class="memory-log__edit-btn" id="memory-log-edit-memories-btn" aria-pressed="false" hidden>Edit</button>
+                <button type="button" class="memory-log__primary-btn" id="memory-log-add-btn" aria-haspopup="dialog" aria-controls="add-memory-modal">
+                  + Add a memory
+                </button>
+              </div>
+            </div>
+            <p class="memory-log__panel-desc">Moments worth remembering</p>
+          </div>
         </div>
 
         <div id="memory-log-feed" class="memory-log__feed" hidden></div>
@@ -62,8 +87,8 @@
             </g>
             <circle cx="60" cy="60" r="12" fill="#D9722C"/>
           </svg>
-          <p class="memory-log__empty-text">No memories yet — add your first one 🌼</p>
-          <button type="button" class="memory-log__add-memory-btn memory-log__add-memory-btn--empty" id="memory-log-empty-add-btn" aria-haspopup="dialog" aria-controls="add-memory-modal">
+          <p class="memory-log__empty-text">No memories yet — add your first one</p>
+          <button type="button" class="memory-log__primary-btn memory-log__primary-btn--empty" id="memory-log-empty-add-btn" aria-haspopup="dialog" aria-controls="add-memory-modal">
             + Add a memory
           </button>
         </div>
@@ -132,6 +157,11 @@
           <label for="person-relationship">About them</label>
           <input type="text" id="person-relationship" name="person-relationship" placeholder="e.g. Daughter, lives nearby, loves gardening" autocomplete="off">
         </div>
+        <div class="memory-form__field">
+          <label for="person-phone">Phone</label>
+          <input type="tel" id="person-phone" name="person-phone" autocomplete="tel">
+        </div>
+        <p class="memory-form__info">To add an emergency contact, please go to your Profile.</p>
         <div class="modal-actions">
           <button type="button" id="person-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
           <button type="submit" class="modal-btn modal-btn--primary">Save</button>
@@ -167,6 +197,17 @@
           <button type="submit" class="modal-btn modal-btn--primary">Save Memory</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div id="memory-confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="memory-confirm-title" hidden>
+    <div class="modal-card">
+      <p class="modal-title" id="memory-confirm-title">Remove this person?</p>
+      <p class="modal-body" id="memory-confirm-body">Remove this person? This cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" id="memory-confirm-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+        <button type="button" id="memory-confirm-remove" class="modal-btn modal-btn--primary">Remove</button>
+      </div>
     </div>
   </div>
 

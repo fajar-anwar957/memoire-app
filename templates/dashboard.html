@@ -17,14 +17,14 @@
       <div class="dashboard__brand-group">
         <svg class="dashboard__flower" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <g transform="translate(60, 60)">
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(0)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(60)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(120)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(180)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(240)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#1B3A5C" transform="rotate(300)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(0)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(60)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(120)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(180)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(240)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(300)"/>
           </g>
-          <circle cx="60" cy="60" r="12" fill="#D9722C"/>
+          <circle cx="60" cy="60" r="12" fill="#E8954F"/>
         </svg>
         <p class="dashboard__brand">Mémoire</p>
       </div>
@@ -47,11 +47,24 @@
     </section>
 
     <section class="dashboard__actions" aria-label="Quick actions">
-      <p class="dashboard__section-label">What would you like to do?</p>
+      <p class="dashboard__section-label">
+        <svg class="dashboard__section-flower" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g transform="translate(16, 16)">
+            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(0)"/>
+            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(60)"/>
+            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(120)"/>
+            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(180)"/>
+            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(240)"/>
+            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(300)"/>
+          </g>
+          <circle cx="16" cy="16" r="4" fill="#E8954F"/>
+        </svg>
+        What would you like to do?
+      </p>
 
-      <a href="/companion" class="dashboard-card dashboard-card--primary">
+      <a href="/companion" class="dashboard-card dashboard-card--primary dashboard-card--companion">
         <span class="dashboard-card__accent" aria-hidden="true"></span>
-        <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--companion" aria-hidden="true">
+        <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--orange" aria-hidden="true">
           <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
@@ -63,7 +76,8 @@
       </a>
 
       <div class="dashboard__tile-grid">
-        <a href="/memory-log" class="dashboard-card dashboard-card--tile">
+        <a href="/memory-log" class="dashboard-card dashboard-card--tile dashboard-card--memories">
+          <span class="dashboard-card__accent" aria-hidden="true"></span>
           <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--navy" aria-hidden="true">
             <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -77,8 +91,9 @@
           </span>
         </a>
 
-        <a href="/activities" class="dashboard-card dashboard-card--tile">
-          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--navy" aria-hidden="true">
+        <a href="/activities" class="dashboard-card dashboard-card--tile dashboard-card--activities">
+          <span class="dashboard-card__accent" aria-hidden="true"></span>
+          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--orange" aria-hidden="true">
             <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="7" height="7" rx="1.5"/>
               <rect x="14" y="3" width="7" height="7" rx="1.5"/>
@@ -92,7 +107,8 @@
           </span>
         </a>
 
-        <button type="button" class="dashboard-card dashboard-card--tile" id="dashboard-call-card" hidden aria-haspopup="dialog" aria-controls="call-contacts-modal">
+        <button type="button" class="dashboard-card dashboard-card--tile dashboard-card--call" id="dashboard-call-card" hidden aria-haspopup="dialog" aria-controls="call-contacts-modal">
+          <span class="dashboard-card__accent" aria-hidden="true"></span>
           <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--call" aria-hidden="true">
             <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>

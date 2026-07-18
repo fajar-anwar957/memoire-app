@@ -288,7 +288,9 @@
     var modalActionsEl = document.getElementById('wa-modal-actions');
     var modalClosingEl = document.getElementById('wa-modal-closing');
     var nextBtn = document.getElementById('wa-next-word');
+    var doneEarlyBtn = document.getElementById('wa-done-early');
     var replayBtn = document.getElementById('wa-replay-word');
+    var speakWarmBtn = document.getElementById('wa-speak-warm');
     var moreBtns = document.querySelectorAll('.cst-wa__more-btn');
 
     if (!promptEl || !optionsEl || !modalEl) {
@@ -302,7 +304,9 @@
     var state = {
       currentEntry: null,
       answered: false,
-      feedbackTimer: null
+      feedbackTimer: null,
+      warmLine: '',
+      feedbackSegments: []
     };
 
     function resumeGame() {
@@ -323,11 +327,27 @@
       if (speechSupported) {
         replayBtn.addEventListener('click', function () {
           if (state.currentEntry) {
-            speakWord(state.currentEntry.word);
+            toggleSpeech(function () {
+              shared.speakSegments(buildRoundSpeech(state.currentEntry, optionsEl), SPEECH_RATE);
+            });
           }
         });
       } else {
         replayBtn.hidden = true;
+      }
+    }
+
+    if (speakWarmBtn) {
+      if (speechSupported) {
+        speakWarmBtn.addEventListener('click', function () {
+          if (state.feedbackSegments && state.feedbackSegments.length) {
+            toggleSpeech(function () {
+              shared.speakSegments(state.feedbackSegments, SPEECH_RATE);
+            });
+          }
+        });
+      } else {
+        speakWarmBtn.hidden = true;
       }
     }
 
@@ -346,10 +366,22 @@
 
       state.answered = true;
       var selected = button.getAttribute('data-option');
-      var selectedOption = findOptionByText(state.currentEntry, selected);
-      var warmLine = selectedOption ? selectedOption.warm : '';
+      var correctOption = getCorrectOption(state.currentEntry);
+      var correctText = correctOption ? correctOption.text : '';
+      var isCorrect = selected === correctText;
+      var heading;
+      var warmLine;
 
-      applyOptionFeedback(optionsEl, selected);
+      if (isCorrect) {
+        applyCorrectFeedback(optionsEl, selected);
+        heading = 'Wonderful! That\u2019s right \u2014 ' + correctText + '.';
+        warmLine = correctOption ? correctOption.warm : '';
+      } else {
+        applyMissFeedback(optionsEl, selected, correctText);
+        heading = 'Good try! It was ' + correctText + '.';
+        warmLine = shared.GENTLE_SUPPORT_LINE;
+      }
+
       saveRound(state.currentEntry, selected);
 
       var roundsDone = getRoundsCompletedToday();
@@ -360,6 +392,10 @@
       }
 
       state.feedbackTimer = setTimeout(function () {
+        state.warmLine = warmLine;
+        state.feedbackSegments = [heading, warmLine].filter(function (part) {
+          return !!String(part || '').trim();
+        });
         openFeedbackModal({
           modalEl: modalEl,
           modalHeadingEl: modalHeadingEl,
@@ -368,9 +404,12 @@
           modalBodyEl: modalBodyEl,
           modalActionsEl: modalActionsEl,
           modalClosingEl: modalClosingEl,
+          speakWarmBtn: speakWarmBtn,
           word: state.currentEntry.word,
           selected: selected,
+          heading: heading,
           warmLine: warmLine,
+          feedbackSegments: state.feedbackSegments,
           isLastRound: isLastRound
         });
       }, FEEDBACK_DELAY_MS);
@@ -378,6 +417,7 @@
 
     nextBtn.addEventListener('click', function () {
       closeFeedbackModal(modalEl);
+      state.feedbackSegments = [];
 
       if (isSetComplete()) {
         showSessionComplete(gameEl, doneEl);
@@ -389,6 +429,14 @@
       state.currentEntry = pickWordEntry(previousId);
       renderRound(promptEl, imageEl, promptZoneEl, optionsEl, state.currentEntry);
     });
+
+    if (doneEarlyBtn) {
+      doneEarlyBtn.addEventListener('click', function () {
+        closeFeedbackModal(modalEl);
+        state.feedbackSegments = [];
+        showSessionComplete(gameEl, doneEl);
+      });
+    }
   }
 
 
@@ -472,19 +520,45 @@
   }
 
 
-  function findOptionByText(entry, text) {
-    if (!entry || !entry.options) {
+  /* First option in each word entry is the intended answer. */
+  function getCorrectOption(entry) {
+    if (!entry || !entry.options || !entry.options.length) {
       return null;
     }
-    for (var i = 0; i < entry.options.length; i++) {
-      if (entry.options[i].text === text) {
+    var i;
+    for (i = 0; i < entry.options.length; i++) {
+      if (entry.options[i].correct) {
         return entry.options[i];
       }
     }
-    return null;
+    return entry.options[0];
   }
 
+  function buildRoundSpeech(entry, optionsEl) {
+    var segments = [];
+    var optionTexts = [];
+    var word = entry && entry.word ? String(entry.word).trim() : '';
 
+    if (word) {
+      segments.push(word);
+    }
+
+    if (optionsEl) {
+      Array.prototype.forEach.call(optionsEl.querySelectorAll('.cst-wa__option'), function (button) {
+        var label = button.getAttribute('data-option') || String(button.textContent || '').trim();
+        if (label) {
+          optionTexts.push(label);
+        }
+      });
+    }
+
+    var optionsLine = shared.formatOptionsQuestion(optionTexts);
+    if (optionsLine) {
+      segments.push(optionsLine);
+    }
+
+    return segments;
+  }
 
   function renderPromptImage(imageEl, imageFile) {
     if (!imageEl) {
@@ -527,22 +601,36 @@
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           promptZoneEl.classList.add('is-visible');
-          speakWord(entry.word);
         });
       });
-    } else {
-      speakWord(entry.word);
     }
   }
 
-  function applyOptionFeedback(optionsEl, selected) {
+  function applyCorrectFeedback(optionsEl, selected) {
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
     Array.prototype.forEach.call(buttons, function (button) {
       button.disabled = true;
+      button.classList.remove('cst-wa__option--chosen', 'cst-wa__option--selected');
       if (button.getAttribute('data-option') === selected) {
         button.classList.add('cst-wa__option--chosen');
         button.innerHTML =
-          '<span class="cst-wa__option-mark" aria-hidden="true">✓</span> ' + selected;
+          '<span class="cst-wa__option-mark" aria-hidden="true">\u2713</span> ' + selected;
+      }
+    });
+  }
+
+  function applyMissFeedback(optionsEl, selected, correctText) {
+    var buttons = optionsEl.querySelectorAll('.cst-wa__option');
+    Array.prototype.forEach.call(buttons, function (button) {
+      button.disabled = true;
+      button.classList.remove('cst-wa__option--chosen', 'cst-wa__option--selected');
+      var optionText = button.getAttribute('data-option');
+      if (optionText === correctText) {
+        button.classList.add('cst-wa__option--chosen');
+        button.innerHTML =
+          '<span class="cst-wa__option-mark" aria-hidden="true">\u2713</span> ' + correctText;
+      } else if (optionText === selected) {
+        button.classList.add('cst-wa__option--selected');
       }
     });
   }
@@ -574,11 +662,16 @@
       if (config.modalBodyEl) {
         config.modalBodyEl.hidden = false;
       }
-      config.modalHeadingEl.textContent = pickModalHeading();
+      config.modalHeadingEl.textContent = config.heading || pickModalHeading();
       config.modalWarmEl.textContent = config.warmLine;
       config.modalActionsEl.hidden = false;
       config.modalClosingEl.hidden = true;
-      speakWarmLine(config.warmLine);
+      if (config.speakWarmBtn) {
+        var segments = config.feedbackSegments || [config.heading, config.warmLine].filter(function (part) {
+          return !!String(part || '').trim();
+        });
+        config.speakWarmBtn.hidden = !speechSupported || !segments.length;
+      }
     }
 
     config.modalEl.hidden = false;
@@ -639,12 +732,15 @@
     return shared.shuffleOptions(options);
   }
 
-  function speakWord(word) {
-    shared.speakWord(word, SPEECH_RATE);
-  }
-
-  function speakWarmLine(line) {
-    shared.speakWarmLine(line, SPEECH_RATE);
+  function toggleSpeech(speakCallback) {
+    if (!speechSupported) {
+      return;
+    }
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      shared.cancelSpeech();
+      return;
+    }
+    speakCallback();
   }
 
   function closeFeedbackModal(modalEl) {

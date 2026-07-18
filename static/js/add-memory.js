@@ -5,6 +5,14 @@
   var SAVE_ERROR_MESSAGE =
     "We couldn't save this photo — storage is full. Try removing an older memory first.";
 
+  var PHOTO_PREVIEW_DEFAULT =
+    '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
+      '<circle cx="8.5" cy="8.5" r="1.75"/>' +
+      '<path d="M21 15l-5-5L5 21"/>' +
+    '</svg>' +
+    '<span class="photo-preview__text">Tap to add<br>a photo</span>';
+
   function getMemories() {
     try {
       var stored = localStorage.getItem(STORAGE_KEY);
@@ -16,10 +24,8 @@
     }
   }
 
-  function saveMemory(entry) {
+  function writeMemories(memories) {
     try {
-      var memories = getMemories();
-      memories.push(entry);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
       return { ok: true, count: memories.length };
     } catch (err) {
@@ -27,16 +33,61 @@
     }
   }
 
+  function createMemoryId() {
+    return 'mem_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function memoryMatchesId(memory, id) {
+    if (!memory || id == null || id === '') return false;
+    if (memory.id != null && String(memory.id) === String(id)) return true;
+    if (memory.date != null && String(memory.date) === String(id)) return true;
+    return false;
+  }
+
+  function findMemoryIndex(memories, id) {
+    for (var i = 0; i < memories.length; i++) {
+      if (memoryMatchesId(memories[i], id)) return i;
+    }
+    return -1;
+  }
+
+  function saveMemory(entry) {
+    var memories = getMemories();
+    var toSave = Object.assign({}, entry);
+    if (!toSave.id) {
+      toSave.id = createMemoryId();
+    }
+    memories.push(toSave);
+    return writeMemories(memories);
+  }
+
+  function updateMemory(id, updates) {
+    var memories = getMemories();
+    var index = findMemoryIndex(memories, id);
+    if (index < 0) {
+      return { ok: false, error: new Error('Memory not found') };
+    }
+    memories[index] = Object.assign({}, memories[index], updates, {
+      id: memories[index].id || id
+    });
+    return writeMemories(memories);
+  }
+
+  function deleteMemory(id) {
+    var memories = getMemories();
+    var next = memories.filter(function (memory) {
+      return !memoryMatchesId(memory, id);
+    });
+    if (next.length === memories.length) {
+      return { ok: false, error: new Error('Memory not found') };
+    }
+    return writeMemories(next);
+  }
+
   function resetMemoryForm(form, photoPreview, photoInput) {
     if (form) form.reset();
     if (photoPreview) {
-      photoPreview.innerHTML =
-        '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-          '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
-          '<circle cx="8.5" cy="8.5" r="1.75"/>' +
-          '<path d="M21 15l-5-5L5 21"/>' +
-        '</svg>' +
-        '<span class="photo-preview__text">Tap to add<br>a photo</span>';
+      photoPreview.innerHTML = PHOTO_PREVIEW_DEFAULT;
     }
     if (photoInput) photoInput.value = '';
     hideSaveError();
@@ -81,6 +132,7 @@
     if (!memoryModal) return null;
 
     var memoryForm = document.getElementById('add-memory-form');
+    var memoryTitle = document.getElementById('memory-modal-title');
     var memoryCancel = document.getElementById('memory-modal-cancel');
     var memorySaveBtn = memoryForm
       ? memoryForm.querySelector('.modal-btn--primary')
@@ -92,9 +144,26 @@
       : document.getElementById('memory-toast');
     var toastTimer = null;
     var lastTrigger = null;
+    var editingId = null;
+    var existingPhoto = '';
+
+    function setModalTitle(isEdit) {
+      if (!memoryTitle) return;
+      memoryTitle.textContent = isEdit ? 'Edit memory' : 'Add a Memory';
+    }
+
+    function setSaveLabel(isEdit) {
+      if (!memorySaveBtn) return;
+      memorySaveBtn.textContent = isEdit ? 'Save changes' : 'Save Memory';
+    }
 
     function openMemoryModal(triggerEl) {
+      editingId = null;
+      existingPhoto = '';
       lastTrigger = triggerEl || lastTrigger;
+      setModalTitle(false);
+      setSaveLabel(false);
+      resetMemoryForm(memoryForm, memoryPhotoPreview, memoryPhotoInput);
       memoryModal.hidden = false;
       memoryModal.classList.add('is-open');
       hideSaveError();
@@ -102,10 +171,38 @@
       if (textInput) textInput.focus();
     }
 
+    function openEditMemoryModal(memory, triggerEl) {
+      if (!memory) return;
+      editingId = memory.id || memory.date || null;
+      existingPhoto = memory.photo ? String(memory.photo) : '';
+      lastTrigger = triggerEl || lastTrigger;
+      setModalTitle(true);
+      setSaveLabel(true);
+      resetMemoryForm(memoryForm, memoryPhotoPreview, memoryPhotoInput);
+
+      var textInput = document.getElementById('memory-text');
+      if (textInput) {
+        textInput.value = String(memory.text || '');
+      }
+      if (existingPhoto && memoryPhotoPreview) {
+        memoryPhotoPreview.innerHTML =
+          '<img src="' + existingPhoto + '" alt="Memory photo preview">';
+      }
+
+      memoryModal.hidden = false;
+      memoryModal.classList.add('is-open');
+      hideSaveError();
+      if (textInput) textInput.focus();
+    }
+
     function closeMemoryModal() {
       memoryModal.classList.remove('is-open');
       memoryModal.hidden = true;
+      editingId = null;
+      existingPhoto = '';
       resetMemoryForm(memoryForm, memoryPhotoPreview, memoryPhotoInput);
+      setModalTitle(false);
+      setSaveLabel(false);
       if (lastTrigger && typeof lastTrigger.focus === 'function') {
         lastTrigger.focus();
       }
@@ -134,22 +231,36 @@
       }
 
       compressImageToDataURL(memoryPhotoInput).then(function (photo) {
-        var result = saveMemory({
-          text: text,
-          photo: photo,
-          date: new Date().toISOString()
-        });
+        var resolvedPhoto = photo || existingPhoto || '';
+        var result;
+
+        if (editingId) {
+          result = updateMemory(editingId, {
+            text: text,
+            photo: resolvedPhoto
+          });
+        } else {
+          result = saveMemory({
+            text: text,
+            photo: resolvedPhoto,
+            date: new Date().toISOString()
+          });
+        }
 
         if (!result.ok) {
           showSaveError(memoryForm);
           return;
         }
 
+        var wasEdit = !!editingId;
         closeMemoryModal();
         if (typeof options.onSaved === 'function') {
-          options.onSaved();
+          options.onSaved(wasEdit);
         }
-        showToast(options.toastMessage || 'Memory saved!');
+        showToast(
+          options.toastMessage ||
+          (wasEdit ? 'Memory updated!' : 'Memory saved!')
+        );
       });
     }
 
@@ -207,6 +318,7 @@
 
     return {
       open: openMemoryModal,
+      openEdit: openEditMemoryModal,
       close: closeMemoryModal
     };
   }
@@ -214,6 +326,8 @@
   window.MemoireAddMemory = {
     init: init,
     getMemories: getMemories,
-    saveMemory: saveMemory
+    saveMemory: saveMemory,
+    updateMemory: updateMemory,
+    deleteMemory: deleteMemory
   };
 })(window);

@@ -1,6 +1,7 @@
 (function () {
   var getActiveProfile = window.MemoireCore.getActiveProfile;
   var contactIsEmergency = window.MemoireCore.contactIsEmergency;
+  var formatDisplayName = window.MemoireCore.formatDisplayName;
 
   var memoireConversationHistory = 'memoireConversationHistory';
   var memoireChatSession = 'memoireChatSession';
@@ -180,7 +181,7 @@
     var tokenToName = {};
     nameTokens.forEach(function (entry) {
       if (!tokenToName[entry.token]) {
-        tokenToName[entry.token] = entry.name;
+        tokenToName[entry.token] = formatDisplayName(entry.name) || entry.name;
       }
     });
 
@@ -373,7 +374,9 @@
   function buildEmergencyMessage(profile) {
     var contact = getEmergencyContact(profile);
     if (contact) {
-      var name = (contact.name || '').trim() || 'your emergency contact';
+      var name = formatDisplayName(contact.name) ||
+        (contact.name || '').trim() ||
+        'your emergency contact';
       var phone = ('' + contact.phone).trim();
       return 'I\'m worried about you. Please contact ' + name + ' right now at ' + phone + '.\n\n' +
         'If this is a medical emergency, please call your local emergency number immediately.';
