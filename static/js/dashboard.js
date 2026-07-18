@@ -3,6 +3,8 @@
   var getActiveProfile = window.MemoireCore.getActiveProfile;
   var escapeHtml = window.MemoireCore.escapeHtml;
   var displayValue = window.MemoireCore.displayValue;
+  var formatDisplayName = window.MemoireCore.formatDisplayName;
+  var normalizeRelationship = window.MemoireCore.normalizeRelationship;
 
   function getPreferredName(profile) {
     if (profile && profile.preferredName && String(profile.preferredName).trim()) {
@@ -66,8 +68,10 @@
   }
 
   function renderContactRow(contact) {
-    var contactName = displayValue(contact.name);
-    var relationship = contact.relationship ? String(contact.relationship).trim() : '';
+    var contactName = formatDisplayName(contact.name) || displayValue(contact.name);
+    var relationship = contact.relationship
+      ? (normalizeRelationship(contact.relationship) || String(contact.relationship).trim())
+      : '';
     var phone = contact.phone ? String(contact.phone).trim() : '';
     var dialNumber = phone ? sanitizePhoneForDial(phone) : '';
     var telHref = dialNumber ? buildTelHref(dialNumber) : '';
@@ -119,7 +123,7 @@
     }
 
     var activeProfile = getActiveProfile();
-    var preferredName = getPreferredName(activeProfile);
+    var preferredName = formatDisplayName(getPreferredName(activeProfile)) || 'Friend';
 
     var greetingEl = document.getElementById('dashboard-greeting');
     if (greetingEl) {
