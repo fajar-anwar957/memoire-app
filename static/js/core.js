@@ -41,6 +41,147 @@
     return text || '—';
   }
 
+  /**
+   * Capitalise each word for on-screen person names.
+   * Does not alter stored values or FAMILY_n tokens.
+   */
+  function formatDisplayName(name) {
+    var text = String(name == null ? '' : name).trim();
+    if (!text) {
+      return '';
+    }
+    return text.split(/\s+/).map(function (word) {
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }).join(' ');
+  }
+
+  /**
+   * Extract a core relationship noun from free-text input.
+   * "She is my sister" → "Sister", "my neighbour" → "Neighbour".
+   */
+  function normalizeRelationship(raw) {
+    var text = String(raw == null ? '' : raw).trim();
+    if (!text) {
+      return '';
+    }
+    text = text.replace(/[.!?]+$/g, '').trim();
+    if (!text) {
+      return '';
+    }
+
+    var stopWords = {
+      she: true, he: true, they: true, we: true, i: true,
+      me: true, him: true, her: true, them: true,
+      is: true, are: true, was: true, were: true,
+      be: true, been: true, being: true,
+      my: true, our: true, his: true, their: true, your: true
+    };
+
+    var words = text.toLowerCase().split(/\s+/).filter(Boolean);
+    var kept = [];
+    var i;
+    var word;
+    for (i = 0; i < words.length; i++) {
+      word = words[i].replace(/^[^a-z0-9']+|[^a-z0-9']+$/gi, '');
+      if (!word || stopWords[word]) {
+        continue;
+      }
+      kept.push(word);
+    }
+
+    if (!kept.length) {
+      word = text.toLowerCase().replace(/^[^a-z0-9']+|[^a-z0-9']+$/gi, '');
+      if (!word) {
+        return '';
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }
+
+    var result = kept.join(' ');
+    return result.charAt(0).toUpperCase() + result.slice(1);
+  }
+
+  var RELATIONSHIP_MIGRATION_KEY = 'patientProfilesRelationshipNormV1';
+
+  function migrateContactRelationshipsOnce() {
+    try {
+      if (localStorage.getItem(RELATIONSHIP_MIGRATION_KEY) === '1') {
+        return;
+      }
+      var profiles = getProfiles();
+      var changed = false;
+      var i;
+      var j;
+      var contacts;
+      var cleaned;
+      for (i = 0; i < profiles.length; i++) {
+        contacts = profiles[i] && profiles[i].contacts;
+        if (!Array.isArray(contacts)) {
+          continue;
+        }
+        for (j = 0; j < contacts.length; j++) {
+          if (!contacts[j] || contacts[j].relationship == null) {
+            continue;
+          }
+          cleaned = normalizeRelationship(contacts[j].relationship);
+          if (cleaned !== contacts[j].relationship) {
+            contacts[j].relationship = cleaned;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        localStorage.setItem('patientProfiles', JSON.stringify(profiles));
+      }
+      localStorage.setItem(RELATIONSHIP_MIGRATION_KEY, '1');
+    } catch (err) {
+      /* ignore migration errors; leave data as-is */
+    }
+  }
+
+  migrateContactRelationshipsOnce();
+
+  var EMERGENCY_FLAG_MIGRATION_KEY = 'patientProfilesEmergencyFlagV1';
+
+  function migrateContactEmergencyFlagsOnce() {
+    try {
+      if (localStorage.getItem(EMERGENCY_FLAG_MIGRATION_KEY) === '1') {
+        return;
+      }
+      var profiles = getProfiles();
+      var changed = false;
+      var i;
+      var j;
+      var contacts;
+      var contact;
+      for (i = 0; i < profiles.length; i++) {
+        contacts = profiles[i] && profiles[i].contacts;
+        if (!Array.isArray(contacts)) {
+          continue;
+        }
+        for (j = 0; j < contacts.length; j++) {
+          contact = contacts[j];
+          if (!contact) {
+            continue;
+          }
+          // Preserve explicit flags; legacy contacts without a boolean were treated as emergency.
+          if (typeof contact.isEmergency !== 'boolean') {
+            contact.isEmergency = true;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        localStorage.setItem('patientProfiles', JSON.stringify(profiles));
+      }
+      localStorage.setItem(EMERGENCY_FLAG_MIGRATION_KEY, '1');
+    } catch (err) {
+      /* ignore migration errors; leave data as-is */
+    }
+  }
+
+  migrateContactEmergencyFlagsOnce();
+
   function contactIsEmergency(contact) {
     if (!contact) {
       return false;
@@ -120,6 +261,8 @@
     getActiveProfile: getActiveProfile,
     escapeHtml: escapeHtml,
     displayValue: displayValue,
+    formatDisplayName: formatDisplayName,
+    normalizeRelationship: normalizeRelationship,
     contactIsEmergency: contactIsEmergency,
     readFileAsDataURL: readFileAsDataURL,
     compressImageToDataURL: compressImageToDataURL
