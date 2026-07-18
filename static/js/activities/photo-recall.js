@@ -4,6 +4,7 @@
   var shared = window.MemoireActivities;
   var speechSupported = shared.speechSupported;
   var FLOWER_FALLBACK_SVG = shared.FLOWER_FALLBACK_SVG;
+  var formatDisplayName = window.MemoireCore.formatDisplayName;
 
   /* ── Photo Recall ── */
 
@@ -11,40 +12,11 @@
   var PR_STORAGE_KEY = 'cstPhotoRecall';
   var PR_FEEDBACK_DELAY_MS = 1200;
   var PR_SPEECH_RATE = 0.9;
-  var PR_IDENTITY_SPEECH_RATE = 0.85;
-  var PR_CORRECT_HEADING_VARIANTS = ['yes', 'thats', 'wonderful'];
   var PR_NEUTRAL_NAMES = [
     'Margaret', 'Harold', 'Dorothy', 'Arthur', 'Betty',
     'Frank', 'Edith', 'George', 'Rose', 'William'
   ];
   var PR_DATE_ADJECTIVES = ['lovely', 'sunny', 'warm', 'gentle', 'happy'];
-  var PR_RELATIONSHIP_LINES = {
-    daughter: '{name} loves you very much, and she has your smile.',
-    son: '{name} loves you very much, and he has your smile.',
-    grandchild: '{name} brings joy to your family every day.',
-    friend: '{name} has shared many happy times with you.',
-    caretaker: '{name} takes good care of you every day.',
-    sister: '{name} has been by your side through many years.',
-    brother: '{name} has been by your side through many years.',
-    wife: '{name} shares a lifetime of love with you.',
-    husband: '{name} shares a lifetime of love with you.',
-    default: '{name} is someone special in your life.'
-  };
-  var PR_RELATIONSHIP_KEYWORDS = [
-    { match: 'granddaughter', key: 'grandchild' },
-    { match: 'grandson', key: 'grandchild' },
-    { match: 'grandchild', key: 'grandchild' },
-    { match: 'daughter', key: 'daughter' },
-    { match: 'son', key: 'son' },
-    { match: 'caretaker', key: 'caretaker' },
-    { match: 'caregiver', key: 'caretaker' },
-    { match: 'carer', key: 'caretaker' },
-    { match: 'friend', key: 'friend' },
-    { match: 'sister', key: 'sister' },
-    { match: 'brother', key: 'brother' },
-    { match: 'wife', key: 'wife' },
-    { match: 'husband', key: 'husband' }
-  ];
 
   document.addEventListener('DOMContentLoaded', function () {
     if (document.body.getAttribute('data-cst-activity') !== 'photo-recall') {
@@ -73,6 +45,9 @@
     var modalActionsEl = document.getElementById('pr-modal-actions');
     var modalClosingEl = document.getElementById('pr-modal-closing');
     var nextBtn = document.getElementById('pr-next-round');
+    var doneEarlyBtn = document.getElementById('pr-done-early');
+    var speakQuestionBtn = document.getElementById('pr-speak-question');
+    var speakFeedbackBtn = document.getElementById('pr-speak-feedback');
     var moreBtns = document.querySelectorAll('#pr-done-more, #pr-modal-more');
 
     if (!gameEl) {
@@ -102,6 +77,7 @@
       feedbackTimer: null,
       currentContact: null,
       currentMemory: null,
+      feedbackSegments: [],
       contactsPool: contactsWithPhotos,
       memoriesPool: memoriesWithPhotos,
       sessionLimit: mode === 'people'
@@ -114,13 +90,24 @@
       return completed >= state.sessionLimit && completed % state.sessionLimit === 0;
     }
 
+    function refreshPeoplePool() {
+      state.contactsPool = prGetContactsWithPhotos();
+      return state.contactsPool;
+    }
+
     function resumeGame() {
       prHideSessionComplete(gameEl, doneEl);
       state.answered = false;
       if (state.mode === 'people') {
         if (peopleRoundEl) peopleRoundEl.hidden = false;
         if (memoryRoundEl) memoryRoundEl.hidden = true;
+        refreshPeoplePool();
         state.currentContact = prPickContactEntry(state.contactsPool, null);
+        if (!state.currentContact) {
+          if (emptyEl) emptyEl.hidden = false;
+          if (gameEl) gameEl.hidden = true;
+          return;
+        }
         prRenderPeopleRound(photoEl, cueEl, optionsEl, peopleRoundEl, state.currentContact);
       } else {
         if (peopleRoundEl) peopleRoundEl.hidden = true;
@@ -153,6 +140,33 @@
       });
     });
 
+    if (speakQuestionBtn) {
+      if (speechSupported) {
+        speakQuestionBtn.addEventListener('click', function () {
+          prToggleSpeech(function () {
+            shared.speakSegments(prBuildQuestionSpeech(cueEl, optionsEl), PR_SPEECH_RATE);
+          });
+        });
+      } else {
+        speakQuestionBtn.hidden = true;
+      }
+    }
+
+    if (speakFeedbackBtn) {
+      if (speechSupported) {
+        speakFeedbackBtn.addEventListener('click', function () {
+          if (!state.feedbackSegments || !state.feedbackSegments.length) {
+            return;
+          }
+          prToggleSpeech(function () {
+            shared.speakSegments(state.feedbackSegments, PR_SPEECH_RATE);
+          });
+        });
+      } else {
+        speakFeedbackBtn.hidden = true;
+      }
+    }
+
     gameEl.hidden = false;
     if (emptyEl) emptyEl.hidden = true;
 
@@ -173,18 +187,20 @@
         var selectedName = button.getAttribute('data-name');
         var contact = state.currentContact;
         var correctName = String(contact.name).trim();
+        var displayName = formatDisplayName(correctName) || correctName;
         var relationship = String(contact.relationship || 'friend').trim();
         var isCorrect = selectedName === correctName;
-        var line1 = 'This is ' + correctName + ', your ' + relationship + '.';
-        var line2 = prRelationshipLine(relationship, correctName);
-        var heading = isCorrect
-          ? prPickCorrectHeading(correctName)
-          : correctName;
+        var heading;
+        var warmLine;
 
         if (isCorrect) {
-          prApplyCorrectFeedback(optionsEl, correctName);
+          heading = 'Wonderful! That\u2019s right \u2014 ' + displayName + '.';
+          warmLine = prBuildWarmLine(displayName, relationship);
+          prApplyCorrectFeedback(optionsEl, correctName, displayName);
         } else {
-          prApplyErrorlessFeedback(optionsEl, correctName);
+          heading = 'Good try! It was ' + displayName + '.';
+          warmLine = shared.GENTLE_SUPPORT_LINE;
+          prApplyMissFeedback(optionsEl, correctName, selectedName, displayName);
         }
 
         prSaveRound(contact, selectedName);
@@ -197,6 +213,9 @@
         }
 
         state.feedbackTimer = setTimeout(function () {
+          state.feedbackSegments = [heading, warmLine].filter(function (part) {
+            return !!String(part || '').trim();
+          });
           prOpenFeedbackModal({
             modalEl: modalEl,
             modalHeadingEl: modalHeadingEl,
@@ -204,9 +223,10 @@
             modalBodyEl: modalBodyEl,
             modalActionsEl: modalActionsEl,
             modalClosingEl: modalClosingEl,
+            speakFeedbackBtn: speakFeedbackBtn,
             heading: heading,
-            line1: line1,
-            line2: line2,
+            warmLine: warmLine,
+            feedbackSegments: state.feedbackSegments,
             photoSrc: contact.photo,
             revealPulse: !isCorrect,
             optionsEl: optionsEl,
@@ -222,6 +242,7 @@
       nextBtn.addEventListener('click', function () {
         prCloseFeedbackModal(modalEl);
         resetModalSections();
+        state.feedbackSegments = [];
 
         if (isSessionComplete()) {
           prShowSessionComplete(gameEl, doneEl);
@@ -230,8 +251,23 @@
 
         state.answered = false;
         var previousRef = state.currentContact ? prContactRef(state.currentContact) : null;
+        refreshPeoplePool();
         state.currentContact = prPickContactEntry(state.contactsPool, previousRef);
+        if (!state.currentContact) {
+          if (emptyEl) emptyEl.hidden = false;
+          if (gameEl) gameEl.hidden = true;
+          return;
+        }
         prRenderPeopleRound(photoEl, cueEl, optionsEl, peopleRoundEl, state.currentContact);
+      });
+    }
+
+    if (state.mode === 'people' && doneEarlyBtn) {
+      doneEarlyBtn.addEventListener('click', function () {
+        prCloseFeedbackModal(modalEl);
+        resetModalSections();
+        state.feedbackSegments = [];
+        prShowSessionComplete(gameEl, doneEl);
       });
     }
 
@@ -435,34 +471,42 @@
 
 
 
-  function prRelationshipLine(relationship, name) {
-    var key = String(relationship || '').trim().toLowerCase();
-    var template = PR_RELATIONSHIP_LINES.default;
-    var i;
-    var matchWord;
-    var pattern;
-    for (i = 0; i < PR_RELATIONSHIP_KEYWORDS.length; i++) {
-      matchWord = PR_RELATIONSHIP_KEYWORDS[i].match;
-      pattern = new RegExp('\\b' + matchWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-      if (pattern.test(key)) {
-        template = PR_RELATIONSHIP_LINES[PR_RELATIONSHIP_KEYWORDS[i].key] || template;
-        break;
-      }
+  function prBuildWarmLine(name, relationship) {
+    var rel = window.MemoireCore && typeof window.MemoireCore.normalizeRelationship === 'function'
+      ? window.MemoireCore.normalizeRelationship(relationship)
+      : String(relationship || '').trim();
+    if (!rel) {
+      rel = 'Friend';
     }
-    return template.replace(/\{name\}/g, name);
+    return name + ' is your ' + rel + ' \u2014 someone special in your life.';
   }
 
-  function prPickCorrectHeading(name) {
-    var variant = PR_CORRECT_HEADING_VARIANTS[
-      Math.floor(Math.random() * PR_CORRECT_HEADING_VARIANTS.length)
-    ];
-    if (variant === 'yes') {
-      return 'Yes \u2014 ' + name + '!';
+  function prBuildQuestionSpeech(cueEl, optionsEl) {
+    var segments = [];
+    var optionNames = [];
+    var cue = cueEl ? String(cueEl.textContent || '').trim() : '';
+
+    if (cue) {
+      segments.push(cue);
     }
-    if (variant === 'thats') {
-      return 'That\u2019s ' + name + '!';
+    segments.push('Who is this?');
+
+    if (optionsEl) {
+      Array.prototype.forEach.call(optionsEl.querySelectorAll('.cst-wa__option'), function (button) {
+        var raw = button.getAttribute('data-name');
+        var label = formatDisplayName(raw) || raw || String(button.textContent || '').trim();
+        if (label) {
+          optionNames.push(label);
+        }
+      });
     }
-    return 'Wonderful!';
+
+    var optionsLine = shared.formatOptionsQuestion(optionNames);
+    if (optionsLine) {
+      segments.push(optionsLine);
+    }
+
+    return segments;
   }
 
   function prEnsureModalBodyStructure(modalBodyEl, modalWarmEl) {
@@ -478,11 +522,9 @@
     }
 
     var line2El = modalBodyEl.querySelector('#pr-modal-warm-2');
-    if (!line2El) {
-      line2El = document.createElement('p');
-      line2El.className = 'cst-wa-modal__warm cst-pr-modal__line-2';
-      line2El.id = 'pr-modal-warm-2';
-      modalBodyEl.appendChild(line2El);
+    if (line2El) {
+      line2El.textContent = '';
+      line2El.hidden = true;
     }
 
     return {
@@ -559,7 +601,7 @@
 
   function prRenderPeopleRound(photoEl, cueEl, optionsEl, promptZoneEl, contact) {
     var relationship = String(contact.relationship || 'friend').trim();
-    var cueText = 'Someone special to you\u2026 your ' + relationship + '.';
+    var cueText = shared.formatRelationshipCue(relationship);
 
     prRenderPhoto(photoEl, contact.photo);
 
@@ -578,7 +620,7 @@
         button.type = 'button';
         button.className = 'cst-wa__option';
         button.setAttribute('data-name', name);
-        button.textContent = name;
+        button.textContent = formatDisplayName(name) || name;
         optionsEl.appendChild(button);
       });
     }
@@ -587,17 +629,13 @@
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           promptZoneEl.classList.add('is-visible');
-          prSpeak(cueText);
         });
       });
-    } else {
-      prSpeak(cueText);
     }
   }
 
   function prRenderMemoryRound(photoEl, captionEl, dateEl, promptZoneEl, memory) {
     var text = String(memory.text).trim();
-    var spokenPrompt = 'Do you remember this? ' + text;
 
     prRenderPhoto(photoEl, memory.photo);
 
@@ -617,35 +655,38 @@
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           promptZoneEl.classList.add('is-visible');
-          prSpeak(spokenPrompt);
         });
       });
-    } else {
-      prSpeak(spokenPrompt);
     }
   }
 
-  function prApplyCorrectFeedback(optionsEl, correctName) {
+  function prApplyCorrectFeedback(optionsEl, correctName, displayName) {
+    var label = displayName || formatDisplayName(correctName) || correctName;
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
     Array.prototype.forEach.call(buttons, function (button) {
       button.disabled = true;
+      button.classList.remove('cst-wa__option--chosen', 'cst-wa__option--selected');
       if (button.getAttribute('data-name') === correctName) {
         button.classList.add('cst-wa__option--chosen');
         button.innerHTML =
-          '<span class="cst-wa__option-mark" aria-hidden="true">\u2713</span> ' + correctName;
+          '<span class="cst-wa__option-mark" aria-hidden="true">\u2713</span> ' + label;
       }
     });
   }
 
-  function prApplyErrorlessFeedback(optionsEl, correctName) {
+  function prApplyMissFeedback(optionsEl, correctName, selectedName, displayName) {
+    var label = displayName || formatDisplayName(correctName) || correctName;
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
     Array.prototype.forEach.call(buttons, function (button) {
       button.disabled = true;
-      button.classList.remove('cst-wa__option--chosen');
-      if (button.getAttribute('data-name') === correctName) {
+      button.classList.remove('cst-wa__option--chosen', 'cst-wa__option--selected');
+      var name = button.getAttribute('data-name');
+      if (name === correctName) {
         button.classList.add('cst-wa__option--chosen');
         button.innerHTML =
-          '<span class="cst-wa__option-mark" aria-hidden="true">\u2713</span> ' + correctName;
+          '<span class="cst-wa__option-mark" aria-hidden="true">\u2713</span> ' + label;
+      } else if (name === selectedName) {
+        button.classList.add('cst-wa__option--selected');
       }
     });
   }
@@ -669,9 +710,19 @@
       config.modalBodyEl.hidden = false;
     }
     config.modalHeadingEl.textContent = config.heading;
-    config.modalWarmEl.textContent = config.line1 || '';
-    bodyParts.line2El.textContent = config.line2 || '';
+    config.modalWarmEl.textContent = config.warmLine || '';
+    if (bodyParts.line2El) {
+      bodyParts.line2El.textContent = '';
+      bodyParts.line2El.hidden = true;
+    }
     prSetModalThumbnail(bodyParts.thumbEl, config.photoSrc);
+
+    if (config.speakFeedbackBtn) {
+      var segments = config.feedbackSegments || [config.heading, config.warmLine].filter(function (part) {
+        return !!String(part || '').trim();
+      });
+      config.speakFeedbackBtn.hidden = !speechSupported || !segments.length;
+    }
 
     if (config.isLastRound) {
       config.modalActionsEl.hidden = true;
@@ -680,8 +731,6 @@
       config.modalActionsEl.hidden = false;
       config.modalClosingEl.hidden = true;
     }
-
-    prSpeakIdentityLines(config.line1, config.line2);
 
     if (config.revealPulse) {
       prPulseCorrectButton(config.optionsEl, config.correctName);
@@ -739,12 +788,15 @@
     return shared.shuffleOptions(items);
   }
 
-  function prSpeak(text) {
-    shared.speakText(text, PR_SPEECH_RATE);
-  }
-
-  function prSpeakIdentityLines(line1, line2) {
-    shared.speakIdentityLines(line1, line2, PR_IDENTITY_SPEECH_RATE);
+  function prToggleSpeech(speakCallback) {
+    if (!speechSupported) {
+      return;
+    }
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      shared.cancelSpeech();
+      return;
+    }
+    speakCallback();
   }
 
   function prCloseFeedbackModal(modalEl) {

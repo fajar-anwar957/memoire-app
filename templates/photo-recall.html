@@ -36,6 +36,9 @@
           <div class="cst-wa__illustration" id="pr-photo"></div>
           <p class="cst-wa__intro" id="pr-cue"></p>
           <h2 class="cst-pr__question">Who is this?</h2>
+          <button type="button" class="cst-wa__replay" id="pr-speak-question" aria-label="Hear the full question">
+            <span class="cst-wa__replay-icon" aria-hidden="true">🔊</span>
+          </button>
           <div class="cst-pr__options" id="pr-name-options" role="group" aria-label="Name choices"></div>
         </div>
 
@@ -65,9 +68,9 @@
             <circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>
           </svg>
         </div>
-        <p class="cst-wa__done-message">That&rsquo;s all for today&rsquo;s photo recall &mdash; well done!</p>
+        <p class="cst-wa__done-message">Lovely time together today!</p>
         <div class="cst-wa__done-actions">
-          <a href="/activities" class="cst-wa__done-btn">Done for Today</a>
+          <a href="/activities" class="cst-wa__done-btn">Back to Activities</a>
           <button type="button" class="cst-wa__more-btn" id="pr-done-more">I&rsquo;d like a few more</button>
         </div>
       </section>
@@ -86,9 +89,13 @@
       <div id="pr-modal-body">
         <h2 class="cst-wa-modal__heading" id="pr-modal-heading">Lovely!</h2>
         <p class="cst-wa-modal__warm" id="pr-modal-warm"></p>
+        <button type="button" class="cst-wa__replay" id="pr-speak-feedback" aria-label="Hear the message">
+          <span class="cst-wa__replay-icon" aria-hidden="true">🔊</span>
+        </button>
       </div>
       <div class="cst-wa-modal__actions" id="pr-modal-actions">
         <button type="button" class="cst-wa-modal__next" id="pr-next-round">Next Photo</button>
+        <button type="button" class="cst-wa-modal__done-early" id="pr-done-early">I&rsquo;m done for today</button>
       </div>
       <div class="cst-wa-modal__closing" id="pr-modal-closing" hidden>
         <div class="cst-wa__done-visual cst-wa__done-visual--compact" aria-hidden="true">
@@ -108,9 +115,9 @@
             <circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>
           </svg>
         </div>
-        <p class="cst-wa-modal__closing-text">That&rsquo;s all for today&rsquo;s photo recall &mdash; well done!</p>
+        <p class="cst-wa-modal__closing-text">Lovely time together today!</p>
         <div class="cst-wa__done-actions">
-          <a href="/activities" class="cst-wa__done-btn">Done for Today</a>
+          <a href="/activities" class="cst-wa__done-btn">Back to Activities</a>
           <button type="button" class="cst-wa__more-btn" id="pr-modal-more">I&rsquo;d like a few more</button>
         </div>
       </div>
