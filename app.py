@@ -108,6 +108,165 @@ def word_association():
 def photo_recall():
     return render_template('photo-recall.html')
 
+@app.route('/activities/daily-quiz')
+def daily_quiz():
+    return render_template('daily-quiz.html')
+
+DAILY_QUIZ_SYSTEM_PROMPT = (
+    "You generate a gentle Cognitive Stimulation Therapy quiz for someone with "
+    "early-stage dementia. Write warm, simple, short questions suitable for older adults.\n\n"
+    "Name tokens in the data: The person taking the quiz may appear as [PATIENT]. "
+    "People close to them may appear as [FAMILY_1], [FAMILY_2], and so on. "
+    "When a personal answer is a person from the data, keep that token exactly "
+    "as written in the options and correct answer — never invent real names.\n\n"
+    "STRICT FACTUAL RULES (must follow):\n"
+    "- Every question MUST be answerable using ONLY facts explicitly present in the "
+    "provided memories and people data. Never invent details, foods, places, events, "
+    "or names that are not in the data.\n"
+    "- If a memory is too vague to support a factual question "
+    '(e.g. "I had breakfast today" with no food named), SKIP it. Use a different '
+    "memory or person instead. Do not ask what someone ate, wore, or did unless "
+    "that detail is explicitly written in the memory.\n"
+    "- Memory questions should ask about what IS in the data. Example: from "
+    '"I went to Lahore yesterday" ask "Where did you go recently?" with correct '
+    'answer "Lahore" and two plausible distractors of the same category (places).\n'
+    "- People questions should ask about relationships present in the data. Example: "
+    '"Who is your neighbour?" with the correct answer being that person\'s token '
+    "and two other name tokens (or plausible name distractors) as options.\n"
+    "- NEVER address the user by any name — no invented names, no tokens used as "
+    'vocatives (never "Alex,", never "[PATIENT],"). Refer to the user only as "you".\n'
+    "- The correct answer and the two distractors must be the same category "
+    "(all places, all names, all activities, etc.). The correct answer must "
+    "genuinely match the memory or person data.\n"
+    "- If there is not enough personal data for the requested number of personal "
+    "questions, make fewer personal questions and add extra gentle general questions "
+    "instead — never invent personal facts to fill the quota.\n\n"
+    "Format rules:\n"
+    "- Return STRICT JSON only: an array of question objects. No markdown, no code fences, "
+    "no commentary before or after the JSON.\n"
+    "- Each object must have: "
+    '"type" ("personal" or "general"), '
+    '"question" (string), '
+    '"options" (array of exactly 3 short strings), '
+    '"correct" (must match one option exactly), '
+    '"warm" (one short warm encouragement line for after they answer).\n'
+    "- General questions must be simple, pleasant, everyday knowledge "
+    "(e.g. fruit, weather, colours, animals) — never distressing or medically complex.\n"
+    "- Never include scores, points, percentages, or judgemental language.\n"
+    "- Keep language plain and dementia-friendly."
+)
+
+@app.route('/api/daily-quiz', methods=['POST'])
+def api_daily_quiz():
+    try:
+        data = request.get_json(silent=True) or {}
+
+        memories = data.get('memories') or []
+        if not isinstance(memories, list):
+            memories = []
+
+        people = data.get('people') or []
+        if not isinstance(people, list):
+            people = []
+
+        avoid_questions = data.get('avoidQuestions') or []
+        if not isinstance(avoid_questions, list):
+            avoid_questions = []
+
+        personal_count = data.get('personalCount', 2)
+        general_count = data.get('generalCount', 1)
+        try:
+            personal_count = max(0, min(3, int(personal_count)))
+        except (TypeError, ValueError):
+            personal_count = 2
+        try:
+            general_count = max(0, min(3, int(general_count)))
+        except (TypeError, ValueError):
+            general_count = 1
+        if personal_count + general_count < 1:
+            personal_count = 2
+            general_count = 1
+
+        memory_lines = []
+        for entry in memories[:12]:
+            if isinstance(entry, str) and entry.strip():
+                memory_lines.append(f'- {entry.strip()}')
+            elif isinstance(entry, dict):
+                text = entry.get('text') or entry.get('content') or ''
+                if isinstance(text, str) and text.strip():
+                    memory_lines.append(f'- {text.strip()}')
+
+        people_lines = []
+        for person in people[:12]:
+            if not isinstance(person, dict):
+                continue
+            name = str(person.get('name') or '').strip()
+            relationship = str(person.get('relationship') or '').strip()
+            if not name:
+                continue
+            if relationship:
+                people_lines.append(f'- {name} ({relationship})')
+            else:
+                people_lines.append(f'- {name}')
+
+        context_parts = []
+        if memory_lines:
+            context_parts.append(
+                'Recent memories (already pseudonymised):\n' + '\n'.join(memory_lines)
+            )
+        else:
+            context_parts.append('Recent memories: none available.')
+
+        if people_lines:
+            context_parts.append(
+                'People in their life (already pseudonymised):\n' + '\n'.join(people_lines)
+            )
+        else:
+            context_parts.append('People in their life: none available.')
+
+        avoid_lines = []
+        for item in avoid_questions[:40]:
+            if isinstance(item, str) and item.strip():
+                avoid_lines.append(f'- {item.strip()}')
+            elif isinstance(item, dict):
+                q = item.get('question') or item.get('text') or ''
+                if isinstance(q, str) and q.strip():
+                    avoid_lines.append(f'- {q.strip()}')
+
+        if avoid_lines:
+            context_parts.append(
+                'Already asked today — do not repeat these questions or ask about '
+                'the same facts:\n' + '\n'.join(avoid_lines)
+            )
+
+        user_message = (
+            f'Generate exactly {personal_count} "personal" questions and '
+            f'{general_count} "general" question(s).\n'
+            f'Total questions in the JSON array must be '
+            f'{personal_count + general_count}.\n\n'
+            + '\n\n'.join(context_parts)
+        )
+
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'ANTHROPIC_API_KEY is not configured'}), 500
+
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model='claude-haiku-4-5',
+            max_tokens=800,
+            system=DAILY_QUIZ_SYSTEM_PROMPT,
+            messages=[{'role': 'user', 'content': user_message}],
+        )
+
+        raw = response.content[0].text if response.content else ''
+        return jsonify({'raw': raw})
+
+    except anthropic.APIError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     try:
