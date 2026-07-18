@@ -93,7 +93,7 @@
           </section>
 
           <section class="profile-summary__panel profile-summary__panel--people profile-summary__section profile-summary__section--people" id="summary-contacts-wrap" aria-labelledby="summary-section-people" hidden>
-            <h2 class="profile-summary__section-title" id="summary-section-people">Important People</h2>
+            <h2 class="profile-summary__section-title" id="summary-section-people">Emergency Contacts</h2>
             <div id="summary-contacts" class="profile-summary__contacts-grid"></div>
           </section>
         </div>
@@ -261,10 +261,10 @@
         <!-- Step 3: Important people -->
         <section class="wizard-panel wizard-panel--3" id="important-people" aria-label="Step 3 of 3">
           <div class="card">
-            <h2 class="person-cards__heading">Important People</h2>
-            <p class="helper-text person-cards__intro">Add family and friends. Tick the box for anyone who should be contacted in an emergency.</p>
-            <div class="person-cards">
-              <article class="person-card">
+            <h2 class="person-cards__heading">Emergency Contacts</h2>
+            <p class="helper-text person-cards__intro">Add people who should be contacted in an emergency. Important people for memories can be added on the Memories &amp; People page.</p>
+            <div class="person-cards" id="person-cards">
+              <article class="person-card" data-contact-index="1">
                 <h2 class="person-card__title">Person 1</h2>
                 <div class="person-card__photo-row">
                   <div class="photo-upload photo-upload--small">
@@ -290,90 +290,13 @@
                     <div class="field">
                       <label for="contact-1-phone">Phone Number</label>
                       <input type="tel" id="contact-1-phone" name="contact-1-phone">
-                      <p class="helper-text person-card__phone-hint" id="contact-1-phone-hint" hidden>Add a phone number so they can be reached quickly in an emergency.</p>
-                    </div>
-                    <div class="person-card__emergency">
-                      <input type="checkbox" id="contact-1-emergency" name="contact-1-emergency">
-                      <label for="contact-1-emergency">Emergency contact</label>
-                    </div>
-                  </div>
-                </div>
-              </article>
-
-              <article class="person-card person-card--hidden">
-                <h2 class="person-card__title">Person 2</h2>
-                <div class="person-card__photo-row">
-                  <div class="photo-upload photo-upload--small">
-                    <div class="photo-preview" id="contact-2-preview">
-                      <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <circle cx="8.5" cy="8.5" r="1.75"/>
-                        <path d="M21 15l-5-5L5 21"/>
-                      </svg>
-                      <span class="photo-preview__text">Add photo</span>
-                    </div>
-                    <input type="file" id="contact-2-photo" name="contact-2-photo" accept="image/*">
-                  </div>
-                  <div class="person-card__fields" style="flex: 1;">
-                    <div class="field">
-                      <label for="contact-2-name">Name</label>
-                      <input type="text" id="contact-2-name" name="contact-2-name">
-                    </div>
-                    <div class="field">
-                      <label for="contact-2-relationship">Relationship</label>
-                      <input type="text" id="contact-2-relationship" name="contact-2-relationship" placeholder="e.g. Son, Neighbour">
-                    </div>
-                    <div class="field">
-                      <label for="contact-2-phone">Phone Number</label>
-                      <input type="tel" id="contact-2-phone" name="contact-2-phone">
-                      <p class="helper-text person-card__phone-hint" id="contact-2-phone-hint" hidden>Add a phone number so they can be reached quickly in an emergency.</p>
-                    </div>
-                    <div class="person-card__emergency">
-                      <input type="checkbox" id="contact-2-emergency" name="contact-2-emergency">
-                      <label for="contact-2-emergency">Emergency contact</label>
-                    </div>
-                  </div>
-                </div>
-              </article>
-
-              <article class="person-card person-card--hidden">
-                <h2 class="person-card__title">Person 3</h2>
-                <div class="person-card__photo-row">
-                  <div class="photo-upload photo-upload--small">
-                    <div class="photo-preview" id="contact-3-preview">
-                      <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <circle cx="8.5" cy="8.5" r="1.75"/>
-                        <path d="M21 15l-5-5L5 21"/>
-                      </svg>
-                      <span class="photo-preview__text">Add photo</span>
-                    </div>
-                    <input type="file" id="contact-3-photo" name="contact-3-photo" accept="image/*">
-                  </div>
-                  <div class="person-card__fields" style="flex: 1;">
-                    <div class="field">
-                      <label for="contact-3-name">Name</label>
-                      <input type="text" id="contact-3-name" name="contact-3-name">
-                    </div>
-                    <div class="field">
-                      <label for="contact-3-relationship">Relationship</label>
-                      <input type="text" id="contact-3-relationship" name="contact-3-relationship" placeholder="e.g. Spouse, Grandchild">
-                    </div>
-                    <div class="field">
-                      <label for="contact-3-phone">Phone Number</label>
-                      <input type="tel" id="contact-3-phone" name="contact-3-phone">
-                      <p class="helper-text person-card__phone-hint" id="contact-3-phone-hint" hidden>Add a phone number so they can be reached quickly in an emergency.</p>
-                    </div>
-                    <div class="person-card__emergency">
-                      <input type="checkbox" id="contact-3-emergency" name="contact-3-emergency">
-                      <label for="contact-3-emergency">Emergency contact</label>
+                      <p class="helper-text person-card__phone-hint" id="contact-1-phone-hint">Add a phone number so they can be reached quickly in an emergency.</p>
                     </div>
                   </div>
                 </div>
               </article>
             </div>
             <button type="button" id="btn-add-person" class="btn-add-person">+ Add another person</button>
-            <p id="memory-log-contacts-note" class="helper-text person-cards__memory-log-note" hidden></p>
           </div>
         </section>
       </div>
