@@ -68,7 +68,69 @@ body {
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--color-navy);
-  letter-spacing: 0.01em;
+  letter-spacing: normal;
+}
+
+/* Subtle status beside newest messages — thinking / speaking only */
+.companion__presence {
+  position: fixed;
+  left: max(1.25rem, calc(50% - 270px + 1.25rem));
+  bottom: calc(80px + 72px + env(safe-area-inset-bottom, 0px));
+  z-index: 19;
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: calc(100% - 2rem);
+  width: max-content;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 254, 250, 0.92);
+  box-shadow: 0 2px 10px rgba(27, 58, 92, 0.1);
+  pointer-events: none;
+}
+
+.companion__presence[data-state="thinking"],
+.companion__presence[data-state="speaking"] {
+  display: inline-flex;
+}
+
+.companion__presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-flower-petal, #8FAFC9);
+  flex-shrink: 0;
+}
+
+.companion__presence[data-state="thinking"] .companion__presence-dot {
+  animation: companion-presence-pulse 1.2s ease-in-out infinite;
+}
+
+.companion__presence[data-state="speaking"] .companion__presence-dot {
+  background: var(--color-orange);
+  animation: companion-presence-pulse 0.9s ease-in-out infinite;
+}
+
+.companion__presence-label {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  color: var(--color-text-muted);
+  line-height: 1.2;
+}
+
+@keyframes companion-presence-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 
 /* Chat area */
@@ -80,7 +142,7 @@ body {
   right: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 1.25rem;
+  padding: 0.75rem 1.25rem 1.25rem;
   /* Extra room at the bottom so the final message is never hidden behind the
      fixed input form area (input bar height ~ 70-90px). */
   padding-bottom: 88px;
@@ -97,10 +159,58 @@ body {
 
 .companion-message--companion {
   align-self: flex-start;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.4rem;
+  max-width: 92%;
 }
 
 .companion-message--patient {
   align-self: flex-end;
+}
+
+.companion-message__speak {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin-top: 0.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-navy);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.companion-message__speak svg {
+  width: 18px;
+  height: 18px;
+}
+
+.companion-message__speak:hover,
+.companion-message__speak:focus-visible {
+  background-color: rgba(27, 58, 92, 0.1);
+}
+
+.companion-message__speak:focus-visible {
+  outline: 3px solid rgba(27, 58, 92, 0.45);
+  outline-offset: 2px;
+}
+
+.companion-message__speak:active {
+  transform: scale(0.94);
+}
+
+.companion-message__speak--active {
+  color: #D9722C;
+  background-color: rgba(217, 114, 44, 0.14);
 }
 
 .companion-message__label {
@@ -108,7 +218,7 @@ body {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-text-muted);
-  letter-spacing: 0.02em;
+  letter-spacing: normal;
 }
 
 .companion-message__bubble {
@@ -123,6 +233,8 @@ body {
   background-color: #E4EAF3;
   color: var(--color-text);
   border-bottom-left-radius: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .companion-message--patient .companion-message__bubble {
@@ -180,9 +292,9 @@ body {
      never picks up the cream input bar tint or visually blends into the chat
      bubble sitting just above it. */
   background-color: #FFFFFF;
-  border: 1.5px solid rgba(27, 58, 92, 0.22);
+  border: 2px solid var(--color-orange);
   border-radius: 24px;
-  box-shadow: 0 2px 10px rgba(27, 58, 92, 0.12);
+  box-shadow: 0 2px 10px rgba(27, 58, 92, 0.08);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -194,8 +306,10 @@ body {
 
 .companion__input:focus {
   outline: none;
-  border-color: #D9722C;
-  box-shadow: 0 2px 12px rgba(217, 114, 44, 0.25);
+  border-color: #C45F1F;
+  box-shadow:
+    0 0 0 3px rgba(217, 114, 44, 0.28),
+    0 2px 12px rgba(217, 114, 44, 0.22);
 }
 
 .companion__send {
@@ -208,7 +322,7 @@ body {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: #D9722C;
+  background: var(--color-orange);
   color: #ffffff;
   cursor: pointer;
   transition:
@@ -218,11 +332,12 @@ body {
 
 .companion__send:hover,
 .companion__send:focus-visible {
-  background: rgba(27, 58, 92, 0.14);
+  background: #C45F1F;
+  color: #ffffff;
 }
 
 .companion__send:focus-visible {
-  outline: 3px solid rgba(27, 58, 92, 0.45);
+  outline: 3px solid rgba(217, 114, 44, 0.45);
   outline-offset: 2px;
 }
 
@@ -235,20 +350,25 @@ body {
   height: 20px;
 }
 
-/* Forget-me-not mic button */
-@keyframes memoire-pulse-glow {
+/* Flower mic button — single circular control, no glow box */
+@keyframes companion-mic-heartbeat {
   0%,
   100% {
-    box-shadow:
-      0 0 0 0 rgba(27, 58, 92, 0.45),
-      0 4px 16px rgba(27, 58, 92, 0.18);
+    transform: scale(1);
   }
 
   50% {
-    box-shadow:
-      0 0 0 14px rgba(27, 58, 92, 0),
-      0 4px 20px rgba(217, 114, 44, 0.28);
+    transform: scale(1.1);
   }
+}
+
+.companion__mic-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 56px;
 }
 
 .companion__mic {
@@ -256,21 +376,22 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
   padding: 0;
   border: none;
+  border-radius: 50%;
   background: transparent;
   box-shadow: none;
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.15s ease;
 }
 
 .companion__mic:hover,
 .companion__mic:focus-visible {
-  box-shadow: 0 6px 20px rgba(27, 58, 92, 0.2);
+  transform: scale(1.04);
 }
 
 .companion__mic:focus-visible {
@@ -283,12 +404,47 @@ body {
 }
 
 .companion__mic--active {
-  animation: memoire-pulse-glow 1.6s ease-in-out infinite;
+  animation: companion-mic-heartbeat 1s ease-in-out infinite;
+}
+
+.companion__mic--active:hover,
+.companion__mic--active:focus-visible,
+.companion__mic--active:active {
+  /* Keep heartbeat transform dominant while listening */
+  transform: none;
 }
 
 .companion__mic-flower {
-  width: 36px;
-  height: 36px;
+  width: 56px;
+  height: 56px;
+  display: block;
+  pointer-events: none;
+}
+
+.companion__mic-status {
+  position: absolute;
+  top: calc(100% + 0.1rem);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: normal;
+  color: var(--color-navy);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companion__mic--active {
+    animation: none;
+  }
+
+  .companion__presence[data-state="thinking"] .companion__presence-dot,
+  .companion__presence[data-state="speaking"] .companion__presence-dot {
+    animation: none;
+  }
 }
 
 @media (min-width: 480px) {

@@ -69,7 +69,7 @@ body {
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--color-navy);
-  letter-spacing: 0.01em;
+  letter-spacing: normal;
 }
 
 /* Layout shell — vertical stack; ~90–95% viewport on wide screens */
@@ -131,9 +131,16 @@ body {
   align-items: center;
   justify-content: center;
   width: 1.25rem;
+  height: 1.25rem;
   font-size: 1rem;
   color: var(--color-navy);
   line-height: 1;
+}
+
+.memory-log__panel-flower {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
 }
 
 .memory-log__panel-desc {
@@ -576,8 +583,19 @@ body {
 
 .memory-log__card-date-accent {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95rem;
+  height: 0.95rem;
   font-size: 0.9rem;
   color: var(--color-orange);
+}
+
+.memory-log__card-flower {
+  width: 0.9rem;
+  height: 0.9rem;
+  display: block;
 }
 
 /* Empty states */

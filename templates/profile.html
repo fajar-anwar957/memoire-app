@@ -7,27 +7,27 @@
   <title>Your Profile — Mémoire</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/profile.css') }}">
 </head>
 <body>
   <div class="page">
-    <header class="header">
-      <img src="{{ url_for('static', filename='assets/memoire-icon.png') }}" alt="Mémoire forget-me-not flower">
-      <span class="header-brand">Mémoire</span>
+    <header class="profile__header page-header">
+      <a href="/dashboard" class="profile__back page-header__back" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </a>
+      <h1 class="profile__title page-header__title" id="page-heading">Your Profile</h1>
     </header>
 
-    <h1 class="heading" id="page-heading">Your Profile</h1>
     <p class="subheading" id="page-subheading">Let's get to know you.</p>
 
     <section id="profile-summary" class="profile-summary" hidden>
       <div class="card profile-summary__card">
         <header class="profile-summary__hero">
-          <a href="/dashboard" class="profile-summary__back" aria-label="Back to home">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
-          </a>
           <div class="profile-summary__photo-wrap">
             <div class="profile-summary__photo" id="summary-photo">
               <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -312,6 +312,38 @@
       </nav>
     </div>
   </div>
+
+  <nav class="dashboard-nav" aria-label="Main navigation">
+    <a href="/dashboard" class="dashboard-nav__item">
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/>
+      </svg>
+      <span class="dashboard-nav__label">Home</span>
+    </a>
+    <a href="/companion" class="dashboard-nav__item">
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span class="dashboard-nav__label">Companion</span>
+    </a>
+    <a href="/activities" class="dashboard-nav__item">
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      <span class="dashboard-nav__label">Activities</span>
+    </a>
+    <a href="/profile" class="dashboard-nav__item dashboard-nav__item--active" aria-current="page">
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+      </svg>
+      <span class="dashboard-nav__label">Profile</span>
+    </a>
+  </nav>
+
   <div id="contact-warning-modal" class="modal-overlay">
     <div class="modal-card">
       <p class="modal-title">No emergency contact added</p>

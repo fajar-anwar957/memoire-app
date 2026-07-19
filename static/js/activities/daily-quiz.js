@@ -141,7 +141,8 @@
     var modalActionsEl = document.getElementById('dq-modal-actions');
     var modalClosingEl = document.getElementById('dq-modal-closing');
     var nextBtn = document.getElementById('dq-next-question');
-    var doneEarlyBtn = document.getElementById('dq-done-early');
+    var exitFooterEl = document.getElementById('dq-exit-footer');
+    var doneTodayBtn = document.getElementById('dq-done-today');
     var speakQuestionBtn = document.getElementById('dq-speak-question');
     var speakWarmBtn = document.getElementById('dq-speak-warm');
     var moreBtns = document.querySelectorAll('.cst-wa__more-btn');
@@ -167,6 +168,12 @@
       exhausted: false
     };
 
+    function setExitFooterVisible(visible) {
+      if (exitFooterEl) {
+        exitFooterEl.hidden = !visible;
+      }
+    }
+
     function setQuizState(next) {
       state.quizState = next;
       if (loadingEl) {
@@ -178,6 +185,7 @@
       if (doneEl) {
         doneEl.hidden = next !== 'complete';
       }
+      setExitFooterVisible(next === 'question');
     }
 
     function showCompleteScreen(exhausted) {
@@ -327,8 +335,12 @@
       renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state);
     });
 
-    if (doneEarlyBtn) {
-      doneEarlyBtn.addEventListener('click', function () {
+    if (doneTodayBtn) {
+      doneTodayBtn.addEventListener('click', function () {
+        if (state.feedbackTimer) {
+          clearTimeout(state.feedbackTimer);
+          state.feedbackTimer = null;
+        }
         shared.closeFeedbackModal(modalEl);
         state.feedbackSegments = [];
         // Answered questions are already in the quiz cache via markQuestionAnswered().
@@ -1040,32 +1052,11 @@
     }
     var total = Math.max(state.quiz.length, 1);
     var filled = Math.min(state.answersInSession, total);
-    var html = '';
-    var i;
-    for (i = 0; i < total; i++) {
-      html +=
-        '<span class="cst-dq__bloom' +
-        (i < filled ? ' is-filled' : '') +
-        '" aria-hidden="true">' +
-        bloomSvg() +
-        '</span>';
+    var fillEl = document.getElementById('dq-progress-fill') || progressEl.querySelector('.cst-dq__progress-fill');
+    if (fillEl) {
+      fillEl.style.width = Math.round((filled / total) * 100) + '%';
     }
-    progressEl.innerHTML = html;
     progressEl.setAttribute('aria-hidden', 'true');
-  }
-
-  function bloomSvg() {
-    return (
-      '<svg class="cst-dq__bloom-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">' +
-      '<ellipse cx="20" cy="8" rx="5" ry="9" fill="currentColor" transform="rotate(0 20 20)"/>' +
-      '<ellipse cx="20" cy="8" rx="5" ry="9" fill="currentColor" transform="rotate(60 20 20)"/>' +
-      '<ellipse cx="20" cy="8" rx="5" ry="9" fill="currentColor" transform="rotate(120 20 20)"/>' +
-      '<ellipse cx="20" cy="8" rx="5" ry="9" fill="currentColor" transform="rotate(180 20 20)"/>' +
-      '<ellipse cx="20" cy="8" rx="5" ry="9" fill="currentColor" transform="rotate(240 20 20)"/>' +
-      '<ellipse cx="20" cy="8" rx="5" ry="9" fill="currentColor" transform="rotate(300 20 20)"/>' +
-      '<circle cx="20" cy="20" r="6" fill="var(--color-orange)"/>' +
-      '</svg>'
-    );
   }
 
   function renderMotif(motifEl, type) {
@@ -1080,39 +1071,25 @@
   function motifSvg(kind) {
     if (kind === 'orientation') {
       return (
-        '<svg class="cst-dq__motif-svg" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-        '<circle cx="48" cy="48" r="18" fill="var(--color-orange)"/>' +
-        '<g stroke="var(--color-orange)" stroke-width="4" stroke-linecap="round">' +
-        '<line x1="48" y1="10" x2="48" y2="20"/>' +
-        '<line x1="48" y1="76" x2="48" y2="86"/>' +
-        '<line x1="10" y1="48" x2="20" y2="48"/>' +
-        '<line x1="76" y1="48" x2="86" y2="48"/>' +
-        '<line x1="20" y1="20" x2="27" y2="27"/>' +
-        '<line x1="69" y1="69" x2="76" y2="76"/>' +
-        '<line x1="76" y1="20" x2="69" y2="27"/>' +
-        '<line x1="27" y1="69" x2="20" y2="76"/>' +
-        '</g>' +
-        '<circle cx="48" cy="48" r="6" fill="var(--color-cream)"/>' +
+        '<svg class="cst-dq__type-icon-svg" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.75"/>' +
+        '<path d="M10 6v4.25l2.75 1.75" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>' +
         '</svg>'
       );
     }
     if (kind === 'personal') {
       return (
-        '<svg class="cst-dq__motif-svg" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-        '<path d="M48 78 C48 78 18 58 18 38 C18 28 26 22 34 22 C40 22 45 26 48 32 C51 26 56 22 62 22 C70 22 78 28 78 38 C78 58 48 78 48 78 Z" fill="var(--color-orange)"/>' +
-        '<circle cx="34" cy="36" r="3" fill="var(--color-cream)" opacity="0.7"/>' +
+        '<svg class="cst-dq__type-icon-svg" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<path d="M10 16.5S3.5 12.2 3.5 7.8C3.5 5.6 5.1 4 7.1 4c1.2 0 2.3.6 2.9 1.6C10.6 4.6 11.7 4 12.9 4c2 0 3.6 1.6 3.6 3.8 0 4.4-6.5 8.7-6.5 8.7z" fill="currentColor"/>' +
         '</svg>'
       );
     }
     return (
-      '<svg class="cst-dq__motif-svg" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-      '<ellipse cx="48" cy="22" rx="10" ry="18" fill="var(--color-navy)" transform="rotate(0 48 48)"/>' +
-      '<ellipse cx="48" cy="22" rx="10" ry="18" fill="var(--color-navy)" transform="rotate(60 48 48)"/>' +
-      '<ellipse cx="48" cy="22" rx="10" ry="18" fill="var(--color-navy)" transform="rotate(120 48 48)"/>' +
-      '<ellipse cx="48" cy="22" rx="10" ry="18" fill="var(--color-navy)" transform="rotate(180 48 48)"/>' +
-      '<ellipse cx="48" cy="22" rx="10" ry="18" fill="var(--color-navy)" transform="rotate(240 48 48)"/>' +
-      '<ellipse cx="48" cy="22" rx="10" ry="18" fill="var(--color-navy)" transform="rotate(300 48 48)"/>' +
-      '<circle cx="48" cy="48" r="14" fill="var(--color-orange)"/>' +
+      '<svg class="cst-dq__type-icon-svg" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M10 17c0-3.5 2.2-6.2 5.5-7.2-1.1 3.4-3.3 5.2-5.5 7.2z" fill="currentColor"/>' +
+      '<path d="M10 17C10 13.5 7.8 10.8 4.5 9.8 5.6 13.2 7.8 15 10 17z" fill="currentColor" opacity="0.85"/>' +
+      '<path d="M10 17V7.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+      '<path d="M10 9.5c1.2-1.4 2.6-2.2 4.2-2.5" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>' +
       '</svg>'
     );
   }

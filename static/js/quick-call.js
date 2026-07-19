@@ -1,4 +1,6 @@
 (function () {
+  'use strict';
+
   var contactIsEmergency = window.MemoireCore.contactIsEmergency;
   var getActiveProfile = window.MemoireCore.getActiveProfile;
   var escapeHtml = window.MemoireCore.escapeHtml;
@@ -6,12 +8,10 @@
   var formatDisplayName = window.MemoireCore.formatDisplayName;
   var normalizeRelationship = window.MemoireCore.normalizeRelationship;
 
-  function getPreferredName(profile) {
-    if (profile && profile.preferredName && String(profile.preferredName).trim()) {
-      return String(profile.preferredName).trim();
-    }
-    return 'Friend';
-  }
+  var modal = null;
+  var contactsList = null;
+  var lastTrigger = null;
+  var initialized = false;
 
   function getEmergencyContacts(profile) {
     if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
@@ -110,118 +110,49 @@
     );
   }
 
-  function initDashboardHeader() {
-    var hour = new Date().getHours();
-    var greeting;
-
-    if (hour >= 5 && hour <= 11) {
-      greeting = 'Good morning';
-    } else if (hour >= 12 && hour <= 16) {
-      greeting = 'Good afternoon';
-    } else {
-      greeting = 'Good evening';
-    }
-
-    var activeProfile = getActiveProfile();
-    var preferredName = formatDisplayName(getPreferredName(activeProfile)) || 'Friend';
-
-    var greetingEl = document.getElementById('dashboard-greeting');
-    if (greetingEl) {
-      greetingEl.textContent = greeting + ', ' + preferredName;
-    }
-
-    var avatarEl = document.getElementById('dashboard-avatar');
-    if (avatarEl && activeProfile && activeProfile.photo) {
-      avatarEl.innerHTML = '<img src="' + activeProfile.photo + '" alt="Photo of ' + preferredName + '">';
-      avatarEl.removeAttribute('aria-hidden');
-    }
-
-    var dateEl = document.getElementById('dashboard-date');
-    if (dateEl) {
-      var now = new Date();
-      dateEl.textContent = now.toLocaleDateString('en-GB', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-      });
-      dateEl.setAttribute('datetime', now.toISOString().split('T')[0]);
-    }
-  }
-
-  var FEELING_SEED_KEY = 'memoireCompanionPrefill';
-  var FEELING_SEED_TEXT = "Today I'm feeling ";
-
-  function initFeelingButton() {
-    var feelingBtn = document.getElementById('dashboard-feeling-btn');
-    if (!feelingBtn) {
+  function closeCallModal() {
+    if (!modal) {
       return;
     }
-
-    feelingBtn.addEventListener('click', function () {
-      try {
-        sessionStorage.setItem(FEELING_SEED_KEY, FEELING_SEED_TEXT);
-      } catch (e) {
-        /* sessionStorage unavailable — companion still opens without seed */
-      }
-    });
+    modal.classList.remove('is-open');
+    modal.hidden = true;
+    if (lastTrigger && typeof lastTrigger.focus === 'function') {
+      lastTrigger.focus();
+    }
   }
 
-  function initQuickCall() {
-    var callCard = document.getElementById('dashboard-call-card');
-    var callFab = document.getElementById('dashboard-call-fab');
-    var modal = document.getElementById('call-contacts-modal');
-    var contactsList = document.getElementById('call-contacts-list');
-    var cancelBtn = document.getElementById('call-modal-cancel');
-
+  function openCallModal(trigger) {
     if (!modal || !contactsList) {
-      return;
+      return false;
     }
 
     var emergencyContacts = getEmergencyContacts(getActiveProfile());
-    var lastTrigger = null;
-
-    /* FAB stays hidden on dashboard (page-scoped CSS); Call Someone card is the entry point */
-    if (callFab) {
-      callFab.hidden = true;
+    if (!emergencyContacts.length) {
+      return false;
     }
 
-    if (!emergencyContacts.length) {
-      if (callCard) {
-        callCard.hidden = true;
-      }
+    lastTrigger = trigger || null;
+    contactsList.innerHTML = emergencyContacts.map(renderContactRow).join('');
+    modal.hidden = false;
+    modal.classList.add('is-open');
+
+    var firstItem = contactsList.querySelector('.call-contact-item[href]');
+    if (firstItem) {
+      firstItem.focus();
+    }
+    return true;
+  }
+
+  function initQuickCall(options) {
+    options = options || {};
+    modal = document.getElementById(options.modalId || 'call-contacts-modal');
+    contactsList = document.getElementById(options.listId || 'call-contacts-list');
+    var cancelBtn = document.getElementById(options.cancelId || 'call-modal-cancel');
+
+    if (!modal || !contactsList || initialized) {
       return;
     }
-
-    if (callCard) {
-      callCard.hidden = false;
-    }
-
-    function openCallModal(trigger) {
-      lastTrigger = trigger || null;
-
-      contactsList.innerHTML = emergencyContacts.map(renderContactRow).join('');
-
-      modal.hidden = false;
-      modal.classList.add('is-open');
-      var firstItem = contactsList.querySelector('.call-contact-item[href]');
-      if (firstItem) {
-        firstItem.focus();
-      }
-    }
-
-    function closeCallModal() {
-      modal.classList.remove('is-open');
-      modal.hidden = true;
-      if (lastTrigger && typeof lastTrigger.focus === 'function') {
-        lastTrigger.focus();
-      }
-    }
-
-    if (callCard) {
-      callCard.addEventListener('click', function () {
-        openCallModal(callCard);
-      });
-    }
+    initialized = true;
 
     if (cancelBtn) {
       cancelBtn.addEventListener('click', closeCallModal);
@@ -240,9 +171,13 @@
     });
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    initDashboardHeader();
-    initFeelingButton();
-    initQuickCall();
-  });
+  window.MemoireQuickCall = {
+    init: initQuickCall,
+    open: openCallModal,
+    close: closeCallModal,
+    getEmergencyContacts: getEmergencyContacts,
+    hasEmergencyContacts: function () {
+      return getEmergencyContacts(getActiveProfile()).length > 0;
+    }
+  };
 })();

@@ -45,7 +45,8 @@
     var modalActionsEl = document.getElementById('pr-modal-actions');
     var modalClosingEl = document.getElementById('pr-modal-closing');
     var nextBtn = document.getElementById('pr-next-round');
-    var doneEarlyBtn = document.getElementById('pr-done-early');
+    var exitFooterEl = document.getElementById('pr-exit-footer');
+    var doneTodayBtn = document.getElementById('pr-done-today');
     var speakQuestionBtn = document.getElementById('pr-speak-question');
     var speakFeedbackBtn = document.getElementById('pr-speak-feedback');
     var moreBtns = document.querySelectorAll('#pr-done-more, #pr-modal-more');
@@ -64,10 +65,17 @@
       ? 'people'
       : (memoriesWithPhotos.length >= 1 ? 'memory' : 'empty');
 
+    function setExitFooterVisible(visible) {
+      if (exitFooterEl) {
+        exitFooterEl.hidden = !visible;
+      }
+    }
+
     if (mode === 'empty') {
       if (emptyEl) emptyEl.hidden = false;
       if (gameEl) gameEl.hidden = true;
       if (doneEl) doneEl.hidden = true;
+      setExitFooterVisible(false);
       return;
     }
 
@@ -97,6 +105,7 @@
 
     function resumeGame() {
       prHideSessionComplete(gameEl, doneEl);
+      setExitFooterVisible(true);
       state.answered = false;
       if (state.mode === 'people') {
         if (peopleRoundEl) peopleRoundEl.hidden = false;
@@ -106,6 +115,7 @@
         if (!state.currentContact) {
           if (emptyEl) emptyEl.hidden = false;
           if (gameEl) gameEl.hidden = true;
+          setExitFooterVisible(false);
           return;
         }
         prRenderPeopleRound(photoEl, cueEl, optionsEl, peopleRoundEl, state.currentContact);
@@ -129,6 +139,18 @@
       if (modalClosingEl) {
         modalClosingEl.hidden = true;
       }
+    }
+
+    function goToSessionComplete() {
+      if (state.feedbackTimer) {
+        clearTimeout(state.feedbackTimer);
+        state.feedbackTimer = null;
+      }
+      prCloseFeedbackModal(modalEl);
+      resetModalSections();
+      state.feedbackSegments = [];
+      setExitFooterVisible(false);
+      prShowSessionComplete(gameEl, doneEl);
     }
 
     Array.prototype.forEach.call(moreBtns, function (moreBtn) {
@@ -171,6 +193,7 @@
     if (emptyEl) emptyEl.hidden = true;
 
     if (isSessionComplete()) {
+      setExitFooterVisible(false);
       prShowSessionComplete(gameEl, doneEl);
     } else {
       resumeGame();
@@ -245,6 +268,7 @@
         state.feedbackSegments = [];
 
         if (isSessionComplete()) {
+          setExitFooterVisible(false);
           prShowSessionComplete(gameEl, doneEl);
           return;
         }
@@ -256,18 +280,16 @@
         if (!state.currentContact) {
           if (emptyEl) emptyEl.hidden = false;
           if (gameEl) gameEl.hidden = true;
+          setExitFooterVisible(false);
           return;
         }
         prRenderPeopleRound(photoEl, cueEl, optionsEl, peopleRoundEl, state.currentContact);
       });
     }
 
-    if (state.mode === 'people' && doneEarlyBtn) {
-      doneEarlyBtn.addEventListener('click', function () {
-        prCloseFeedbackModal(modalEl);
-        resetModalSections();
-        state.feedbackSegments = [];
-        prShowSessionComplete(gameEl, doneEl);
+    if (doneTodayBtn) {
+      doneTodayBtn.addEventListener('click', function () {
+        goToSessionComplete();
       });
     }
 
@@ -281,6 +303,7 @@
         prSaveRound(state.currentMemory, 'That was lovely');
 
         if (isSessionComplete()) {
+          setExitFooterVisible(false);
           prShowSessionComplete(gameEl, doneEl);
           return;
         }
@@ -724,11 +747,10 @@
       config.speakFeedbackBtn.hidden = !speechSupported || !segments.length;
     }
 
-    if (config.isLastRound) {
-      config.modalActionsEl.hidden = true;
-      config.modalClosingEl.hidden = false;
-    } else {
+    if (config.modalActionsEl) {
       config.modalActionsEl.hidden = false;
+    }
+    if (config.modalClosingEl) {
       config.modalClosingEl.hidden = true;
     }
 
@@ -739,16 +761,9 @@
     config.modalEl.hidden = false;
     config.modalEl.classList.add('is-open');
 
-    if (config.isLastRound) {
-      var doneBtn = config.modalClosingEl.querySelector('.cst-wa__done-btn');
-      if (doneBtn) {
-        doneBtn.focus();
-      }
-    } else {
-      var nextFocus = document.getElementById(config.nextFocusId || 'pr-next-round');
-      if (nextFocus) {
-        nextFocus.focus();
-      }
+    var nextFocus = document.getElementById(config.nextFocusId || 'pr-next-round');
+    if (nextFocus) {
+      nextFocus.focus();
     }
   }
 
