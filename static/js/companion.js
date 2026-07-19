@@ -1,16 +1,46 @@
 (function () {
   var getActiveProfile = window.MemoireCore.getActiveProfile;
-  var contactIsEmergency = window.MemoireCore.contactIsEmergency;
   var formatDisplayName = window.MemoireCore.formatDisplayName;
 
   var memoireConversationHistory = 'memoireConversationHistory';
   var memoireChatSession = 'memoireChatSession';
   var CHAT_SESSION_MAX = 40;
+  var SPEECH_RATE = 0.9;
+  var HEALTH_EMERGENCY_REPLY =
+    'I\'m here with you. Would you like to call someone who can help?';
 
   var chat = document.getElementById('companion-chat');
   var form = document.getElementById('companion-form');
   var input = document.getElementById('companion-input');
   var mic = document.getElementById('companion-mic');
+  var micStatus = document.getElementById('companion-mic-status');
+  var presenceEl = document.getElementById('companion-presence');
+  var presenceLabel = document.getElementById('companion-presence-label');
+
+  var speechApi = window.MemoireActivities || {};
+  var speechSupported = !!speechApi.speechSupported;
+  var activeSpeakBtn = null;
+  var speechWatchTimer = null;
+  var presenceState = 'idle';
+
+  function setPresenceState(nextState) {
+    if (!presenceEl || presenceState === nextState) {
+      return;
+    }
+    presenceState = nextState;
+    presenceEl.setAttribute('data-state', nextState);
+    if (presenceLabel) {
+      if (nextState === 'thinking') {
+        presenceLabel.hidden = false;
+        presenceLabel.textContent = 'Thinking…';
+      } else if (nextState === 'speaking') {
+        presenceLabel.hidden = false;
+        presenceLabel.textContent = 'Speaking…';
+      } else {
+        presenceLabel.hidden = true;
+      }
+    }
+  }
 
   var conversationHistory = [];
 
@@ -82,7 +112,6 @@
   conversationHistory = loadHistoryFromStorage();
   var chatSessionMessages = loadChatSessionFromStorage();
   var isWaitingForReply = false;
-  var loadingMessage = null;
   var recognition = null;
   var isListening = false;
 
@@ -194,6 +223,109 @@
     return unmasked;
   }
 
+  function textToSpeechSegments(text) {
+    var raw = String(text || '').trim();
+    if (!raw) {
+      return [];
+    }
+
+    var segments = [];
+    var paragraphs = raw.split(/\n+/);
+    var i;
+    for (i = 0; i < paragraphs.length; i++) {
+      var paragraph = paragraphs[i].trim();
+      if (!paragraph) {
+        continue;
+      }
+      var pieces = paragraph.match(/[^.!?]+[.!?]+(?:['"”’)]+)?|[^.!?]+$/g) || [paragraph];
+      var j;
+      for (j = 0; j < pieces.length; j++) {
+        var piece = pieces[j].trim();
+        if (piece) {
+          segments.push(piece);
+        }
+      }
+    }
+    return segments.length ? segments : [raw];
+  }
+
+  function clearSpeakActiveState() {
+    if (speechWatchTimer) {
+      clearInterval(speechWatchTimer);
+      speechWatchTimer = null;
+    }
+    if (activeSpeakBtn) {
+      activeSpeakBtn.classList.remove('companion-message__speak--active');
+      activeSpeakBtn.setAttribute('aria-pressed', 'false');
+      activeSpeakBtn = null;
+    }
+    if (presenceState === 'speaking') {
+      setPresenceState(isWaitingForReply ? 'thinking' : 'idle');
+    }
+  }
+
+  function watchSpeechEnd(btn) {
+    if (speechWatchTimer) {
+      clearInterval(speechWatchTimer);
+    }
+    speechWatchTimer = setInterval(function () {
+      if (!window.speechSynthesis ||
+          (!window.speechSynthesis.speaking && !window.speechSynthesis.pending)) {
+        if (activeSpeakBtn === btn) {
+          clearSpeakActiveState();
+        } else if (speechWatchTimer) {
+          clearInterval(speechWatchTimer);
+          speechWatchTimer = null;
+        }
+      }
+    }, 200);
+  }
+
+  function createSpeakButton(text) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'companion-message__speak';
+    btn.setAttribute('aria-label', 'Hear this message');
+    btn.setAttribute('aria-pressed', 'false');
+    btn.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>' +
+      '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>' +
+      '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>' +
+      '</svg>';
+
+    btn.addEventListener('click', function () {
+      if (!speechSupported || typeof speechApi.speakSegments !== 'function') {
+        return;
+      }
+
+      var isThisSpeaking = activeSpeakBtn === btn &&
+        window.speechSynthesis &&
+        (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+
+      if (isThisSpeaking) {
+        if (typeof speechApi.cancelSpeech === 'function') {
+          speechApi.cancelSpeech();
+        } else {
+          window.speechSynthesis.cancel();
+        }
+        clearSpeakActiveState();
+        return;
+      }
+
+      clearSpeakActiveState();
+      activeSpeakBtn = btn;
+      btn.classList.add('companion-message__speak--active');
+      btn.setAttribute('aria-pressed', 'true');
+      setPresenceState('speaking');
+      speechApi.speakSegments(textToSpeechSegments(text), SPEECH_RATE);
+      watchSpeechEnd(btn);
+    });
+
+    return btn;
+  }
+
   function appendPatientMessage(text, skipSessionSave) {
     var message = document.createElement('div');
     message.className = 'companion-message companion-message--patient';
@@ -211,7 +343,7 @@
     }
   }
 
-  function createCompanionBubble() {
+  function createCompanionShell() {
     var message = document.createElement('div');
     message.className = 'companion-message companion-message--companion';
 
@@ -222,12 +354,13 @@
     chat.appendChild(message);
     scrollChatToBottom();
 
-    return bubble;
+    return { message: message, bubble: bubble };
   }
 
-  function appendCompanionMessage(text, skipSessionSave) {
-    var bubble = createCompanionBubble();
-    bubble.textContent = text;
+  function finishCompanionReveal(shell, text, skipSessionSave) {
+    if (speechSupported) {
+      shell.message.insertBefore(createSpeakButton(text), shell.bubble);
+    }
     scrollChatToBottom();
 
     if (!skipSessionSave) {
@@ -235,45 +368,56 @@
     }
   }
 
-  function streamCompanionMessage(text) {
-    var bubble = createCompanionBubble();
-    var words = text.split(/\s+/).filter(function (word) {
+  function appendCompanionMessage(text, skipSessionSave) {
+    var shell = createCompanionShell();
+    shell.bubble.textContent = text;
+    finishCompanionReveal(shell, text, skipSessionSave);
+  }
+
+  function streamCompanionMessage(text, skipSessionSave) {
+    var shell = createCompanionShell();
+    var words = String(text || '').split(/\s+/).filter(function (word) {
       return word.length > 0;
     });
 
+    if (!words.length) {
+      shell.bubble.textContent = text;
+      finishCompanionReveal(shell, text, skipSessionSave);
+      return;
+    }
+
     var index = 0;
 
-    function revealNextWord() {
+    function revealNextBatch() {
       if (index >= words.length) {
-        appendToChatSession('assistant', text);
+        finishCompanionReveal(shell, text, skipSessionSave);
         return;
       }
 
-      bubble.textContent += (index === 0 ? '' : ' ') + words[index];
-      index += 1;
+      var batchSize = 2 + Math.floor(Math.random() * 3);
+      var batch = words.slice(index, index + batchSize);
+      shell.bubble.textContent += (index === 0 ? '' : ' ') + batch.join(' ');
+      index += batch.length;
       scrollChatToBottom();
-
-      setTimeout(revealNextWord, 40);
+      setTimeout(revealNextBatch, 100);
     }
 
-    revealNextWord();
+    revealNextBatch();
   }
 
   function showLoadingIndicator() {
-    loadingMessage = document.createElement('p');
-    loadingMessage.className = 'companion-typing';
-    loadingMessage.setAttribute('aria-busy', 'true');
-    loadingMessage.textContent = 'thinking...';
-
-    chat.appendChild(loadingMessage);
-    scrollChatToBottom();
+    setPresenceState('thinking');
   }
 
   function hideLoadingIndicator() {
-    if (loadingMessage && loadingMessage.parentNode) {
-      loadingMessage.parentNode.removeChild(loadingMessage);
+    if (presenceState === 'thinking') {
+      setPresenceState(
+        activeSpeakBtn && window.speechSynthesis &&
+        (window.speechSynthesis.speaking || window.speechSynthesis.pending)
+          ? 'speaking'
+          : 'idle'
+      );
     }
-    loadingMessage = null;
   }
 
   // ROOT CAUSE of the "patient's own name treated as a family member" bug:
@@ -327,7 +471,7 @@
   // contains any of these, we MUST NOT let the LLM improvise a response. This is a
   // safety-critical guard: the AI must never invent medical guidance or guess who to
   // contact for a vulnerable, early-stage dementia user. Instead we show a fixed,
-  // profile-driven emergency message (see the bypass at the top of sendMessage).
+  // profile-driven emergency response and open the shared quick-call modal.
   var HEALTH_EMERGENCY_KEYWORDS = [
     'vomit', 'vomiting', 'throw up', 'throwing up',
     'chest pain', 'chest hurts', 'can\'t breathe', 'cant breathe',
@@ -355,55 +499,27 @@
     return false;
   }
 
-  // Returns the contact we should surface in an emergency. Contacts saved before the
-  // isEmergency flag was added are treated as emergency contacts for backwards compatibility.
-  function getEmergencyContact(profile) {
-    if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
-      return null;
+  function openEmergencyCallModal() {
+    if (!window.MemoireQuickCall || typeof window.MemoireQuickCall.open !== 'function') {
+      return;
     }
-    for (var i = 0; i < profile.contacts.length; i++) {
-      var contact = profile.contacts[i];
-      if (contactIsEmergency(contact) && contact.phone && ('' + contact.phone).trim()) {
-        return contact;
-      }
-    }
-    return null;
-  }
-
-  // Builds the fixed safety reply from the real saved profile data (never the LLM).
-  function buildEmergencyMessage(profile) {
-    var contact = getEmergencyContact(profile);
-    if (contact) {
-      var name = formatDisplayName(contact.name) ||
-        (contact.name || '').trim() ||
-        'your emergency contact';
-      var phone = ('' + contact.phone).trim();
-      return 'I\'m worried about you. Please contact ' + name + ' right now at ' + phone + '.\n\n' +
-        'If this is a medical emergency, please call your local emergency number immediately.';
-    }
-    return 'Please contact a family member or call your local emergency number immediately.';
+    window.MemoireQuickCall.open();
   }
 
   function sendMessage(userText) {
     // SAFETY BYPASS (safety-critical):
     // If the patient's message contains any health/emergency concern keyword, skip the
-    // LLM entirely and respond with a fixed message that surfaces the real emergency
-    // contact pulled from the saved profile. The AI must never improvise medical
-    // guidance or guess emergency contacts for a vulnerable user, so this path is
-    // instant and deterministic: no masking, no /api/chat call, no streaming.
+    // LLM entirely and respond with a fixed warm message plus the shared emergency
+    // call modal (all isEmergency contacts). The AI must never improvise medical
+    // guidance or guess emergency contacts for a vulnerable user.
     if (detectHealthEmergencyKeywords(userText)) {
-      var safetyMessage = buildEmergencyMessage(getActiveProfile());
-      // Show the same loading indicator used for normal AI replies, then briefly
-      // pause before revealing the fixed safety message. This is purely a UX
-      // transition so the emergency response feels consistent with how Claude's
-      // replies appear, even though this content is never LLM-generated.
+      var safetyMessage = HEALTH_EMERGENCY_REPLY;
       isWaitingForReply = true;
       showLoadingIndicator();
       setTimeout(function () {
         hideLoadingIndicator();
-        appendCompanionMessage(safetyMessage);
-        // Still record the exchange in history so the conversation stays complete, but
-        // the stored reply is the fixed safety message, never anything from Claude.
+        streamCompanionMessage(safetyMessage);
+        openEmergencyCallModal();
         conversationHistory.push({ role: 'user', content: userText });
         conversationHistory.push({ role: 'assistant', content: safetyMessage });
         saveHistoryToStorage();
@@ -444,7 +560,7 @@
           var errorText = (result.data && result.data.error)
             ? result.data.error
             : 'Sorry, I could not respond just now. Please try again.';
-          appendCompanionMessage(errorText);
+          streamCompanionMessage(errorText);
           return;
         }
 
@@ -458,12 +574,24 @@
       })
       .catch(function () {
         hideLoadingIndicator();
-        appendCompanionMessage('Sorry, I could not respond just now. Please try again.');
+        streamCompanionMessage('Sorry, I could not respond just now. Please try again.');
       })
       .finally(function () {
         isWaitingForReply = false;
         input.focus();
       });
+  }
+
+  function setListeningUi(listening) {
+    isListening = listening;
+    if (!mic) {
+      return;
+    }
+    mic.classList.toggle('companion__mic--active', listening);
+    mic.setAttribute('aria-pressed', listening ? 'true' : 'false');
+    if (micStatus) {
+      micStatus.hidden = !listening;
+    }
   }
 
   function setupSpeechRecognition() {
@@ -486,13 +614,11 @@
     });
 
     recognition.addEventListener('end', function () {
-      isListening = false;
-      mic.classList.remove('companion__mic--active');
+      setListeningUi(false);
     });
 
     recognition.addEventListener('error', function () {
-      isListening = false;
-      mic.classList.remove('companion__mic--active');
+      setListeningUi(false);
     });
   }
 
@@ -523,11 +649,44 @@
       return;
     }
 
-    isListening = true;
-    mic.classList.add('companion__mic--active');
+    setListeningUi(true);
     recognition.start();
   });
 
+  function applyFeelingPrefill() {
+    if (!input) {
+      return;
+    }
+
+    var seedKey = 'memoireCompanionPrefill';
+    var seed = null;
+
+    try {
+      seed = sessionStorage.getItem(seedKey);
+      if (seed) {
+        sessionStorage.removeItem(seedKey);
+      }
+    } catch (e) {
+      seed = null;
+    }
+
+    if (!seed) {
+      return;
+    }
+
+    input.value = seed;
+    input.focus();
+    var caret = seed.length;
+    if (typeof input.setSelectionRange === 'function') {
+      input.setSelectionRange(caret, caret);
+    }
+  }
+
+  if (window.MemoireQuickCall && typeof window.MemoireQuickCall.init === 'function') {
+    window.MemoireQuickCall.init();
+  }
+
   setupSpeechRecognition();
   renderStoredChatSession();
+  applyFeelingPrefill();
 })();
