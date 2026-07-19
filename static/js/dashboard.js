@@ -148,6 +148,24 @@
     }
   }
 
+  var FEELING_SEED_KEY = 'memoireCompanionPrefill';
+  var FEELING_SEED_TEXT = "Today I'm feeling ";
+
+  function initFeelingButton() {
+    var feelingBtn = document.getElementById('dashboard-feeling-btn');
+    if (!feelingBtn) {
+      return;
+    }
+
+    feelingBtn.addEventListener('click', function () {
+      try {
+        sessionStorage.setItem(FEELING_SEED_KEY, FEELING_SEED_TEXT);
+      } catch (e) {
+        /* sessionStorage unavailable — companion still opens without seed */
+      }
+    });
+  }
+
   function initQuickCall() {
     var callCard = document.getElementById('dashboard-call-card');
     var callFab = document.getElementById('dashboard-call-fab');
@@ -162,21 +180,20 @@
     var emergencyContacts = getEmergencyContacts(getActiveProfile());
     var lastTrigger = null;
 
+    /* FAB stays hidden on dashboard (page-scoped CSS); Call Someone card is the entry point */
+    if (callFab) {
+      callFab.hidden = true;
+    }
+
     if (!emergencyContacts.length) {
       if (callCard) {
         callCard.hidden = true;
-      }
-      if (callFab) {
-        callFab.hidden = true;
       }
       return;
     }
 
     if (callCard) {
       callCard.hidden = false;
-    }
-    if (callFab) {
-      callFab.hidden = false;
     }
 
     function openCallModal(trigger) {
@@ -206,12 +223,6 @@
       });
     }
 
-    if (callFab) {
-      callFab.addEventListener('click', function () {
-        openCallModal(callFab);
-      });
-    }
-
     if (cancelBtn) {
       cancelBtn.addEventListener('click', closeCallModal);
     }
@@ -231,6 +242,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     initDashboardHeader();
+    initFeelingButton();
     initQuickCall();
   });
 })();

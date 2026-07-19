@@ -11,60 +11,59 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/dashboard.css') }}">
 </head>
-<body>
+<body class="page-dashboard">
   <main class="dashboard">
     <header class="dashboard__header">
       <div class="dashboard__brand-group">
         <svg class="dashboard__flower" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <g transform="translate(60, 60)">
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(0)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(60)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(120)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(180)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(240)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#D9722C" transform="rotate(300)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(0)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(60)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(120)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(180)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(240)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(300)"/>
           </g>
-          <circle cx="60" cy="60" r="12" fill="#E8954F"/>
+          <circle cx="60" cy="60" r="12" fill="#D9722C"/>
         </svg>
         <p class="dashboard__brand">Mémoire</p>
       </div>
-      <time class="dashboard__date" id="dashboard-date" datetime=""></time>
     </header>
 
+    <!--
+      Banner image: static/images/calm-banner.jpg (soft blue flower field).
+      Styled in dashboard.css — local file only, do not hotlink.
+    -->
     <section class="dashboard__hero" aria-labelledby="dashboard-greeting">
-      <div class="dashboard__greeting-row">
-        <div class="dashboard__avatar" id="dashboard-avatar" aria-hidden="true">
-          <svg class="dashboard__avatar-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="8" r="4"/>
-            <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
-          </svg>
-        </div>
-        <div class="dashboard__greeting-copy">
-          <h1 class="dashboard__greeting-text" id="dashboard-greeting">Good morning, Friend</h1>
-          <p class="dashboard__greeting-sub">How are you feeling today?</p>
+      <div class="dashboard__hero-media">
+        <div class="dashboard__hero-banner" aria-hidden="true"></div>
+        <time class="dashboard__date" id="dashboard-date" datetime=""></time>
+      </div>
+      <div class="dashboard__hero-content">
+        <div class="dashboard__greeting-row">
+          <div class="dashboard__avatar" id="dashboard-avatar" aria-hidden="true">
+            <svg class="dashboard__avatar-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+            </svg>
+          </div>
+          <div class="dashboard__greeting-copy">
+            <h1 class="dashboard__greeting-text" id="dashboard-greeting">Good morning, Friend</h1>
+            <a href="/companion" class="dashboard__feeling-btn" id="dashboard-feeling-btn">
+              <svg class="dashboard__feeling-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.3l7.8-7.9 1-1a5.5 5.5 0 0 0 0-7.8z"/>
+              </svg>
+              Share how you're feeling
+            </a>
+          </div>
         </div>
       </div>
     </section>
 
     <section class="dashboard__actions" aria-label="Quick actions">
-      <p class="dashboard__section-label">
-        <svg class="dashboard__section-flower" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <g transform="translate(16, 16)">
-            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(0)"/>
-            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(60)"/>
-            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(120)"/>
-            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(180)"/>
-            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(240)"/>
-            <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#D9722C" transform="rotate(300)"/>
-          </g>
-          <circle cx="16" cy="16" r="4" fill="#E8954F"/>
-        </svg>
-        What would you like to do?
-      </p>
-
       <a href="/companion" class="dashboard-card dashboard-card--primary dashboard-card--companion">
         <span class="dashboard-card__accent" aria-hidden="true"></span>
-        <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--orange" aria-hidden="true">
+        <span class="dashboard-card__icon-wrap" aria-hidden="true">
           <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
@@ -75,51 +74,84 @@
         </span>
       </a>
 
-      <div class="dashboard__tile-grid">
-        <a href="/memory-log" class="dashboard-card dashboard-card--tile dashboard-card--memories">
-          <span class="dashboard-card__accent" aria-hidden="true"></span>
-          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--navy" aria-hidden="true">
-            <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <path d="M21 15l-5-5L5 21"/>
-            </svg>
-          </span>
-          <span class="dashboard-card__body">
-            <h2 class="dashboard-card__title">Memories &amp; People</h2>
-            <p class="dashboard-card__subtext">Add and revisit happy moments</p>
-          </span>
-        </a>
+      <div class="dashboard__activities">
+        <p class="dashboard__section-label">
+          <svg class="dashboard__section-flower" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g transform="translate(16, 16)">
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(0)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(60)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(180)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(240)"/>
+              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(300)"/>
+            </g>
+            <circle cx="16" cy="16" r="4" fill="#D9722C"/>
+          </svg>
+          Today's activities
+        </p>
 
-        <a href="/activities" class="dashboard-card dashboard-card--tile dashboard-card--activities">
-          <span class="dashboard-card__accent" aria-hidden="true"></span>
-          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--orange" aria-hidden="true">
-            <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-              <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-              <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-              <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-            </svg>
-          </span>
-          <span class="dashboard-card__body">
-            <h2 class="dashboard-card__title">Today's Activities</h2>
-            <p class="dashboard-card__subtext">Word games, photos, and more</p>
-          </span>
-        </a>
+        <div class="dashboard__activity-grid">
+          <a href="/activities/word-association" class="dashboard-card dashboard-card--tile dashboard-card--activity">
+            <span class="dashboard-card__accent" aria-hidden="true"></span>
+            <span class="dashboard-card__icon-wrap" aria-hidden="true">
+              <svg class="dashboard-card__icon" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 5.5a2.5 2.5 0 0 1 2.5-2.5h9A2.5 2.5 0 0 1 17 5.5v4.3a2.5 2.5 0 0 1-2.5 2.5H9.2L5 16.5V12.3A2.5 2.5 0 0 1 3 9.8V5.5z" fill="currentColor"/>
+              </svg>
+            </span>
+            <span class="dashboard-card__body">
+              <h2 class="dashboard-card__title">Word Association</h2>
+              <p class="dashboard-card__subtext">Find words that go together and spark new connections</p>
+            </span>
+          </a>
 
-        <button type="button" class="dashboard-card dashboard-card--tile dashboard-card--call" id="dashboard-call-card" hidden aria-haspopup="dialog" aria-controls="call-contacts-modal">
-          <span class="dashboard-card__accent" aria-hidden="true"></span>
-          <span class="dashboard-card__icon-wrap dashboard-card__icon-wrap--call" aria-hidden="true">
-            <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-            </svg>
-          </span>
-          <span class="dashboard-card__body">
-            <h2 class="dashboard-card__title">Call Someone</h2>
-            <p class="dashboard-card__subtext">Choose someone to call</p>
-          </span>
-        </button>
+          <a href="/activities/photo-recall" class="dashboard-card dashboard-card--tile dashboard-card--activity">
+            <span class="dashboard-card__accent" aria-hidden="true"></span>
+            <span class="dashboard-card__icon-wrap" aria-hidden="true">
+              <svg class="dashboard-card__icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.75"/>
+                <circle cx="7" cy="8.5" r="1.5" fill="currentColor"/>
+                <path d="M2.5 13l4-3.5 3 2.5 3.5-4.5 4.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="dashboard-card__body">
+              <h2 class="dashboard-card__title">Photo Recall</h2>
+              <p class="dashboard-card__subtext">Look at familiar scenes and share what you remember</p>
+            </span>
+          </a>
+
+          <a href="/activities/daily-quiz" class="dashboard-card dashboard-card--tile dashboard-card--activity">
+            <span class="dashboard-card__accent" aria-hidden="true"></span>
+            <span class="dashboard-card__icon-wrap" aria-hidden="true">
+              <svg class="dashboard-card__icon" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="10" cy="8" r="4.5" fill="currentColor"/>
+                <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                  <line x1="10" y1="1" x2="10" y2="2.5"/>
+                  <line x1="10" y1="13.5" x2="10" y2="15"/>
+                  <line x1="3" y1="8" x2="4.5" y2="8"/>
+                  <line x1="15.5" y1="8" x2="17" y2="8"/>
+                </g>
+              </svg>
+            </span>
+            <span class="dashboard-card__body">
+              <h2 class="dashboard-card__title">Daily Quiz</h2>
+              <p class="dashboard-card__subtext">Answer gentle questions about the world around you</p>
+            </span>
+          </a>
+        </div>
       </div>
+
+      <button type="button" class="dashboard-card dashboard-card--tile dashboard-card--call" id="dashboard-call-card" hidden aria-haspopup="dialog" aria-controls="call-contacts-modal">
+        <span class="dashboard-card__accent" aria-hidden="true"></span>
+        <span class="dashboard-card__icon-wrap" aria-hidden="true">
+          <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+        </span>
+        <span class="dashboard-card__body">
+          <h2 class="dashboard-card__title">Call Someone</h2>
+          <p class="dashboard-card__subtext">Choose someone to call</p>
+        </span>
+      </button>
     </section>
   </main>
 
