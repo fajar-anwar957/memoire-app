@@ -260,7 +260,18 @@
     var memoryKey = getMemoryKey(memory);
 
     var dateHtml = dateLabel
-      ? '<p class="memory-log__card-date"><span class="memory-log__card-date-accent" aria-hidden="true">✿</span> ' + escapeHtml(dateLabel) + '</p>'
+      ? '<p class="memory-log__card-date"><span class="memory-log__card-date-accent" aria-hidden="true">' +
+        '<svg class="memory-log__card-flower" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">' +
+        '<g transform="translate(8, 8)">' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(0)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(60)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(120)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(180)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(240)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(300)"/>' +
+        '</g>' +
+        '<circle cx="8" cy="8" r="1.9" fill="#D9722C"/>' +
+        '</svg></span> ' + escapeHtml(dateLabel) + '</p>'
       : '';
 
     var thumbHtml = hasPhoto

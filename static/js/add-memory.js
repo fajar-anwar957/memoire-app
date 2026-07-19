@@ -2,6 +2,8 @@
   var compressImageToDataURL = window.MemoireCore.compressImageToDataURL;
 
   var STORAGE_KEY = 'dashboardMemories';
+  var MIGRATION_KEY = 'memoireThinkingAboutMigrated';
+  var DEFAULT_TEXT_PLACEHOLDER = 'A short note about your day…';
   var SAVE_ERROR_MESSAGE =
     "We couldn't save this photo — storage is full. Try removing an older memory first.";
 
@@ -84,6 +86,57 @@
     return writeMemories(next);
   }
 
+  /* One-time: move "Thinking about X: " text prefixes into context metadata. */
+  function migrateThinkingAboutPrefixes() {
+    try {
+      if (localStorage.getItem(MIGRATION_KEY) === '1') {
+        return { ok: true, migrated: false };
+      }
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+
+    var memories = getMemories();
+    var changed = false;
+    var prefixRe = /^Thinking about (.+?):\s*/i;
+
+    memories.forEach(function (memory) {
+      if (!memory || typeof memory.text !== 'string') {
+        return;
+      }
+      var match = memory.text.match(prefixRe);
+      if (!match) {
+        return;
+      }
+
+      var word = String(match[1] || '').trim().toLowerCase();
+      if (word.length > 3 && /[^s]s$/i.test(word)) {
+        word = word.slice(0, -1);
+      }
+
+      if (!memory.context) {
+        memory.context = 'word-association: ' + word;
+      }
+      memory.text = memory.text.slice(match[0].length).trim();
+      changed = true;
+    });
+
+    if (changed) {
+      var result = writeMemories(memories);
+      if (!result.ok) {
+        return result;
+      }
+    }
+
+    try {
+      localStorage.setItem(MIGRATION_KEY, '1');
+    } catch (err) {
+      /* ignore flag write failure */
+    }
+
+    return { ok: true, migrated: changed };
+  }
+
   function resetMemoryForm(form, photoPreview, photoInput) {
     if (form) form.reset();
     if (photoPreview) {
@@ -146,6 +199,8 @@
     var lastTrigger = null;
     var editingId = null;
     var existingPhoto = '';
+    var pendingContext = '';
+    var activePlaceholder = DEFAULT_TEXT_PLACEHOLDER;
 
     function setModalTitle(isEdit) {
       if (!memoryTitle) return;
@@ -157,28 +212,64 @@
       memorySaveBtn.textContent = isEdit ? 'Save changes' : 'Save Memory';
     }
 
-    function openMemoryModal(triggerEl) {
+    function setTextPlaceholder(placeholder) {
+      var textInput = document.getElementById('memory-text');
+      activePlaceholder = placeholder || DEFAULT_TEXT_PLACEHOLDER;
+      if (textInput) {
+        textInput.placeholder = activePlaceholder;
+      }
+    }
+
+    function normalizeOpenArgs(triggerOrOptions) {
+      if (
+        triggerOrOptions &&
+        typeof triggerOrOptions === 'object' &&
+        !triggerOrOptions.tagName &&
+        typeof triggerOrOptions.nodeType !== 'number'
+      ) {
+        return {
+          trigger: triggerOrOptions.trigger || null,
+          placeholder: triggerOrOptions.placeholder || DEFAULT_TEXT_PLACEHOLDER,
+          context: triggerOrOptions.context || ''
+        };
+      }
+      return {
+        trigger: triggerOrOptions || null,
+        placeholder: DEFAULT_TEXT_PLACEHOLDER,
+        context: ''
+      };
+    }
+
+    function openMemoryModal(triggerOrOptions) {
+      var args = normalizeOpenArgs(triggerOrOptions);
       editingId = null;
       existingPhoto = '';
-      lastTrigger = triggerEl || lastTrigger;
+      pendingContext = args.context ? String(args.context) : '';
+      lastTrigger = args.trigger || lastTrigger;
       setModalTitle(false);
       setSaveLabel(false);
       resetMemoryForm(memoryForm, memoryPhotoPreview, memoryPhotoInput);
+      setTextPlaceholder(args.placeholder);
       memoryModal.hidden = false;
       memoryModal.classList.add('is-open');
       hideSaveError();
       var textInput = document.getElementById('memory-text');
-      if (textInput) textInput.focus();
+      if (textInput) {
+        textInput.value = '';
+        textInput.focus();
+      }
     }
 
     function openEditMemoryModal(memory, triggerEl) {
       if (!memory) return;
       editingId = memory.id || memory.date || null;
       existingPhoto = memory.photo ? String(memory.photo) : '';
+      pendingContext = '';
       lastTrigger = triggerEl || lastTrigger;
       setModalTitle(true);
       setSaveLabel(true);
       resetMemoryForm(memoryForm, memoryPhotoPreview, memoryPhotoInput);
+      setTextPlaceholder(DEFAULT_TEXT_PLACEHOLDER);
 
       var textInput = document.getElementById('memory-text');
       if (textInput) {
@@ -200,7 +291,9 @@
       memoryModal.hidden = true;
       editingId = null;
       existingPhoto = '';
+      pendingContext = '';
       resetMemoryForm(memoryForm, memoryPhotoPreview, memoryPhotoInput);
+      setTextPlaceholder(DEFAULT_TEXT_PLACEHOLDER);
       setModalTitle(false);
       setSaveLabel(false);
       if (lastTrigger && typeof lastTrigger.focus === 'function') {
@@ -240,11 +333,15 @@
             photo: resolvedPhoto
           });
         } else {
-          result = saveMemory({
+          var entry = {
             text: text,
             photo: resolvedPhoto,
             date: new Date().toISOString()
-          });
+          };
+          if (pendingContext) {
+            entry.context = pendingContext;
+          }
+          result = saveMemory(entry);
         }
 
         if (!result.ok) {
@@ -323,11 +420,18 @@
     };
   }
 
+  try {
+    migrateThinkingAboutPrefixes();
+  } catch (err) {
+    /* non-fatal */
+  }
+
   window.MemoireAddMemory = {
     init: init,
     getMemories: getMemories,
     saveMemory: saveMemory,
     updateMemory: updateMemory,
-    deleteMemory: deleteMemory
+    deleteMemory: deleteMemory,
+    migrateThinkingAboutPrefixes: migrateThinkingAboutPrefixes
   };
 })(window);
