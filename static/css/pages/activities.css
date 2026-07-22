@@ -10,7 +10,7 @@ body {
 
 .activities {
   width: 100%;
-  max-width: 560px;
+  max-width: 640px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -139,7 +139,12 @@ body {
   min-height: 130px;
   padding: 0;
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, var(--activity-card-tint) 100%);
+  border: 1px solid rgba(30, 58, 95, 0.12);
+  box-shadow:
+    0 2px 4px rgba(34, 54, 74, 0.05),
+    0 8px 20px rgba(34, 54, 74, 0.09);
   opacity: 0;
   animation: activities-card-enter 0.5s ease forwards;
   transition:
@@ -162,7 +167,9 @@ body {
 @media (hover: hover) and (pointer: fine) {
   .activities-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 28px rgba(27, 58, 92, 0.16);
+    box-shadow:
+      0 4px 8px rgba(34, 54, 74, 0.08),
+      0 14px 28px rgba(34, 54, 74, 0.12);
   }
 }
 
@@ -170,11 +177,7 @@ body {
   transform: translateY(-1px);
 }
 
-/* Card themes */
-.activities-card--word {
-  background: linear-gradient(135deg, #fff 40%, rgba(217, 114, 44, 0.1));
-}
-
+/* Card themes — accent bar + glyph only (shared warm wash on .activities-card) */
 .activities-card--word .activities-card__accent {
   background: var(--color-orange);
 }
@@ -183,24 +186,16 @@ body {
   color: var(--color-orange);
 }
 
-.activities-card--photo {
-  background: linear-gradient(135deg, #fff 40%, rgba(27, 58, 92, 0.08));
-}
-
 .activities-card--photo .activities-card__accent {
-  background: var(--color-navy);
+  background: var(--color-orange);
 }
 
 .activities-card--photo .activities-card__glyph {
   color: var(--color-navy);
 }
 
-.activities-card--quiz {
-  background: linear-gradient(135deg, #fff 35%, rgba(217, 114, 44, 0.07) 70%, rgba(27, 58, 92, 0.06));
-}
-
 .activities-card--quiz .activities-card__accent {
-  background: linear-gradient(180deg, var(--color-orange) 0%, #E8954F 100%);
+  background: var(--color-orange);
 }
 
 .activities-card--quiz .activities-card__glyph {
@@ -211,9 +206,11 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 5px;
+  width: 4px;
   height: 100%;
-  border-radius: 24px 0 0 24px;
+  border-radius: 20px 0 0 20px;
+  background: var(--color-orange);
+  z-index: 2;
 }
 
 .activities-card__ornament {
@@ -270,7 +267,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: auto;
+  align-self: flex-start;
+  min-width: 9rem;
   min-height: 48px;
   margin-top: auto;
   padding: 0.75rem 1.25rem;
@@ -282,9 +281,10 @@ body {
   text-decoration: none;
   color: #ffffff;
   border: none;
-  border-radius: 14px;
+  border-radius: 999px;
   cursor: pointer;
   transition: filter 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 2px 8px rgba(212, 119, 46, 0.22);
 }
 
 .activities-card__button--orange {
@@ -293,6 +293,7 @@ body {
 
 .activities-card__button--navy {
   background-color: var(--color-navy);
+  box-shadow: 0 2px 8px rgba(30, 58, 95, 0.22);
 }
 
 @media (hover: hover) and (pointer: fine) {

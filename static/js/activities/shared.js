@@ -8,12 +8,12 @@
   var FLOWER_FALLBACK_SVG =
     '<svg class="cst-wa__fallback-flower" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
     '<circle cx="50" cy="50" r="42" fill="var(--color-orange)" opacity="0.15"/>' +
-    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(0 50 50)"/>' +
-    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(60 50 50)"/>' +
-    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(120 50 50)"/>' +
-    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(180 50 50)"/>' +
-    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(240 50 50)"/>' +
-    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(300 50 50)"/>' +
+    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(0 50 50)"/>' +
+    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(60 50 50)"/>' +
+    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(120 50 50)"/>' +
+    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(180 50 50)"/>' +
+    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(240 50 50)"/>' +
+    '<ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(300 50 50)"/>' +
     '<circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>' +
     '</svg>';
 
