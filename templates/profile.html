@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/call-modal.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/profile.css') }}">
 </head>
 <body>
@@ -222,9 +223,21 @@
             </div>
 
             <div class="field">
-              <label for="topics-avoid">Topics to Avoid</label>
-              <textarea id="topics-avoid" name="topics-avoid" rows="3" placeholder="Anything you'd rather not discuss…"></textarea>
-              <p class="helper-text">We'll be mindful of these in conversation.</p>
+              <label for="topics-avoid-input">Topics to Avoid</label>
+              <div class="topics-avoid" id="topics-avoid">
+                <div class="topics-avoid__chips" id="topics-avoid-list" role="list" aria-label="Topics to avoid"></div>
+                <div class="topics-avoid__add-row">
+                  <input
+                    type="text"
+                    id="topics-avoid-input"
+                    name="topics-avoid-input"
+                    placeholder="e.g. Laptops, Cats, Late Wife Mary…"
+                    autocomplete="off"
+                  >
+                  <button type="button" class="topics-avoid__add-btn" id="topics-avoid-add">Add</button>
+                </div>
+              </div>
+              <p class="helper-text">Add each topic separately. We'll never bring these up in conversation.</p>
             </div>
 
             <div class="field">
@@ -315,79 +328,92 @@
 
   <nav class="dashboard-nav" aria-label="Main navigation">
     <a href="/dashboard" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
       <span class="dashboard-nav__label">Home</span>
     </a>
     <a href="/companion" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       <span class="dashboard-nav__label">Companion</span>
     </a>
     <a href="/activities" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       <span class="dashboard-nav__label">Activities</span>
     </a>
     <a href="/profile" class="dashboard-nav__item dashboard-nav__item--active" aria-current="page">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-.5C4 16.9 7.6 14 12 14s8 2.9 8 6.5V21H4z"/></svg>
       <span class="dashboard-nav__label">Profile</span>
     </a>
   </nav>
 
   <div id="contact-warning-modal" class="modal-overlay">
     <div class="modal-card">
-      <p class="modal-title">No emergency contact added</p>
-      <p class="modal-body">We strongly recommend adding at least one person who can be contacted in an emergency. Would you like to go back and add one?</p>
-      <div class="modal-actions">
-        <button type="button" id="modal-go-back" class="modal-btn modal-btn--secondary">Go Back</button>
-        <button type="button" id="modal-continue" class="modal-btn modal-btn--primary">Continue Anyway</button>
+      <div class="modal-header">
+        <p class="modal-title">No emergency contact added</p>
+      </div>
+      <div class="modal-body">
+        <p class="modal-copy">We strongly recommend adding at least one person who can be contacted in an emergency. Would you like to go back and add one?</p>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" id="modal-go-back" class="modal-btn modal-btn--secondary">Go Back</button>
+          <button type="button" id="modal-continue" class="modal-btn modal-btn--primary">Continue Anyway</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="edit-profile-modal" class="modal-overlay">
     <div class="modal-card">
-      <p class="modal-title">Edit profile</p>
-      <p class="modal-body">Are you sure you want to edit your profile?</p>
-      <div class="modal-actions">
-        <button type="button" id="edit-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
-        <button type="button" id="edit-modal-continue" class="modal-btn modal-btn--primary">Continue</button>
+      <div class="modal-header">
+        <p class="modal-title">Edit profile</p>
+      </div>
+      <div class="modal-body">
+        <p class="modal-copy">Are you sure you want to edit your profile?</p>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" id="edit-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+          <button type="button" id="edit-modal-continue" class="modal-btn modal-btn--primary">Continue</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="delete-profile-modal" class="modal-overlay">
     <div class="modal-card">
-      <p class="modal-title">Delete profile</p>
-      <p class="modal-body">Are you sure you want to delete this profile? This cannot be undone.</p>
-      <div class="modal-actions">
-        <button type="button" id="delete-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
-        <button type="button" id="delete-modal-confirm" class="modal-btn modal-btn--primary">Delete</button>
+      <div class="modal-header">
+        <p class="modal-title">Delete profile</p>
+      </div>
+      <div class="modal-body">
+        <p class="modal-copy">Are you sure you want to delete this profile? This cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" id="delete-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+          <button type="button" id="delete-modal-confirm" class="modal-btn modal-btn--primary">Delete</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="switch-profile-modal" class="modal-overlay">
     <div class="modal-card">
-      <p class="modal-title">Switch profile</p>
-      <p class="modal-body">Choose a profile to view:</p>
-      <ul id="switch-profile-list" class="switch-profile-list"></ul>
-      <div class="modal-actions">
-        <button type="button" id="switch-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+      <div class="modal-header">
+        <p class="modal-title">Switch profile</p>
+        <p class="modal-subtitle">Choose a profile to view:</p>
+      </div>
+      <div class="modal-body">
+        <ul id="switch-profile-list" class="switch-profile-list"></ul>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" id="switch-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
   <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/quick-call.js') }}"></script>
   <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
   <script>
     (function () {

@@ -1,5 +1,5 @@
 (function () {
-  document.addEventListener('DOMContentLoaded', function () {
+  function initProfilePage() {
   var getProfiles = window.MemoireCore.getProfiles;
   var getActiveProfile = window.MemoireCore.getActiveProfile;
   var displayValue = window.MemoireCore.displayValue;
@@ -34,6 +34,82 @@
 
   function saveProfiles(profiles) {
     localStorage.setItem('patientProfiles', JSON.stringify(profiles));
+  }
+
+  // Topics to Avoid — stored as topicsToAvoid: string[]. Migrates legacy topicsAvoid string.
+  var topicsToAvoidList = [];
+
+  function normalizeTopicsToAvoid(raw) {
+    if (Array.isArray(raw)) {
+      return raw
+        .map(function (item) { return typeof item === 'string' ? item.trim() : ''; })
+        .filter(function (item) { return !!item; });
+    }
+    if (typeof raw === 'string' && raw.trim()) {
+      return raw.split(/[,;\n]+/).map(function (part) { return part.trim(); }).filter(Boolean);
+    }
+    return [];
+  }
+
+  function getTopicsToAvoidFromProfile(profile) {
+    if (!profile) return [];
+    if (profile.topicsToAvoid != null) {
+      return normalizeTopicsToAvoid(profile.topicsToAvoid);
+    }
+    return normalizeTopicsToAvoid(profile.topicsAvoid);
+  }
+
+  function renderTopicsToAvoidChips() {
+    var listEl = document.getElementById('topics-avoid-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    topicsToAvoidList.forEach(function (topic, index) {
+      var chip = document.createElement('span');
+      chip.className = 'topics-avoid__chip';
+      chip.setAttribute('role', 'listitem');
+
+      var label = document.createElement('span');
+      label.className = 'topics-avoid__chip-label';
+      label.textContent = topic;
+
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'topics-avoid__chip-remove';
+      removeBtn.setAttribute('aria-label', 'Remove ' + topic);
+      removeBtn.textContent = '\u00d7';
+      removeBtn.addEventListener('click', function () {
+        topicsToAvoidList.splice(index, 1);
+        renderTopicsToAvoidChips();
+      });
+
+      chip.appendChild(label);
+      chip.appendChild(removeBtn);
+      listEl.appendChild(chip);
+    });
+  }
+
+  function addTopicToAvoid(rawValue) {
+    var topic = (rawValue || '').trim();
+    if (!topic) return;
+    var lower = topic.toLowerCase();
+    var exists = topicsToAvoidList.some(function (item) {
+      return item.toLowerCase() === lower;
+    });
+    if (exists) return;
+    topicsToAvoidList.push(topic);
+    renderTopicsToAvoidChips();
+  }
+
+  function clearTopicsToAvoid() {
+    topicsToAvoidList = [];
+    renderTopicsToAvoidChips();
+    var input = document.getElementById('topics-avoid-input');
+    if (input) input.value = '';
+  }
+
+  function setTopicsToAvoid(topics) {
+    topicsToAvoidList = normalizeTopicsToAvoid(topics);
+    renderTopicsToAvoidChips();
   }
 
   function contactSource(contact) {
@@ -211,6 +287,8 @@
   }
 
   function renderSummary(profile) {
+    if (!profile) return;
+
     var photoEl = document.getElementById('summary-photo');
     if (photoEl) {
       if (profile.photo) {
@@ -220,16 +298,21 @@
       }
     }
 
-    document.getElementById('summary-full-name').textContent = displayValue(profile.fullName);
-    document.getElementById('summary-preferred-name').textContent = displayValue(profile.preferredName);
-    document.getElementById('summary-age').textContent = displayValue(profile.age);
-    document.getElementById('summary-hometown').textContent = displayValue(profile.hometown);
-    document.getElementById('summary-work').textContent = displayValue(profile.work);
-    document.getElementById('summary-hobbies').textContent = formatHobbies(profile);
-    document.getElementById('summary-favourite-food').textContent = displayValue(profile.favouriteFood);
-    document.getElementById('summary-favourite-media').textContent = displayValue(profile.favouriteMedia);
-    document.getElementById('summary-happy-memory').textContent = displayValue(profile.happyMemory);
-    document.getElementById('summary-pets').textContent = displayValue(profile.pets);
+    function setText(id, value) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    setText('summary-full-name', displayValue(profile.fullName));
+    setText('summary-preferred-name', displayValue(profile.preferredName));
+    setText('summary-age', displayValue(profile.age));
+    setText('summary-hometown', displayValue(profile.hometown));
+    setText('summary-work', displayValue(profile.work));
+    setText('summary-hobbies', formatHobbies(profile));
+    setText('summary-favourite-food', displayValue(profile.favouriteFood));
+    setText('summary-favourite-media', displayValue(profile.favouriteMedia));
+    setText('summary-happy-memory', displayValue(profile.happyMemory));
+    setText('summary-pets', displayValue(profile.pets));
 
     var contactsWrap = document.getElementById('summary-contacts-wrap');
     var contactsEl = document.getElementById('summary-contacts');
@@ -271,10 +354,11 @@
     if (profileSummary) profileSummary.hidden = false;
     if (pageHeading) pageHeading.textContent = profileMode === 'caregiver' ? 'Their Profile' : 'Your Profile';
     if (pageSubheading) {
-      pageSubheading.textContent = profile.preferredName || profile.fullName
-        ? 'Here is the saved profile.'
-        : (profileMode === 'caregiver' ? "Let's get to know them." : "Let's get to know you.");
+      pageSubheading.hidden = true;
+      pageSubheading.textContent = '';
     }
+    setProfileActionsVisible(true);
+    restoreHiddenPatientSections();
     renderSummary(profile);
   }
 
@@ -283,7 +367,138 @@
     if (profileWizard) profileWizard.classList.remove('profile-wizard--hidden');
     if (pageHeading) pageHeading.textContent = profileMode === 'caregiver' ? 'Their Profile' : 'Your Profile';
     if (pageSubheading) {
+      pageSubheading.hidden = false;
       pageSubheading.textContent = profileMode === 'caregiver' ? "Let's get to know them." : "Let's get to know you.";
+    }
+  }
+
+  function setProfileActionsVisible(visible) {
+    var actions = document.querySelector('.profile-summary__actions');
+    if (actions) actions.hidden = !visible;
+  }
+
+  function getContactKnownAs(contact) {
+    if (contact && contact.preferredName && String(contact.preferredName).trim()) {
+      return String(contact.preferredName).trim();
+    }
+    var name = contact && contact.name ? String(contact.name).trim() : '';
+    if (!name) return '';
+    return name.split(/\s+/)[0] || '';
+  }
+
+  function setDetailLabel(ddId, labelText) {
+    var dd = document.getElementById(ddId);
+    if (!dd) return;
+    var detail = dd.closest('.profile-summary__detail');
+    if (!detail) return;
+    var dt = detail.querySelector('dt');
+    if (dt) dt.textContent = labelText;
+  }
+
+  function setSectionTitle(id, text) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function resetPatientSummaryLabels() {
+    setSectionTitle('summary-section-about', 'About You');
+    setSectionTitle('summary-section-life', 'Life & Interests');
+    setDetailLabel('summary-age', 'Age');
+    setDetailLabel('summary-hometown', 'Hometown');
+    setDetailLabel('summary-work', 'Work');
+    setDetailLabel('summary-favourite-food', 'Favourite Food');
+  }
+
+  function renderContactSummary(contact) {
+    if (!contact) return;
+
+    var photoEl = document.getElementById('summary-photo');
+    if (photoEl) {
+      if (contact.photo && String(contact.photo).trim()) {
+        photoEl.innerHTML = '<img src="' + contact.photo + '" alt="Photo of ' + escapeHtml(formatDisplayName(contact.name) || 'contact') + '">';
+      } else {
+        photoEl.innerHTML = '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.75"/><path d="M21 15l-5-5L5 21"/></svg>';
+      }
+    }
+
+    function setText(id, value) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    var displayName = formatDisplayName(contact.name) || displayValue(contact.name);
+    var knownAs = formatDisplayName(getContactKnownAs(contact)) || '—';
+    var relationship = contact.relationship
+      ? (normalizeRelationship(contact.relationship) || String(contact.relationship).trim())
+      : '';
+    var phone = contact.phone ? String(contact.phone).trim() : '';
+
+    setText('summary-full-name', displayName);
+    setText('summary-preferred-name', knownAs);
+
+    setSectionTitle('summary-section-about', 'About Them');
+    setDetailLabel('summary-age', 'Relationship');
+    setDetailLabel('summary-hometown', 'Phone');
+    setText('summary-age', displayValue(relationship));
+    setText('summary-hometown', displayValue(phone));
+    setText('summary-work', '—');
+    setText('summary-favourite-food', '—');
+    setText('summary-hobbies', '—');
+    setText('summary-favourite-media', '—');
+    setText('summary-pets', '—');
+    setText('summary-happy-memory', '—');
+
+    ['summary-work', 'summary-favourite-food'].forEach(function (id) {
+      var dd = document.getElementById(id);
+      var detail = dd && dd.closest('.profile-summary__detail');
+      if (detail) detail.hidden = true;
+    });
+
+    var lifeSection = document.getElementById('summary-section-life');
+    if (lifeSection) {
+      lifeSection.hidden = true;
+      if (lifeSection.nextElementSibling) lifeSection.nextElementSibling.hidden = true;
+    }
+
+    var happyMemory = document.getElementById('summary-happy-memory');
+    if (happyMemory) {
+      var happyBlock = happyMemory.closest('.profile-summary__happy-memory');
+      if (happyBlock) happyBlock.hidden = true;
+    }
+
+    var contactsWrap = document.getElementById('summary-contacts-wrap');
+    if (contactsWrap) contactsWrap.hidden = true;
+  }
+
+  function showContactSummaryView(contact) {
+    editingProfileId = null;
+    if (profileWizard) profileWizard.classList.add('profile-wizard--hidden');
+    if (profileSummary) profileSummary.hidden = false;
+    if (pageHeading) pageHeading.textContent = 'Their Profile';
+    if (pageSubheading) {
+      pageSubheading.hidden = true;
+      pageSubheading.textContent = '';
+    }
+    setProfileActionsVisible(false);
+    renderContactSummary(contact);
+  }
+
+  function restoreHiddenPatientSections() {
+    resetPatientSummaryLabels();
+    ['summary-work', 'summary-favourite-food'].forEach(function (id) {
+      var dd = document.getElementById(id);
+      var detail = dd && dd.closest('.profile-summary__detail');
+      if (detail) detail.hidden = false;
+    });
+    var lifeSection = document.getElementById('summary-section-life');
+    if (lifeSection) {
+      lifeSection.hidden = false;
+      if (lifeSection.nextElementSibling) lifeSection.nextElementSibling.hidden = false;
+    }
+    var happyMemory = document.getElementById('summary-happy-memory');
+    if (happyMemory) {
+      var happyBlock = happyMemory.closest('.profile-summary__happy-memory');
+      if (happyBlock) happyBlock.hidden = false;
     }
   }
 
@@ -295,7 +510,7 @@
     document.getElementById('work').value = '';
     document.getElementById('favourite-media').value = '';
     document.getElementById('happy-memory').value = '';
-    document.getElementById('topics-avoid').value = '';
+    clearTopicsToAvoid();
     document.getElementById('favourite-food').value = '';
     document.getElementById('pets').value = '';
     document.getElementById('hobby-other-text').value = '';
@@ -346,7 +561,7 @@
     document.getElementById('work').value = profile.work || '';
     document.getElementById('favourite-media').value = profile.favouriteMedia || '';
     document.getElementById('happy-memory').value = profile.happyMemory || '';
-    document.getElementById('topics-avoid').value = profile.topicsAvoid || '';
+    setTopicsToAvoid(getTopicsToAvoidFromProfile(profile));
     document.getElementById('favourite-food').value = profile.favouriteFood || '';
     document.getElementById('pets').value = profile.pets || '';
 
@@ -470,8 +685,46 @@
     editingProfileId = null;
     resetWizardForm();
     showWizardView();
+  } else if (urlParams.has('contact')) {
+    var contactIndex = parseInt(urlParams.get('contact'), 10);
+    var contactProfile = getActiveProfile();
+    var selectedContact = contactProfile &&
+      contactProfile.contacts &&
+      Array.isArray(contactProfile.contacts) &&
+      !isNaN(contactIndex) &&
+      contactIndex >= 0 &&
+      contactIndex < contactProfile.contacts.length
+      ? contactProfile.contacts[contactIndex]
+      : null;
+
+    if (selectedContact && (selectedContact.name || selectedContact.relationship || selectedContact.phone || selectedContact.photo)) {
+      showContactSummaryView(selectedContact);
+      var backLink = document.querySelector('.profile__back');
+      if (backLink) {
+        if (urlParams.get('from') === 'call') {
+          backLink.setAttribute('href', '/dashboard');
+          backLink.setAttribute('aria-label', 'Back to home');
+        } else {
+          backLink.setAttribute('href', '/memory-log');
+          backLink.setAttribute('aria-label', 'Back to Memories & People');
+        }
+      }
+    } else if (contactProfile) {
+      showSummaryView(contactProfile);
+    } else {
+      showWizardView();
+    }
   } else if (activeProfile) {
     showSummaryView(activeProfile);
+  } else {
+    // Profiles exist but active lookup failed earlier — try once more via getProfiles
+    var fallbackProfiles = getProfiles();
+    if (fallbackProfiles.length) {
+      try {
+        localStorage.setItem('activeProfileId', String(fallbackProfiles[0].id));
+      } catch (err) { /* ignore */ }
+      showSummaryView(fallbackProfiles[0]);
+    }
   }
 
   var btnEditProfile = document.getElementById('btn-edit-profile');
@@ -599,6 +852,26 @@
     hobbyOtherCheckbox.addEventListener('change', function () {
       hobbyOtherText.style.display = this.checked ? 'block' : 'none';
       if (this.checked) hobbyOtherText.focus();
+    });
+  }
+
+  var topicsAvoidInput = document.getElementById('topics-avoid-input');
+  var topicsAvoidAddBtn = document.getElementById('topics-avoid-add');
+  function commitTopicFromInput() {
+    if (!topicsAvoidInput) return;
+    addTopicToAvoid(topicsAvoidInput.value);
+    topicsAvoidInput.value = '';
+    topicsAvoidInput.focus();
+  }
+  if (topicsAvoidAddBtn) {
+    topicsAvoidAddBtn.addEventListener('click', commitTopicFromInput);
+  }
+  if (topicsAvoidInput) {
+    topicsAvoidInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitTopicFromInput();
+      }
     });
   }
 
@@ -785,7 +1058,7 @@
           hobbyOther: document.getElementById('hobby-other-text').value.trim(),
           favouriteMedia: document.getElementById('favourite-media').value.trim(),
           happyMemory: document.getElementById('happy-memory').value.trim(),
-          topicsAvoid: document.getElementById('topics-avoid').value.trim(),
+          topicsToAvoid: topicsToAvoidList.slice(),
           favouriteFood: document.getElementById('favourite-food').value.trim(),
           pets: document.getElementById('pets').value.trim(),
           timePreference: (document.querySelector('input[name="time-preference"]:checked') || { value: '' }).value,
@@ -821,5 +1094,11 @@
         }
       });
     }
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initProfilePage);
+  } else {
+    initProfilePage();
+  }
 })();
