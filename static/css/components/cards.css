@@ -2,7 +2,7 @@
 .card-base,
 .onboarding-card,
 .activities-card {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 20px;
   display: flex;
   flex-direction: column;
@@ -10,5 +10,8 @@
 
 .card-base,
 .activities-card {
-  box-shadow: 0 4px 18px rgba(27, 58, 92, 0.1);
+  border: 1px solid rgba(30, 58, 95, 0.12);
+  box-shadow:
+    0 2px 4px rgba(34, 54, 74, 0.05),
+    0 8px 20px rgba(34, 54, 74, 0.09);
 }

@@ -6,13 +6,19 @@
   display: flex;
   align-items: stretch;
   justify-content: space-around;
-  min-height: 72px;
-  padding: 0.45rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0));
-  background: #ffffff;
-  border-top: 1px solid rgba(27, 58, 92, 0.12);
-  box-shadow: 0 -6px 20px rgba(27, 58, 92, 0.08);
+  gap: 0.2rem;
+  min-height: 76px;
+  padding: 0.7rem 0.75rem calc(0.8rem + env(safe-area-inset-bottom, 0));
+  background: var(--card);
+  border-top: 1px solid rgba(30, 58, 95, 0.1);
+  border-radius: 20px 20px 0 0;
+  box-shadow:
+    0 -6px 24px rgba(30, 58, 95, 0.1),
+    0 -1px 4px rgba(30, 58, 95, 0.06);
   z-index: 80;
 }
+
+/* Companion chat input sits above this nav (z-index 90) */
 
 .dashboard-nav__item {
   flex: 1;
@@ -21,58 +27,87 @@
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  min-height: 56px;
-  min-width: 64px;
-  padding: 0.35rem 0.35rem;
+  min-height: 58px;
+  min-width: 68px;
+  max-width: 120px;
+  margin: 0 auto;
+  padding: 0.45rem 0.4rem;
   text-decoration: none;
-  color: var(--color-orange);
-  opacity: 1;
+  color: var(--text-muted);
   font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: normal;
+  border-radius: 14px;
   transition:
     color 0.2s ease,
-    font-weight 0.2s ease;
+    background-color 0.2s ease;
 }
 
 .dashboard-nav__icon {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
   padding: 0.35rem;
   box-sizing: content-box;
   border-radius: 12px;
+  color: inherit;
+  fill: currentColor;
+  stroke: none;
   transition:
     background-color 0.2s ease,
-    box-shadow 0.2s ease;
+    color 0.2s ease;
 }
 
 .dashboard-nav__item:focus-visible {
-  outline: 3px solid rgba(217, 114, 44, 0.45);
-  outline-offset: -3px;
-  border-radius: 10px;
+  outline: 3px solid rgba(30, 58, 95, 0.45);
+  outline-offset: 2px;
 }
 
 .dashboard-nav__label {
   line-height: 1.2;
+  color: inherit;
 }
 
 .dashboard-nav__item--active {
-  color: #B85A1F;
+  color: var(--orange);
   font-weight: 700;
 }
 
 .dashboard-nav__item--active .dashboard-nav__icon {
-  background: rgba(217, 114, 44, 0.16);
-  box-shadow: 0 2px 8px rgba(217, 114, 44, 0.28);
+  color: var(--orange);
+  background: rgba(217, 122, 52, 0.14);
 }
 
 .dashboard-nav__item--active .dashboard-nav__label {
   font-weight: 700;
+  color: var(--orange);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-nav__item:not(.dashboard-nav__item--active):hover {
+    color: var(--navy);
+    background-color: rgba(30, 58, 95, 0.05);
+  }
 }
 
 @media (max-width: 719px) {
   body.keyboard-open .dashboard-nav {
     display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .dashboard-nav {
+    padding: 0.75rem 1.1rem calc(0.85rem + env(safe-area-inset-bottom, 0));
+  }
+
+  .dashboard-nav__item {
+    font-size: 0.875rem;
+    max-width: 140px;
+    min-height: 60px;
+  }
+
+  .dashboard-nav__icon {
+    width: 28px;
+    height: 28px;
   }
 }
