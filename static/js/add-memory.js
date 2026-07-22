@@ -59,6 +59,10 @@
     if (!toSave.id) {
       toSave.id = createMemoryId();
     }
+    // Always persist a real ISO timestamp so companion can reason about when
+    if (!toSave.date) {
+      toSave.date = new Date().toISOString();
+    }
     memories.push(toSave);
     return writeMemories(memories);
   }
@@ -154,8 +158,13 @@
       el.className = 'memory-form__error';
       el.setAttribute('role', 'alert');
       el.hidden = true;
-      var actions = form.querySelector('.modal-actions');
-      if (actions) actions.parentNode.insertBefore(el, actions);
+      var body = form.querySelector('.modal-body');
+      if (body) {
+        body.appendChild(el);
+      } else {
+        var actions = form.querySelector('.modal-actions');
+        if (actions) actions.parentNode.insertBefore(el, actions);
+      }
     }
     return el;
   }
