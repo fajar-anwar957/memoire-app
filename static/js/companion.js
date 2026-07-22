@@ -7,7 +7,11 @@
   var CHAT_SESSION_MAX = 40;
   var SPEECH_RATE = 0.9;
   var HEALTH_EMERGENCY_REPLY =
-    'I\'m here with you. Would you like to call someone who can help?';
+    'I am right here with you. Everything is okay. Let\'s sit together for a moment.';
+  var DISTRESS_GROUNDING_REPLY =
+    'I am right here with you. Everything is okay. Let\'s sit together for a moment.';
+  var USER_MESSAGE_BUFFER_MAX = 5;
+  var LOOP_DETECT_WINDOW = 3;
 
   var chat = document.getElementById('companion-chat');
   var form = document.getElementById('companion-form');
@@ -36,6 +40,9 @@
       } else if (nextState === 'speaking') {
         presenceLabel.hidden = false;
         presenceLabel.textContent = 'Speaking…';
+      } else if (nextState === 'listening') {
+        presenceLabel.hidden = false;
+        presenceLabel.textContent = 'Listening…';
       } else {
         presenceLabel.hidden = true;
       }
@@ -433,6 +440,74 @@
   // relative — i.e. a change in the Flask /api/chat route (app.py), NOT in this file.
   // That backend change is flagged as a separate required fix and intentionally left
   // untouched here.
+  function getPartOfDay(hour) {
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    if (hour < 21) return 'evening';
+    return 'night';
+  }
+
+  function formatLocalDateLabel(date) {
+    if (!date || isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
+  function formatLocalTimeLabel(date) {
+    if (!date || isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('en-GB', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  function getDashboardMemories() {
+    try {
+      if (window.MemoireAddMemory && typeof window.MemoireAddMemory.getMemories === 'function') {
+        var fromApi = window.MemoireAddMemory.getMemories();
+        return Array.isArray(fromApi) ? fromApi : [];
+      }
+      var stored = localStorage.getItem('dashboardMemories');
+      if (!stored) return [];
+      var parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function buildDatedMemoriesForPrompt(nameTokens) {
+    var memories = getDashboardMemories()
+      .filter(function (memory) {
+        return memory && String(memory.text || '').trim();
+      })
+      .slice()
+      .sort(function (a, b) {
+        var timeA = a.date ? new Date(a.date).getTime() : 0;
+        var timeB = b.date ? new Date(b.date).getTime() : 0;
+        return timeB - timeA;
+      })
+      .slice(0, 12);
+
+    return memories.map(function (memory) {
+      var rawDate = memory.date ? new Date(memory.date) : null;
+      var hasValidDate = rawDate && !isNaN(rawDate.getTime());
+      var dateLabel = hasValidDate ? formatLocalDateLabel(rawDate) : 'Unknown date';
+      var isoDate = hasValidDate ? rawDate.toISOString().slice(0, 10) : '';
+      var text = maskMessage(String(memory.text || '').trim(), nameTokens);
+      return {
+        date: isoDate,
+        dateLabel: dateLabel,
+        text: text
+      };
+    });
+  }
+
   function buildApiPayload(maskedUserText, nameTokens) {
     var recentHistory = conversationHistory.slice(-8);
     var maskedHistory = recentHistory.map(function (entry) {
@@ -444,7 +519,7 @@
 
     var profile = getActiveProfile();
     var profileFacts = {};
-    var excludedKeys = { id: true, photo: true, contacts: true };
+    var excludedKeys = { id: true, photo: true, contacts: true, topicsAvoid: true, topicsToAvoid: true };
 
     if (profile) {
       for (var key in profile) {
@@ -454,24 +529,88 @@
         var value = profile[key];
         if (typeof value === 'string') {
           profileFacts[key] = maskMessage(value, nameTokens);
+        } else if (Array.isArray(value)) {
+          profileFacts[key] = value.map(function (item) {
+            return typeof item === 'string' ? maskMessage(item, nameTokens) : item;
+          });
         } else {
           profileFacts[key] = value;
         }
       }
+
+      // Prefer topicsToAvoid array; migrate legacy topicsAvoid string if needed.
+      var topicsSource = profile.topicsToAvoid != null
+        ? profile.topicsToAvoid
+        : profile.topicsAvoid;
+      var topicsList = [];
+      if (Array.isArray(topicsSource)) {
+        topicsList = topicsSource
+          .map(function (item) { return typeof item === 'string' ? item.trim() : ''; })
+          .filter(Boolean);
+      } else if (typeof topicsSource === 'string' && topicsSource.trim()) {
+        topicsList = topicsSource.split(/[,;\n]+/).map(function (part) {
+          return part.trim();
+        }).filter(Boolean);
+      }
+      if (topicsList.length) {
+        profileFacts.topicsToAvoid = topicsList.map(function (topic) {
+          return maskMessage(topic, nameTokens);
+        });
+      }
+    }
+
+    var now = new Date();
+    var hour = now.getHours();
+    var partOfDay = getPartOfDay(hour);
+    var todayLabel = formatLocalDateLabel(now);
+    var timeLabel = formatLocalTimeLabel(now);
+    var todayIso = now.toISOString().slice(0, 10);
+
+    profileFacts.currentLocalDate = todayLabel;
+    profileFacts.currentLocalDateIso = todayIso;
+    profileFacts.currentLocalTime = timeLabel;
+    profileFacts.currentHour = hour;
+    profileFacts.partOfDay = partOfDay;
+    profileFacts.timeOfDayGuidance =
+      'It is currently ' + partOfDay + ' (' + timeLabel + ' on ' + todayLabel + '). ' +
+      'Greet and refer to the time of day using ONLY this: morning before 12:00, ' +
+      'afternoon 12:00–16:59, evening 17:00–20:59, night after 21:00. ' +
+      'Never say "this evening" in the afternoon, or "this morning" at night.';
+
+    var remindersFact = '';
+    if (typeof window.MemoireCore.remindersToCompanionFact === 'function') {
+      remindersFact = window.MemoireCore.remindersToCompanionFact();
+    }
+    if (remindersFact) {
+      profileFacts.remindersForToday = maskMessage(remindersFact, nameTokens);
+    }
+
+    var datedMemories = buildDatedMemoriesForPrompt(nameTokens);
+    if (datedMemories.length) {
+      profileFacts.recentMemoriesWithDates = datedMemories.map(function (entry) {
+        return '[' + entry.dateLabel + '] ' + entry.text;
+      });
+      profileFacts.memoryDateGuidance =
+        'Each recent memory above includes the REAL calendar date it was recorded. ' +
+        'Today is ' + todayLabel + '. Use those dates when talking about when something happened. ' +
+        'Do not call an older memory "yesterday" unless its date is actually yesterday. ' +
+        'Relative phrases like "last Friday" must be computed from today\'s real date.';
     }
 
     return {
       message: maskedUserText,
       history: maskedHistory,
-      profileFacts: profileFacts
+      profileFacts: profileFacts,
+      currentLocalDate: todayLabel,
+      currentLocalDateIso: todayIso,
+      currentLocalTime: timeLabel,
+      partOfDay: partOfDay,
+      memories: datedMemories
     };
   }
 
-  // Fixed list of health/safety concern keywords and phrases. If a patient's message
-  // contains any of these, we MUST NOT let the LLM improvise a response. This is a
-  // safety-critical guard: the AI must never invent medical guidance or guess who to
-  // contact for a vulnerable, early-stage dementia user. Instead we show a fixed,
-  // profile-driven emergency response and open the shared quick-call modal.
+  // Explicit health/safety keywords (legacy gate) plus contextual distress engine
+  // for exit-seeking loops, disorientation, and implicit agitation.
   var HEALTH_EMERGENCY_KEYWORDS = [
     'vomit', 'vomiting', 'throw up', 'throwing up',
     'chest pain', 'chest hurts', 'can\'t breathe', 'cant breathe',
@@ -483,21 +622,195 @@
     'ill', 'nausea', 'nauseous'
   ];
 
-  function detectHealthEmergencyKeywords(text) {
-    if (!text) {
-      return false;
-    }
-    var normalized = ('' + text).toLowerCase().trim();
-    if (!normalized) {
-      return false;
-    }
-    for (var i = 0; i < HEALTH_EMERGENCY_KEYWORDS.length; i++) {
-      if (normalized.indexOf(HEALTH_EMERGENCY_KEYWORDS[i]) !== -1) {
+  var EXIT_SEEKING_PHRASES = [
+    'i am going', 'i\'m going', 'im going',
+    'i need to leave', 'need to leave', 'let me leave',
+    'let me out', 'let me go', 'i want to go', 'want to go home',
+    'take me home', 'going home', 'going now', 'i\'m leaving',
+    'im leaving', 'i am leaving', 'open the door', 'where is the door',
+    'where\'s the door', 'get me out', 'i have to go', 'have to leave',
+    'gotta go', 'got to go', 'pick up the kids', 'go to work',
+    'going to work', 'catch the bus', 'call a taxi'
+  ];
+
+  var DISORIENTATION_PHRASES = [
+    'where am i', 'where are we', 'who are you', 'who am i',
+    'i\'m lost', 'im lost', 'i am lost', 'i feel lost',
+    'i don\'t know where', 'dont know where', 'don\'t know where',
+    'this isn\'t my house', 'this isnt my house', 'not my home',
+    'i\'m confused', 'im confused', 'i am confused', 'so confused',
+    'what is this place', 'what\'s this place'
+  ];
+
+  var PAIN_DISTRESS_PHRASES = [
+    'it hurts', 'hurts so much', 'my head hurts', 'my stomach hurts',
+    'in pain', 'so much pain', 'aching', 'ouch'
+  ];
+
+  var recentUserMessages = [];
+
+  function normalizeDistressText(text) {
+    return ('' + (text || ''))
+      .toLowerCase()
+      .replace(/[^\w\s']/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function containsAnyPhrase(normalized, phrases) {
+    for (var i = 0; i < phrases.length; i++) {
+      var phrase = phrases[i];
+      if (!phrase) continue;
+      // Short tokens need word-boundary matching to avoid "spain"→"pain", etc.
+      if (phrase.indexOf(' ') === -1 && phrase.length <= 5) {
+        var re = new RegExp('\\b' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
+        if (re.test(normalized)) {
+          return true;
+        }
+      } else if (normalized.indexOf(phrase) !== -1) {
         return true;
       }
     }
     return false;
   }
+
+  function detectHealthEmergencyKeywords(text) {
+    var normalized = normalizeDistressText(text);
+    if (!normalized) {
+      return false;
+    }
+    return containsAnyPhrase(normalized, HEALTH_EMERGENCY_KEYWORDS);
+  }
+
+  function tokenizeIntent(normalized) {
+    var stop = {
+      a: true, an: true, the: true, to: true, and: true, or: true,
+      i: true, im: true, am: true, is: true, are: true,
+      me: true, my: true, you: true, please: true, just: true, now: true
+    };
+    return normalized.split(' ').filter(function (token) {
+      return token && token.length > 1 && !stop[token];
+    });
+  }
+
+  function intentSimilarity(a, b) {
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    if (a.indexOf(b) !== -1 || b.indexOf(a) !== -1) return 0.92;
+
+    var tokensA = tokenizeIntent(a);
+    var tokensB = tokenizeIntent(b);
+    if (!tokensA.length || !tokensB.length) return 0;
+
+    var setB = {};
+    for (var i = 0; i < tokensB.length; i++) {
+      setB[tokensB[i]] = true;
+    }
+    var overlap = 0;
+    for (var j = 0; j < tokensA.length; j++) {
+      if (setB[tokensA[j]]) overlap += 1;
+    }
+    var union = {};
+    tokensA.concat(tokensB).forEach(function (t) { union[t] = true; });
+    return overlap / Object.keys(union).length;
+  }
+
+  function isExitSeeking(normalized) {
+    return containsAnyPhrase(normalized, EXIT_SEEKING_PHRASES);
+  }
+
+  function isDisoriented(normalized) {
+    return containsAnyPhrase(normalized, DISORIENTATION_PHRASES);
+  }
+
+  function isPainDistress(normalized) {
+    return containsAnyPhrase(normalized, PAIN_DISTRESS_PHRASES);
+  }
+
+  function isAgitatedContent(normalized) {
+    return isExitSeeking(normalized) || isDisoriented(normalized) || isPainDistress(normalized);
+  }
+
+  function pushUserMessageBuffer(text) {
+    var normalized = normalizeDistressText(text);
+    if (!normalized) return;
+    recentUserMessages.push(normalized);
+    if (recentUserMessages.length > USER_MESSAGE_BUFFER_MAX) {
+      recentUserMessages = recentUserMessages.slice(-USER_MESSAGE_BUFFER_MAX);
+    }
+  }
+
+  function detectRepetitionLoop() {
+    if (recentUserMessages.length < LOOP_DETECT_WINDOW) {
+      return false;
+    }
+    var windowMsgs = recentUserMessages.slice(-LOOP_DETECT_WINDOW);
+
+    var exitCount = 0;
+    for (var i = 0; i < windowMsgs.length; i++) {
+      if (isExitSeeking(windowMsgs[i])) exitCount += 1;
+    }
+    if (exitCount >= LOOP_DETECT_WINDOW) {
+      return true;
+    }
+
+    // Similar-intent loop only counts when messages show agitation / exit-seeking
+    var agitatedCount = 0;
+    for (var k = 0; k < windowMsgs.length; k++) {
+      if (isAgitatedContent(windowMsgs[k])) agitatedCount += 1;
+    }
+    if (agitatedCount < 2) {
+      return false;
+    }
+
+    var similarPairs = 0;
+    for (var a = 0; a < windowMsgs.length; a++) {
+      for (var b = a + 1; b < windowMsgs.length; b++) {
+        if (intentSimilarity(windowMsgs[a], windowMsgs[b]) >= 0.55) {
+          similarPairs += 1;
+        }
+      }
+    }
+    return similarPairs >= 3;
+  }
+
+  /**
+   * Contextual distress engine.
+   * Returns a state string when emergency UI should open, or null otherwise.
+   * States: STATE_HEALTH_EMERGENCY | STATE_HIGH_AGITATION_ELOPEMENT | STATE_IMPLICIT_DISTRESS
+   */
+  function analyzeDistressState(userText) {
+    pushUserMessageBuffer(userText);
+    var normalized = normalizeDistressText(userText);
+
+    if (detectHealthEmergencyKeywords(userText)) {
+      return 'STATE_HEALTH_EMERGENCY';
+    }
+
+    if (detectRepetitionLoop()) {
+      return 'STATE_HIGH_AGITATION_ELOPEMENT';
+    }
+
+    if (isDisoriented(normalized) || isPainDistress(normalized)) {
+      return 'STATE_IMPLICIT_DISTRESS';
+    }
+
+    return null;
+  }
+
+  // Seed buffer from the active chat session so loop detection spans the visit.
+  (function seedUserMessageBuffer() {
+    if (!chatSessionMessages || !chatSessionMessages.length) return;
+    chatSessionMessages.forEach(function (entry) {
+      if (entry && entry.role === 'user' && entry.text) {
+        var normalized = normalizeDistressText(entry.text);
+        if (normalized) recentUserMessages.push(normalized);
+      }
+    });
+    if (recentUserMessages.length > USER_MESSAGE_BUFFER_MAX) {
+      recentUserMessages = recentUserMessages.slice(-USER_MESSAGE_BUFFER_MAX);
+    }
+  })();
 
   function openEmergencyCallModal() {
     if (!window.MemoireQuickCall || typeof window.MemoireQuickCall.open !== 'function') {
@@ -506,33 +819,34 @@
     window.MemoireQuickCall.open();
   }
 
+  function triggerDistressResponse(userText, state) {
+    var safetyMessage = (state === 'STATE_HEALTH_EMERGENCY')
+      ? HEALTH_EMERGENCY_REPLY
+      : DISTRESS_GROUNDING_REPLY;
+
+    isWaitingForReply = true;
+    showLoadingIndicator();
+    setTimeout(function () {
+      hideLoadingIndicator();
+      streamCompanionMessage(safetyMessage);
+      openEmergencyCallModal();
+      conversationHistory.push({ role: 'user', content: userText });
+      conversationHistory.push({ role: 'assistant', content: safetyMessage });
+      saveHistoryToStorage();
+      isWaitingForReply = false;
+      input.focus();
+    }, 500);
+  }
+
   function sendMessage(userText) {
-    // SAFETY BYPASS (safety-critical):
-    // If the patient's message contains any health/emergency concern keyword, skip the
-    // LLM entirely and respond with a fixed warm message plus the shared emergency
-    // call modal (all isEmergency contacts). The AI must never improvise medical
-    // guidance or guess emergency contacts for a vulnerable user.
-    if (detectHealthEmergencyKeywords(userText)) {
-      var safetyMessage = HEALTH_EMERGENCY_REPLY;
-      isWaitingForReply = true;
-      showLoadingIndicator();
-      setTimeout(function () {
-        hideLoadingIndicator();
-        streamCompanionMessage(safetyMessage);
-        openEmergencyCallModal();
-        conversationHistory.push({ role: 'user', content: userText });
-        conversationHistory.push({ role: 'assistant', content: safetyMessage });
-        saveHistoryToStorage();
-        isWaitingForReply = false;
-        input.focus();
-      }, 500);
+    // SAFETY / DISTRESS BYPASS (safety-critical):
+    // Keyword emergencies, exit-seeking repetition loops, and implicit distress
+    // skip the LLM and open the emergency-contact popup with a short grounding reply.
+    var distressState = analyzeDistressState(userText);
+    if (distressState) {
+      triggerDistressResponse(userText, distressState);
       return;
     }
-
-    // ISSUE C (flagged, not fixed here): Companion replies are too long, especially
-    // on mobile. Reply length controlled by Claude system prompt in Flask backend —
-    // needs separate fix to instruct shorter, 2-3 sentence max responses suitable
-    // for dementia patients and mobile screens.
 
     isWaitingForReply = true;
     showLoadingIndicator();
@@ -591,6 +905,11 @@
     mic.setAttribute('aria-pressed', listening ? 'true' : 'false');
     if (micStatus) {
       micStatus.hidden = !listening;
+    }
+    if (listening) {
+      setPresenceState('listening');
+    } else if (presenceState === 'listening') {
+      setPresenceState('idle');
     }
   }
 
