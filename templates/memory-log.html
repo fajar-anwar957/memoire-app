@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/call-modal.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/memory-log.css') }}">
 </head>
@@ -62,14 +63,14 @@
                 <span class="memory-log__panel-accent" aria-hidden="true">
                   <svg class="memory-log__panel-flower" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                     <g transform="translate(10, 10)">
-                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="#8FAFC9" transform="rotate(0)"/>
-                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="#8FAFC9" transform="rotate(60)"/>
-                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="#8FAFC9" transform="rotate(120)"/>
-                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="#8FAFC9" transform="rotate(180)"/>
-                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="#8FAFC9" transform="rotate(240)"/>
-                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="#8FAFC9" transform="rotate(300)"/>
+                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="var(--navy)" transform="rotate(0)"/>
+                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="var(--navy)" transform="rotate(60)"/>
+                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="var(--navy)" transform="rotate(120)"/>
+                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="var(--navy)" transform="rotate(180)"/>
+                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="var(--navy)" transform="rotate(240)"/>
+                      <ellipse cx="0" cy="-5.5" rx="2.2" ry="4" fill="var(--navy)" transform="rotate(300)"/>
                     </g>
-                    <circle cx="10" cy="10" r="2.4" fill="#D9722C"/>
+                    <circle cx="10" cy="10" r="2.4" fill="var(--orange)"/>
                   </svg>
                 </span>
                 Your Memories
@@ -90,14 +91,14 @@
         <div id="memory-log-memories-empty" class="memory-log__memories-empty" hidden>
           <svg class="memory-log__empty-flower" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <g transform="translate(60, 60)">
-              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(0)"/>
-              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(60)"/>
-              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(120)"/>
-              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(180)"/>
-              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(240)"/>
-              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(300)"/>
+              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(0)"/>
+              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(60)"/>
+              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(180)"/>
+              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(240)"/>
+              <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(300)"/>
             </g>
-            <circle cx="60" cy="60" r="12" fill="#D9722C"/>
+            <circle cx="60" cy="60" r="12" fill="var(--orange)"/>
           </svg>
           <p class="memory-log__empty-text">No memories yet — add your first one</p>
           <button type="button" class="memory-log__primary-btn memory-log__primary-btn--empty" id="memory-log-empty-add-btn" aria-haspopup="dialog" aria-controls="add-memory-modal">
@@ -111,31 +112,19 @@
 
   <nav class="dashboard-nav" aria-label="Main navigation">
     <a href="/dashboard" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
       <span class="dashboard-nav__label">Home</span>
     </a>
     <a href="/companion" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       <span class="dashboard-nav__label">Companion</span>
     </a>
     <a href="/activities" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       <span class="dashboard-nav__label">Activities</span>
     </a>
     <a href="/profile" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-.5C4 16.9 7.6 14 12 14s8 2.9 8 6.5V21H4z"/></svg>
       <span class="dashboard-nav__label">Profile</span>
     </a>
   </nav>
@@ -144,39 +133,45 @@
 
   <div id="add-person-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="person-modal-title" hidden>
     <div class="modal-card">
-      <p class="modal-title" id="person-modal-title">Add someone special</p>
-      <form id="add-person-form" class="memory-form" novalidate>
-        <div class="memory-form__field">
-          <span class="memory-form__label">Photo <span class="memory-form__optional">(optional)</span></span>
-          <div class="photo-upload photo-upload--small">
-            <div class="photo-preview" id="person-photo-preview">
-              <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.75"/>
-                <path d="M21 15l-5-5L5 21"/>
-              </svg>
-              <span class="photo-preview__text">Add photo</span>
+      <div class="modal-header">
+        <p class="modal-title" id="person-modal-title">Add someone special</p>
+      </div>
+      <form id="add-person-form" class="memory-form modal-form" novalidate>
+        <div class="modal-body">
+          <div class="memory-form__field">
+            <span class="memory-form__label">Photo <span class="memory-form__optional">(optional)</span></span>
+            <div class="photo-upload photo-upload--small">
+              <div class="photo-preview" id="person-photo-preview">
+                <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.75"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>
+                <span class="photo-preview__text">Add photo</span>
+              </div>
+              <input type="file" id="person-photo" name="person-photo" accept="image/*">
             </div>
-            <input type="file" id="person-photo" name="person-photo" accept="image/*">
           </div>
+          <div class="memory-form__field" id="person-name-field">
+            <label for="person-name">Name</label>
+            <input type="text" id="person-name" name="person-name" autocomplete="name">
+            <p class="memory-form__error" id="person-name-error" hidden>Please enter a name</p>
+          </div>
+          <div class="memory-form__field">
+            <label for="person-relationship">About them</label>
+            <input type="text" id="person-relationship" name="person-relationship" placeholder="e.g. Daughter, lives nearby, loves gardening" autocomplete="off">
+          </div>
+          <div class="memory-form__field">
+            <label for="person-phone">Phone</label>
+            <input type="tel" id="person-phone" name="person-phone" autocomplete="tel">
+          </div>
+          <p class="memory-form__info">To add an emergency contact, please go to your Profile.</p>
         </div>
-        <div class="memory-form__field" id="person-name-field">
-          <label for="person-name">Name</label>
-          <input type="text" id="person-name" name="person-name" autocomplete="name">
-          <p class="memory-form__error" id="person-name-error" hidden>Please enter a name</p>
-        </div>
-        <div class="memory-form__field">
-          <label for="person-relationship">About them</label>
-          <input type="text" id="person-relationship" name="person-relationship" placeholder="e.g. Daughter, lives nearby, loves gardening" autocomplete="off">
-        </div>
-        <div class="memory-form__field">
-          <label for="person-phone">Phone</label>
-          <input type="tel" id="person-phone" name="person-phone" autocomplete="tel">
-        </div>
-        <p class="memory-form__info">To add an emergency contact, please go to your Profile.</p>
-        <div class="modal-actions">
-          <button type="button" id="person-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
-          <button type="submit" class="modal-btn modal-btn--primary">Save</button>
+        <div class="modal-footer">
+          <div class="modal-actions">
+            <button type="button" id="person-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+            <button type="submit" class="modal-btn modal-btn--primary">Save</button>
+          </div>
         </div>
       </form>
     </div>
@@ -184,29 +179,35 @@
 
   <div id="add-memory-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="memory-modal-title" hidden>
     <div class="modal-card">
-      <p class="modal-title" id="memory-modal-title">Add a Memory</p>
-      <form id="add-memory-form" class="memory-form">
-        <div class="memory-form__field">
-          <label for="memory-text">What happened today?</label>
-          <textarea id="memory-text" name="memory-text" rows="3" placeholder="A short note about your day…" required></textarea>
-        </div>
-        <div class="memory-form__field">
-          <span class="memory-form__label">Photo <span class="memory-form__optional">(optional)</span></span>
-          <div class="photo-upload">
-            <div class="photo-preview photo-preview--memory" id="memory-photo-preview">
-              <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.75"/>
-                <path d="M21 15l-5-5L5 21"/>
-              </svg>
-              <span class="photo-preview__text">Tap to add<br>a photo</span>
+      <div class="modal-header">
+        <p class="modal-title" id="memory-modal-title">Add a Memory</p>
+      </div>
+      <form id="add-memory-form" class="memory-form modal-form">
+        <div class="modal-body">
+          <div class="memory-form__field">
+            <label for="memory-text">What happened today?</label>
+            <textarea id="memory-text" name="memory-text" rows="3" placeholder="A short note about your day…" required></textarea>
+          </div>
+          <div class="memory-form__field">
+            <span class="memory-form__label">Photo <span class="memory-form__optional">(optional)</span></span>
+            <div class="photo-upload">
+              <div class="photo-preview photo-preview--memory" id="memory-photo-preview">
+                <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.75"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>
+                <span class="photo-preview__text">Tap to add<br>a photo</span>
+              </div>
+              <input type="file" id="memory-photo" name="memory-photo" accept="image/*">
             </div>
-            <input type="file" id="memory-photo" name="memory-photo" accept="image/*">
           </div>
         </div>
-        <div class="modal-actions">
-          <button type="button" id="memory-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
-          <button type="submit" class="modal-btn modal-btn--primary">Save Memory</button>
+        <div class="modal-footer">
+          <div class="modal-actions">
+            <button type="button" id="memory-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+            <button type="submit" class="modal-btn modal-btn--primary">Save Memory</button>
+          </div>
         </div>
       </form>
     </div>
@@ -214,16 +215,23 @@
 
   <div id="memory-confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="memory-confirm-title" hidden>
     <div class="modal-card">
-      <p class="modal-title" id="memory-confirm-title">Remove this person?</p>
-      <p class="modal-body" id="memory-confirm-body">Remove this person? This cannot be undone.</p>
-      <div class="modal-actions">
-        <button type="button" id="memory-confirm-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
-        <button type="button" id="memory-confirm-remove" class="modal-btn modal-btn--primary">Remove</button>
+      <div class="modal-header">
+        <p class="modal-title" id="memory-confirm-title">Remove this person?</p>
+      </div>
+      <div class="modal-body">
+        <p class="modal-copy" id="memory-confirm-body">Remove this person? This cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" id="memory-confirm-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+          <button type="button" id="memory-confirm-remove" class="modal-btn modal-btn--primary">Remove</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/quick-call.js') }}"></script>
   <script src="{{ url_for('static', filename='js/add-memory.js') }}"></script>
   <script src="{{ url_for('static', filename='js/memory-log.js') }}"></script>
 </body>

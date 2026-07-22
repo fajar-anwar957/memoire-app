@@ -1,14 +1,25 @@
-/* Call contacts modal (shared by dashboard quick-call and companion emergency) */
+/* Call contacts modal content + persistent Call FAB (all main pages)
+ * Shell scrolling comes from shared modals.css (.modal-header / .modal-body / .modal-footer).
+ */
 .call-modal-hint {
-  margin: -0.35rem 0 1.15rem;
+  margin: 0;
   font-size: 0.9375rem;
   line-height: 1.45;
   color: var(--color-text-muted);
 }
 
+#call-contacts-modal .modal-title {
+  font-size: 1.35rem;
+  color: var(--text);
+}
+
+#call-contacts-modal .modal-card {
+  max-width: 420px;
+}
+
 .call-contacts-list {
   list-style: none;
-  margin: 0 0 1.5rem;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -20,24 +31,38 @@
   align-items: center;
   gap: 0.9rem;
   width: 100%;
-  min-height: 72px;
+  min-height: 96px;
   padding: 0.9rem 1rem;
   font-family: var(--font-family);
+  font-size: inherit;
   text-align: left;
   text-decoration: none;
-  color: var(--color-navy);
-  background-color: var(--color-cream);
-  border: 2px solid var(--color-navy);
+  color: var(--text);
+  background-color: var(--surface-tint, #f4fafe);
+  border: 2px solid rgba(30, 58, 95, 0.18);
   border-radius: 12px;
+  box-sizing: border-box;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
     transform 0.15s ease;
 }
 
+.call-contact-item__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+  flex: 1;
+  color: inherit;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .call-contact-item:hover {
-    background-color: rgba(27, 58, 92, 0.08);
+    background-color: rgba(212, 119, 46, 0.1);
+    border-color: var(--orange);
   }
 }
 
@@ -46,7 +71,7 @@
 }
 
 .call-contact-item:focus-visible {
-  outline: 3px solid rgba(27, 58, 92, 0.45);
+  outline: 3px solid rgba(30, 58, 95, 0.45);
   outline-offset: 3px;
 }
 
@@ -55,15 +80,15 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: var(--contact-photo-size, 80px);
+  height: var(--contact-photo-size, 80px);
+  border-radius: 14px;
   overflow: hidden;
-  background: rgba(27, 58, 92, 0.08);
-  color: var(--color-navy);
-  font-size: 1.125rem;
+  background: var(--icon-tile-blue, #dbeaf5);
+  color: var(--navy-muted, #3a5575);
+  font-size: 1.5rem;
   font-weight: 700;
-  box-shadow: 0 0 0 3px rgba(217, 114, 44, 0.35);
+  box-shadow: 0 0 0 2px rgba(212, 119, 46, 0.28);
 }
 
 .call-contact-item__avatar img {
@@ -92,16 +117,18 @@
 }
 
 .call-contact-item__phone {
+  flex-shrink: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--navy);
   line-height: 1.35;
   letter-spacing: normal;
+  pointer-events: none;
 }
 
 .call-contact-item--no-phone {
   cursor: default;
-  border-color: rgba(27, 58, 92, 0.25);
+  border-color: rgba(30, 58, 95, 0.15);
 }
 
 .call-contact-item__no-number {
@@ -109,4 +136,81 @@
   font-weight: 500;
   color: var(--color-text-muted);
   line-height: 1.35;
+}
+
+/* Persistent floating Call button — above bottom nav on every main page */
+.memoire-call-fab {
+  position: fixed;
+  right: 1.15rem;
+  bottom: calc(6.35rem + env(safe-area-inset-bottom, 0px));
+  z-index: 85;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 52px;
+  padding: 0.7rem 1.15rem 0.7rem 0.95rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--orange);
+  color: #ffffff;
+  font-family: var(--font-family);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(212, 119, 46, 0.42);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.memoire-call-fab[hidden] {
+  display: none !important;
+}
+
+.memoire-call-fab__icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.memoire-call-fab__label {
+  letter-spacing: 0.01em;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .memoire-call-fab:hover {
+    background: #c56a26;
+    box-shadow: 0 6px 22px rgba(212, 119, 46, 0.5);
+  }
+}
+
+.memoire-call-fab:active {
+  transform: scale(0.96);
+}
+
+.memoire-call-fab:focus-visible {
+  outline: 3px solid rgba(30, 58, 95, 0.45);
+  outline-offset: 3px;
+}
+
+/* Companion: clear input bar + nav */
+body:has(.companion__input-bar) .memoire-call-fab {
+  bottom: calc(92px + 80px + 0.85rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  body:has(.companion__input-bar) .memoire-call-fab {
+    bottom: calc(96px + 84px + 0.85rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 719px) {
+  body.keyboard-open:has(.companion__input-bar) .memoire-call-fab {
+    bottom: calc(80px + 0.85rem);
+  }
+}
+
+/* Backward-compatible alias for existing dashboard FAB markup */
+.dashboard-fab.dashboard-fab--call {
+  display: none !important;
 }

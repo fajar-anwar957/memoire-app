@@ -61,6 +61,43 @@ SYSTEM_PROMPT = (
     "Important: [PATIENT] always refers to the person you are talking to, "
     "themselves. Never describe [PATIENT] as someone else's relative or "
     "as a different person (e.g. never say 'your mother [PATIENT]').\n\n"
+    "Time of day (CRITICAL — always follow):\n"
+    "- Facts about the patient may include Current Local Date, Current Local "
+    "Time, and Part Of Day. Trust those values — they are the patient's real "
+    "local clock.\n"
+    "- Part of day rules: morning before 12:00, afternoon 12:00–16:59, "
+    "evening 17:00–20:59, night after 21:00.\n"
+    "- Only greet with the matching part of day (e.g. say 'this afternoon' "
+    "only in the afternoon). Never invent a different part of day.\n\n"
+    "Memory dates (CRITICAL — always follow):\n"
+    "- When Recent Memories With Dates are provided, each line starts with "
+    "the real calendar date the memory was recorded.\n"
+    "- Compare that date to today's Current Local Date when talking about "
+    "when something happened.\n"
+    "- Never call a memory 'yesterday' unless its date is actually yesterday. "
+    "Phrases like 'last Friday' must be based on today's real date.\n\n"
+    "Schedule and reminders:\n"
+    "- If Reminders For Today facts are provided, use them when the patient "
+    "asks what is next, what is coming up, their schedule, or their next "
+    "activity.\n"
+    "- Answer warmly with the reminder text and time "
+    "(e.g. 'Sarah is visiting you today at 4:00 PM').\n"
+    "- If there are several reminders, mention the soonest upcoming one first.\n"
+    "- If no reminders are provided, gently say you do not see any saved "
+    "reminders for today.\n\n"
+    "Validation and redirection (CRITICAL — always follow):\n"
+    "- When the patient expresses past, impossible, or exit-seeking duties "
+    "(e.g. needing to leave, go to work, pick someone up, go home now), "
+    "NEVER ask practical or logistical questions such as 'Who will take you?', "
+    "'How will you get there?', or 'Please wait for someone'.\n"
+    "- NEVER argue, reason against them, instruct them to stay put, or correct "
+    "their reality.\n"
+    "- ALWAYS use Validation + Reminiscence Redirection: first validate the "
+    "feeling (e.g. 'You care about your family so much!'), then immediately "
+    "pivot to a safe, comforting long-term memory or anchor topic "
+    "(e.g. 'What was your favourite game to play with them when they were small?').\n"
+    "- Keep the tone calm, affirming, and gently redirecting — never "
+    "confrontational.\n\n"
     "Reply length and format:\n"
     "- Keep every reply to a maximum of 2-3 short sentences.\n"
     "- Avoid long explanations, lists, or multiple questions in one reply.\n"
@@ -320,29 +357,134 @@ def api_chat():
                 return str(value)
             return str(value)
 
+        def _format_memory_entry(entry):
+            if isinstance(entry, str):
+                return entry.strip()
+            if not isinstance(entry, dict):
+                return ''
+            text = str(entry.get('text') or '').strip()
+            if not text:
+                return ''
+            date_label = str(entry.get('dateLabel') or entry.get('date') or '').strip()
+            if date_label:
+                return f'[{date_label}] {text}'
+            return text
+
         fact_lines = []
-        topics_avoid = ''
+        topics_to_avoid = []
+        memory_lines = []
+        skip_fact_keys = {
+            'topicsAvoid',
+            'topicsToAvoid',
+            'recentMemoriesWithDates',
+            'memoryDateGuidance',
+            'timeOfDayGuidance',
+            'currentLocalDate',
+            'currentLocalDateIso',
+            'currentLocalTime',
+            'currentHour',
+            'partOfDay',
+        }
+
         for key, value in profile_facts.items():
+            if key in ('topicsAvoid', 'topicsToAvoid'):
+                if isinstance(value, list):
+                    topics_to_avoid.extend(
+                        str(item).strip() for item in value if item and str(item).strip()
+                    )
+                else:
+                    formatted_topics = _format_fact_value(value)
+                    if formatted_topics:
+                        topics_to_avoid.extend(
+                            part.strip()
+                            for part in re.split(r'[,;\n]+', formatted_topics)
+                            if part.strip()
+                        )
+                continue
+            if key == 'recentMemoriesWithDates':
+                if isinstance(value, list):
+                    for item in value:
+                        line = _format_memory_entry(item)
+                        if line:
+                            memory_lines.append(f'- {line}')
+                continue
+            if key in skip_fact_keys:
+                continue
             formatted = _format_fact_value(value)
             if not formatted:
                 continue
-            if key == 'topicsAvoid':
-                topics_avoid = formatted
-                continue
             fact_lines.append(f'- {_format_field_label(key)}: {formatted}')
 
+        # Also accept top-level memories array from the client payload
+        raw_memories = data.get('memories') or []
+        if isinstance(raw_memories, list):
+            for item in raw_memories:
+                line = _format_memory_entry(item)
+                if line:
+                    memory_lines.append(f'- {line}')
+
+        # Deduplicate memory lines while preserving order
+        seen_memory_lines = set()
+        unique_memory_lines = []
+        for line in memory_lines:
+            if line in seen_memory_lines:
+                continue
+            seen_memory_lines.add(line)
+            unique_memory_lines.append(line)
+        memory_lines = unique_memory_lines
+
+        # Deduplicate while preserving order
+        seen_topics = set()
+        unique_topics = []
+        for topic in topics_to_avoid:
+            lower = topic.lower()
+            if lower in seen_topics:
+                continue
+            seen_topics.add(lower)
+            unique_topics.append(topic)
+        topics_to_avoid = unique_topics
+
+        # Prefer explicit top-level clock fields when present
+        part_of_day = str(data.get('partOfDay') or profile_facts.get('partOfDay') or '').strip()
+        current_date = str(
+            data.get('currentLocalDate') or profile_facts.get('currentLocalDate') or ''
+        ).strip()
+        current_time = str(
+            data.get('currentLocalTime') or profile_facts.get('currentLocalTime') or ''
+        ).strip()
+
         profile_sections = []
+        if part_of_day or current_date or current_time:
+            clock_bits = []
+            if current_date:
+                clock_bits.append(f'Today\'s date: {current_date}')
+            if current_time:
+                clock_bits.append(f'Current local time: {current_time}')
+            if part_of_day:
+                clock_bits.append(f'Part of day: {part_of_day}')
+            profile_sections.append(
+                'Current local clock (authoritative — do not contradict):\n'
+                + '\n'.join(f'- {bit}' for bit in clock_bits)
+            )
         if fact_lines:
             profile_sections.append(
                 'Facts about the patient — use naturally in conversation:\n'
                 + '\n'.join(fact_lines)
             )
-        if topics_avoid:
+        if memory_lines:
             profile_sections.append(
-                'Topics to avoid — never bring up or encourage discussion of this topic; '
-                'if the patient raises it, gently acknowledge and redirect without '
-                'dwelling on it.\n'
-                f'- Topics to avoid: {topics_avoid}'
+                'Recent memories with their real recorded dates '
+                '(compare to today when talking about when they happened):\n'
+                + '\n'.join(memory_lines)
+            )
+        if topics_to_avoid:
+            topics_joined = ', '.join(topics_to_avoid)
+            profile_sections.append(
+                'STRICT NEGATIVE CONSTRAINTS: Under NO circumstances mention or '
+                'discuss any of the following topics: '
+                f'{topics_joined}. '
+                'If the user brings them up, acknowledge briefly without naming '
+                'the topic and pivot away.'
             )
 
         if profile_sections:

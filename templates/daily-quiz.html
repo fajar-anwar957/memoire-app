@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/cards.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/cst-activities.css') }}">
 </head>
 <body data-cst-activity="daily-quiz">
@@ -64,12 +65,12 @@
           </svg>
           <svg class="cst-wa__done-flower" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             <circle class="cst-wa__done-glow" cx="50" cy="50" r="42" fill="var(--color-orange)" opacity="0.15"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(0 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(60 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(120 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(180 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(240 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(300 50 50)"/>
+            <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(0 50 50)"/>
+            <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(60 50 50)"/>
+            <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(120 50 50)"/>
+            <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(180 50 50)"/>
+            <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(240 50 50)"/>
+            <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(300 50 50)"/>
             <circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>
           </svg>
         </div>
@@ -84,76 +85,70 @@
 
   <nav class="dashboard-nav" aria-label="Main navigation">
     <a href="/dashboard" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
       <span class="dashboard-nav__label">Home</span>
     </a>
     <a href="/companion" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       <span class="dashboard-nav__label">Companion</span>
     </a>
     <a href="/activities" class="dashboard-nav__item dashboard-nav__item--active" aria-current="page">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       <span class="dashboard-nav__label">Activities</span>
     </a>
     <a href="/profile" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-.5C4 16.9 7.6 14 12 14s8 2.9 8 6.5V21H4z"/></svg>
       <span class="dashboard-nav__label">Profile</span>
     </a>
   </nav>
 
   <div
     id="dq-feedback-modal"
-    class="cst-wa-modal"
+    class="modal-overlay cst-wa-modal"
     role="dialog"
     aria-modal="true"
     aria-labelledby="dq-modal-heading"
     hidden
   >
-    <div class="cst-wa-modal__card">
-      <div id="dq-modal-body">
+    <div class="modal-card">
+      <div class="modal-header">
         <h2 class="cst-wa-modal__heading" id="dq-modal-heading">Lovely!</h2>
-        <p class="cst-wa-modal__warm" id="dq-modal-warm"></p>
-        <button type="button" class="cst-wa__replay" id="dq-speak-warm" aria-label="Hear the message">
-          <span class="cst-wa__replay-icon" aria-hidden="true">🔊</span>
-        </button>
       </div>
-      <div class="cst-wa-modal__actions" id="dq-modal-actions">
-        <button type="button" class="cst-wa-modal__next" id="dq-next-question">Next Question</button>
-      </div>
-      <div class="cst-wa-modal__closing" id="dq-modal-closing" hidden>
-        <div class="cst-wa__done-visual cst-wa__done-visual--compact" aria-hidden="true">
-          <svg class="cst-wa__done-stars" viewBox="0 0 120 32" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="16,4 18,10 24,10 19,14 21,20 16,16 11,20 13,14 8,10 14,10" fill="var(--color-orange)"/>
-            <polygon points="60,2 61.5,6 66,6 62.5,8.5 64,12 60,10 56,12 57.5,8.5 54,6 58.5,6" fill="var(--color-orange)" opacity="0.7"/>
-            <polygon points="104,4 106,10 112,10 107,14 109,20 104,16 99,20 101,14 96,10 102,10" fill="var(--color-orange)"/>
-          </svg>
-          <svg class="cst-wa__done-flower" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <circle class="cst-wa__done-glow" cx="50" cy="50" r="42" fill="var(--color-orange)" opacity="0.15"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(0 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(60 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(120 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(180 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(240 50 50)"/>
-            <ellipse cx="50" cy="22" rx="10" ry="18" fill="#8FAFC9" transform="rotate(300 50 50)"/>
-            <circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>
-          </svg>
+      <div class="modal-body">
+        <div id="dq-modal-body">
+          <p class="cst-wa-modal__warm" id="dq-modal-warm"></p>
+          <button type="button" class="cst-wa__replay" id="dq-speak-warm" aria-label="Hear the message">
+            <span class="cst-wa__replay-icon" aria-hidden="true">🔊</span>
+          </button>
         </div>
-        <p class="cst-wa-modal__closing-text">Lovely time together today!</p>
-        <div class="cst-wa__done-actions">
-          <a href="/activities" class="cst-wa__done-btn">Done for Today</a>
-          <button type="button" class="cst-wa__more-btn" id="dq-modal-more">I&rsquo;d like a few more</button>
+        <div class="cst-wa-modal__closing" id="dq-modal-closing" hidden>
+          <div class="cst-wa__done-visual cst-wa__done-visual--compact" aria-hidden="true">
+            <svg class="cst-wa__done-stars" viewBox="0 0 120 32" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="16,4 18,10 24,10 19,14 21,20 16,16 11,20 13,14 8,10 14,10" fill="var(--color-orange)"/>
+              <polygon points="60,2 61.5,6 66,6 62.5,8.5 64,12 60,10 56,12 57.5,8.5 54,6 58.5,6" fill="var(--color-orange)" opacity="0.7"/>
+              <polygon points="104,4 106,10 112,10 107,14 109,20 104,16 99,20 101,14 96,10 102,10" fill="var(--color-orange)"/>
+            </svg>
+            <svg class="cst-wa__done-flower" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle class="cst-wa__done-glow" cx="50" cy="50" r="42" fill="var(--color-orange)" opacity="0.15"/>
+              <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(0 50 50)"/>
+              <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(60 50 50)"/>
+              <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(120 50 50)"/>
+              <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(180 50 50)"/>
+              <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(240 50 50)"/>
+              <ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(300 50 50)"/>
+              <circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>
+            </svg>
+          </div>
+          <p class="cst-wa-modal__closing-text">Lovely time together today!</p>
+          <div class="cst-wa__done-actions">
+            <a href="/activities" class="cst-wa__done-btn">Done for Today</a>
+            <button type="button" class="cst-wa__more-btn" id="dq-modal-more">I&rsquo;d like a few more</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="cst-wa-modal__actions" id="dq-modal-actions">
+          <button type="button" class="cst-wa-modal__next" id="dq-next-question">Next Question</button>
         </div>
       </div>
     </div>

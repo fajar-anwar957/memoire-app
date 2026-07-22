@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/cards.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/call-modal.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/dashboard.css') }}">
 </head>
 <body class="page-dashboard">
@@ -17,193 +18,243 @@
       <div class="dashboard__brand-group">
         <svg class="dashboard__flower" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <g transform="translate(60, 60)">
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(0)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(60)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(120)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(180)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(240)"/>
-            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="#8FAFC9" transform="rotate(300)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(0)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(60)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(120)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(180)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(240)"/>
+            <ellipse cx="0" cy="-30" rx="10" ry="18" fill="var(--navy)" transform="rotate(300)"/>
           </g>
-          <circle cx="60" cy="60" r="12" fill="#D9722C"/>
+          <circle cx="60" cy="60" r="12" fill="var(--orange)"/>
         </svg>
         <p class="dashboard__brand">Mémoire</p>
       </div>
     </header>
 
     <!--
-      Banner image: static/images/calm-banner.jpg (soft blue flower field).
-      Styled in dashboard.css — local file only, do not hotlink.
+      Full-width calm banner: static/images/calm-banner.jpg
+      Greeting + feeling button sit below the banner (separate rows, no overlap).
     -->
     <section class="dashboard__hero" aria-labelledby="dashboard-greeting">
-      <div class="dashboard__hero-media">
-        <div class="dashboard__hero-banner" aria-hidden="true"></div>
-        <time class="dashboard__date" id="dashboard-date" datetime=""></time>
+      <div class="dashboard__hero-banner-wrap" aria-hidden="true">
+        <img
+          class="dashboard__hero-banner"
+          src="{{ url_for('static', filename='images/calm-banner.jpg') }}"
+          alt=""
+          width="1200"
+          height="240"
+        >
       </div>
       <div class="dashboard__hero-content">
         <div class="dashboard__greeting-row">
-          <div class="dashboard__avatar" id="dashboard-avatar" aria-hidden="true">
-            <svg class="dashboard__avatar-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="8" r="4"/>
-              <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
-            </svg>
-          </div>
-          <div class="dashboard__greeting-copy">
-            <h1 class="dashboard__greeting-text" id="dashboard-greeting">Good morning, Friend</h1>
-            <a href="/companion" class="dashboard__feeling-btn" id="dashboard-feeling-btn">
-              <svg class="dashboard__feeling-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.3l7.8-7.9 1-1a5.5 5.5 0 0 0 0-7.8z"/>
+          <div class="dashboard__greeting-left">
+            <div class="dashboard__avatar" id="dashboard-avatar" aria-hidden="true">
+              <svg class="dashboard__avatar-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="4"/>
+                <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
               </svg>
-              Share how you're feeling
-            </a>
+            </div>
+            <h1 class="dashboard__greeting-text" id="dashboard-greeting">Good morning, Friend</h1>
           </div>
+          <time class="dashboard__date" id="dashboard-date" datetime=""></time>
         </div>
+        <a href="/companion" class="dashboard__feeling-btn" id="dashboard-feeling-btn">
+          <svg class="dashboard__feeling-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          </svg>
+          Share how you're feeling
+        </a>
       </div>
     </section>
 
-    <section class="dashboard__actions" aria-label="Quick actions">
-      <a href="/companion" class="dashboard-card dashboard-card--primary dashboard-card--companion">
+    <aside class="dashboard-next-up" id="dashboard-next-up" hidden aria-live="polite">
+      <span class="dashboard-next-up__icon-tile" aria-hidden="true">
+        <svg class="dashboard-next-up__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+      </span>
+      <p class="dashboard-next-up__text" id="dashboard-next-up-text"></p>
+    </aside>
+
+    <div class="dashboard__grid">
+      <a href="/activities" class="dashboard-card dashboard-card--activities">
         <span class="dashboard-card__accent" aria-hidden="true"></span>
-        <span class="dashboard-card__icon-wrap" aria-hidden="true">
-          <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
+        <span class="card-illustration" aria-hidden="true">
+          <span class="card-illustration__tile card-illustration__tile--blue">
+            <svg class="card-illustration__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="7" height="7" x="3" y="3" rx="1"/>
+              <rect width="7" height="7" x="14" y="3" rx="1"/>
+              <rect width="7" height="7" x="14" y="14" rx="1"/>
+              <rect width="7" height="7" x="3" y="14" rx="1"/>
+            </svg>
+          </span>
+        </span>
+        <span class="dashboard-card__body">
+          <h2 class="dashboard-card__title">Activities</h2>
+          <p class="dashboard-card__subtext">Gentle games to stretch your mind</p>
+          <span class="dashboard-card__cta">Open</span>
+        </span>
+      </a>
+
+      <a href="/companion" class="dashboard-card dashboard-card--companion">
+        <span class="dashboard-card__accent" aria-hidden="true"></span>
+        <span class="card-illustration" aria-hidden="true">
+          <span class="card-illustration__tile card-illustration__tile--blue">
+            <svg class="card-illustration__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+            </svg>
+          </span>
         </span>
         <span class="dashboard-card__body">
           <h2 class="dashboard-card__title">Chat with Companion</h2>
           <p class="dashboard-card__subtext">Talk, remember, and share stories</p>
+          <span class="dashboard-card__cta">Let's chat</span>
         </span>
       </a>
 
-      <div class="dashboard__activities">
-        <p class="dashboard__section-label">
-          <svg class="dashboard__section-flower" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <g transform="translate(16, 16)">
-              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(0)"/>
-              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(60)"/>
-              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(120)"/>
-              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(180)"/>
-              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(240)"/>
-              <ellipse cx="0" cy="-9" rx="3.5" ry="6.5" fill="#8FAFC9" transform="rotate(300)"/>
-            </g>
-            <circle cx="16" cy="16" r="4" fill="#D9722C"/>
-          </svg>
-          Today's activities
-        </p>
-
-        <div class="dashboard__activity-grid">
-          <a href="/activities/word-association" class="dashboard-card dashboard-card--tile dashboard-card--activity">
-            <span class="dashboard-card__accent" aria-hidden="true"></span>
-            <span class="dashboard-card__icon-wrap" aria-hidden="true">
-              <svg class="dashboard-card__icon" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5.5a2.5 2.5 0 0 1 2.5-2.5h9A2.5 2.5 0 0 1 17 5.5v4.3a2.5 2.5 0 0 1-2.5 2.5H9.2L5 16.5V12.3A2.5 2.5 0 0 1 3 9.8V5.5z" fill="currentColor"/>
-              </svg>
-            </span>
-            <span class="dashboard-card__body">
-              <h2 class="dashboard-card__title">Word Association</h2>
-              <p class="dashboard-card__subtext">Find words that go together and spark new connections</p>
-            </span>
-          </a>
-
-          <a href="/activities/photo-recall" class="dashboard-card dashboard-card--tile dashboard-card--activity">
-            <span class="dashboard-card__accent" aria-hidden="true"></span>
-            <span class="dashboard-card__icon-wrap" aria-hidden="true">
-              <svg class="dashboard-card__icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.75"/>
-                <circle cx="7" cy="8.5" r="1.5" fill="currentColor"/>
-                <path d="M2.5 13l4-3.5 3 2.5 3.5-4.5 4.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <span class="dashboard-card__body">
-              <h2 class="dashboard-card__title">Photo Recall</h2>
-              <p class="dashboard-card__subtext">Look at familiar scenes and share what you remember</p>
-            </span>
-          </a>
-
-          <a href="/activities/daily-quiz" class="dashboard-card dashboard-card--tile dashboard-card--activity">
-            <span class="dashboard-card__accent" aria-hidden="true"></span>
-            <span class="dashboard-card__icon-wrap" aria-hidden="true">
-              <svg class="dashboard-card__icon" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="10" cy="8" r="4.5" fill="currentColor"/>
-                <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                  <line x1="10" y1="1" x2="10" y2="2.5"/>
-                  <line x1="10" y1="13.5" x2="10" y2="15"/>
-                  <line x1="3" y1="8" x2="4.5" y2="8"/>
-                  <line x1="15.5" y1="8" x2="17" y2="8"/>
-                </g>
-              </svg>
-            </span>
-            <span class="dashboard-card__body">
-              <h2 class="dashboard-card__title">Daily Quiz</h2>
-              <p class="dashboard-card__subtext">Answer gentle questions about the world around you</p>
-            </span>
-          </a>
-        </div>
-      </div>
-
-      <button type="button" class="dashboard-card dashboard-card--tile dashboard-card--call" id="dashboard-call-card" hidden aria-haspopup="dialog" aria-controls="call-contacts-modal">
+      <a href="/memory-log" class="dashboard-card dashboard-card--memories">
         <span class="dashboard-card__accent" aria-hidden="true"></span>
-        <span class="dashboard-card__icon-wrap" aria-hidden="true">
-          <svg class="dashboard-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-          </svg>
+        <span class="card-illustration" aria-hidden="true">
+          <span class="card-illustration__tile card-illustration__tile--blue">
+            <svg class="card-illustration__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            </svg>
+          </span>
+        </span>
+        <span class="dashboard-card__body">
+          <h2 class="dashboard-card__title">Memories &amp; People</h2>
+          <p class="dashboard-card__subtext">Look back at moments and loved ones</p>
+          <span class="dashboard-card__cta">Look back</span>
+        </span>
+      </a>
+
+      <button type="button" class="dashboard-card dashboard-card--call" id="dashboard-call-card" hidden aria-haspopup="dialog" aria-controls="call-contacts-modal">
+        <span class="dashboard-card__accent" aria-hidden="true"></span>
+        <span class="card-illustration" aria-hidden="true">
+          <span class="card-illustration__tile card-illustration__tile--blue">
+            <svg class="card-illustration__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </span>
         </span>
         <span class="dashboard-card__body">
           <h2 class="dashboard-card__title">Call Someone</h2>
           <p class="dashboard-card__subtext">Choose someone to call</p>
+          <span class="dashboard-card__cta">Call now</span>
         </span>
       </button>
-    </section>
+
+      <section class="dashboard-card dashboard-card--reminders" aria-labelledby="dashboard-reminders-title">
+        <span class="dashboard-card__accent" aria-hidden="true"></span>
+        <span class="card-illustration" aria-hidden="true">
+          <span class="card-illustration__tile card-illustration__tile--blue">
+            <svg class="card-illustration__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </span>
+        </span>
+        <span class="dashboard-card__body">
+          <h2 class="dashboard-card__title" id="dashboard-reminders-title">Reminders</h2>
+          <p class="dashboard-card__subtext">See what's coming up today</p>
+          <ul class="dashboard-reminders" id="dashboard-reminders-list"></ul>
+          <p class="dashboard-reminders__empty" id="dashboard-reminders-empty" hidden>No reminders yet</p>
+          <button type="button" class="dashboard-reminders__add" id="dashboard-reminders-add" aria-haspopup="dialog" aria-controls="reminder-modal">
+            + Add reminder
+          </button>
+        </span>
+      </section>
+    </div>
   </main>
 
   <nav class="dashboard-nav" aria-label="Main navigation">
     <a href="/dashboard" class="dashboard-nav__item dashboard-nav__item--active" aria-current="page">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
       <span class="dashboard-nav__label">Home</span>
     </a>
     <a href="/companion" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       <span class="dashboard-nav__label">Companion</span>
     </a>
     <a href="/activities" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       <span class="dashboard-nav__label">Activities</span>
     </a>
     <a href="/profile" class="dashboard-nav__item">
-      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
-      </svg>
+      <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-.5C4 16.9 7.6 14 12 14s8 2.9 8 6.5V21H4z"/></svg>
       <span class="dashboard-nav__label">Profile</span>
     </a>
   </nav>
 
-  <button type="button" class="dashboard-fab dashboard-fab--call" id="dashboard-call-fab" hidden aria-label="Call someone" aria-haspopup="dialog" aria-controls="call-contacts-modal">
-    <svg class="dashboard-fab__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-    </svg>
-  </button>
-
-  <div id="call-contacts-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="call-modal-title" hidden>
+  <div id="reminder-modal" class="modal-overlay reminder-modal" role="dialog" aria-modal="true" aria-labelledby="reminder-modal-title" hidden>
     <div class="modal-card">
-      <p class="modal-title" id="call-modal-title">Who would you like to call?</p>
-      <p class="call-modal-hint">Calling opens your phone app on mobile devices.</p>
-      <ul id="call-contacts-list" class="call-contacts-list"></ul>
-      <div class="modal-actions">
-        <button type="button" id="call-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+      <div class="modal-header">
+        <p class="modal-title" id="reminder-modal-title">Add a reminder</p>
+        <p class="reminder-modal__hint">Write what to remember, then pick a time.</p>
+      </div>
+      <form id="reminder-form" class="reminder-form modal-form" novalidate>
+        <div class="modal-body">
+          <div class="reminder-form__field">
+            <label class="reminder-form__label" for="reminder-text">What should we remember?</label>
+            <input
+              type="text"
+              id="reminder-text"
+              class="reminder-form__input"
+              name="reminderText"
+              maxlength="120"
+              autocomplete="off"
+              placeholder="e.g. Take your medicine"
+              required
+            >
+          </div>
+          <div class="reminder-form__field">
+            <p class="reminder-form__label" id="reminder-time-label">What time?</p>
+            <div class="reminder-time-picker" role="group" aria-labelledby="reminder-time-label">
+              <div class="reminder-time-picker__wheels">
+                <div class="reminder-time-picker__col">
+                  <p class="reminder-time-picker__col-label">Hour</p>
+                  <div class="reminder-time-picker__wheel" id="reminder-hour-wheel" tabindex="0" role="listbox" aria-label="Hour"></div>
+                </div>
+                <div class="reminder-time-picker__col">
+                  <p class="reminder-time-picker__col-label">Minute</p>
+                  <div class="reminder-time-picker__wheel" id="reminder-minute-wheel" tabindex="0" role="listbox" aria-label="Minute"></div>
+                </div>
+              </div>
+              <div class="reminder-time-picker__ampm" role="group" aria-label="AM or PM">
+                <button type="button" class="reminder-time-picker__ampm-btn is-active" id="reminder-ampm-am" aria-pressed="true">AM</button>
+                <button type="button" class="reminder-time-picker__ampm-btn" id="reminder-ampm-pm" aria-pressed="false">PM</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-actions">
+            <button type="button" id="reminder-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+            <button type="submit" id="reminder-modal-save" class="modal-btn modal-btn--primary">Save</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="reminder-alert" class="modal-overlay reminder-alert" role="alertdialog" aria-modal="true" aria-labelledby="reminder-alert-title" aria-describedby="reminder-alert-text" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <p class="modal-title reminder-alert__title" id="reminder-alert-title">Gentle reminder</p>
+      </div>
+      <div class="modal-body">
+        <p class="reminder-alert__text" id="reminder-alert-text"></p>
+        <p class="reminder-alert__time" id="reminder-alert-time"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="reminder-alert__dismiss" id="reminder-alert-dismiss">I'm done for today</button>
       </div>
     </div>
   </div>
 
   <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/quick-call.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

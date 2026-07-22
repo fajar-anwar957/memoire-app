@@ -1,11 +1,60 @@
 :root {
   --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --color-navy: #1B3A5C;
-  --color-orange: #D9722C;
-  --color-cream: #FAF6EF;
-  --color-text: #2C2C2A;
-  --color-text-muted: #5F5E5A;
-  /* Forget-me-not motif: soft banner-blue petals + warm orange centre */
-  --color-flower-petal: #8FAFC9;
-  --color-flower-centre: #D9722C;
+
+  /* Brand palette */
+  --bg: #eaf4fb;
+  --surface: #ffffff;
+  --surface-tint: #f4fafe;
+  --navy: #1e3a5f;
+  --navy-deep: #16293f;
+  --navy-muted: #3a5575;
+  --orange: #d4772e;
+  --orange-soft: #f0c08a;
+  --orange-banner: #e8b06a;
+  --text: #22364a;
+  --text-muted: #5f7488;
+
+  /* Soft icon tile tints */
+  --icon-tile-blue: #dbeaf5;
+  --icon-tile-peach: #f6e3d2;
+
+  /*
+   * Input form colours — change here to update all modals/forms app-wide.
+   * Modal shell (header/body/footer scroll pattern) lives in:
+   *   static/css/components/modals.css
+   * Applied via: .modal-card (modals.css), profile .card / .field inputs (profile.css),
+   * memory-form inputs (memory-log.css + modals.css), reminder form (dashboard.css),
+   * call popup card (call-modal.css).
+   */
+  --input-card-bg: #dceef8;
+  --input-field-bg: #fbfdff;
+  --input-field-border: rgba(30, 58, 95, 0.14);
+
+  /* Dashboard accent surfaces (dashboard.css) */
+  --nextup-active-bg: #ffe0b3;
+  --nextup-empty-bg: #dce8d5;
+  --feeling-btn-bg: #e8914a;
+
+  /* Soft warm wash for activity + dashboard cards */
+  --activity-card-tint: #fffcfa;
+
+  /* Contact / person photo size — call popup + Memories & People portraits */
+  --contact-photo-size: 80px;
+
+  /* Backward-compatible aliases used across existing stylesheets */
+  --cream: var(--bg);
+  --card: var(--surface);
+  --card-tint: var(--surface-tint);
+  --card-warm: var(--surface-tint);
+  --flower-petal: var(--navy);
+  --flower-centre: var(--orange);
+
+  --color-navy: var(--navy);
+  --color-orange: var(--orange);
+  --color-cream: var(--cream);
+  --color-card: var(--card);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-flower-petal: var(--flower-petal);
+  --color-flower-centre: var(--flower-centre);
 }

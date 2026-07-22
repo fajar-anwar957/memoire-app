@@ -43,6 +43,8 @@ body {
   line-height: 1.5;
   letter-spacing: normal;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  background-color: var(--bg);
+  color: var(--text);
 }
 
 h1,
@@ -66,4 +68,66 @@ label,
 input,
 textarea {
   scroll-margin-block: 20vh;
+}
+
+/* Global gentle-reminder popup — uses shared modal shell from modals.css */
+.reminder-alert {
+  background: rgba(22, 41, 63, 0.45);
+  z-index: 1100;
+}
+
+.reminder-alert .modal-card {
+  max-width: 400px;
+  text-align: center;
+}
+
+.reminder-alert .modal-header {
+  padding-bottom: 0.35rem;
+}
+
+.reminder-alert .modal-title,
+.reminder-alert__title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.reminder-alert__text {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.reminder-alert__time {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--orange);
+}
+
+.reminder-alert .modal-footer {
+  border-top: none;
+  padding-top: 0.35rem;
+}
+
+.reminder-alert__dismiss {
+  width: 100%;
+  min-height: 56px;
+  padding: 0.9rem 1.2rem;
+  font-family: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--orange);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.reminder-alert__dismiss:focus-visible {
+  outline: 3px solid rgba(30, 58, 95, 0.45);
+  outline-offset: 3px;
 }

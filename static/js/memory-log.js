@@ -263,14 +263,14 @@
       ? '<p class="memory-log__card-date"><span class="memory-log__card-date-accent" aria-hidden="true">' +
         '<svg class="memory-log__card-flower" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">' +
         '<g transform="translate(8, 8)">' +
-        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(0)"/>' +
-        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(60)"/>' +
-        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(120)"/>' +
-        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(180)"/>' +
-        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(240)"/>' +
-        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="#8FAFC9" transform="rotate(300)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="var(--navy)" transform="rotate(0)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="var(--navy)" transform="rotate(60)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="var(--navy)" transform="rotate(120)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="var(--navy)" transform="rotate(180)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="var(--navy)" transform="rotate(240)"/>' +
+        '<ellipse cx="0" cy="-4.2" rx="1.7" ry="3.1" fill="var(--navy)" transform="rotate(300)"/>' +
         '</g>' +
-        '<circle cx="8" cy="8" r="1.9" fill="#D9722C"/>' +
+        '<circle cx="8" cy="8" r="1.9" fill="var(--orange)"/>' +
         '</svg></span> ' + escapeHtml(dateLabel) + '</p>'
       : '';
 
@@ -756,31 +756,42 @@
     if (peopleList) {
       peopleList.addEventListener('click', function (event) {
         var button = event.target.closest('.memory-log__card-action');
-        if (!button) return;
+        if (button) {
+          var actionCard = button.closest('.memory-log__person');
+          if (!actionCard) return;
 
-        var card = button.closest('.memory-log__person');
+          var actionIndex = parseInt(actionCard.getAttribute('data-contact-index'), 10);
+          if (isNaN(actionIndex)) return;
+
+          var action = button.getAttribute('data-action');
+          if (action === 'edit') {
+            openEditPersonModal(actionIndex, button);
+            return;
+          }
+
+          if (action === 'delete') {
+            openConfirmModal({
+              title: 'Remove this person?',
+              body: 'Remove this person? This cannot be undone.',
+              confirmLabel: 'Remove',
+              onConfirm: function () {
+                deleteContactFromActiveProfile(actionIndex);
+                setPeopleEditMode(false);
+              }
+            });
+          }
+          return;
+        }
+
+        if (sectionEditMode.people) return;
+
+        var card = event.target.closest('.memory-log__person');
         if (!card) return;
 
         var index = parseInt(card.getAttribute('data-contact-index'), 10);
         if (isNaN(index)) return;
 
-        var action = button.getAttribute('data-action');
-        if (action === 'edit') {
-          openEditPersonModal(index, button);
-          return;
-        }
-
-        if (action === 'delete') {
-          openConfirmModal({
-            title: 'Remove this person?',
-            body: 'Remove this person? This cannot be undone.',
-            confirmLabel: 'Remove',
-            onConfirm: function () {
-              deleteContactFromActiveProfile(index);
-              setPeopleEditMode(false);
-            }
-          });
-        }
+        window.location.href = '/profile?contact=' + encodeURIComponent(String(index));
       });
     }
 

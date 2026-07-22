@@ -344,6 +344,7 @@ body {
   box-sizing: border-box;
   text-align: center;
   scroll-snap-align: start;
+  cursor: pointer;
   transition:
     box-shadow 0.2s ease,
     transform 0.2s ease,
@@ -352,6 +353,7 @@ body {
 }
 
 .memory-log__people-panel--editing .memory-log__person {
+  cursor: default;
   border-color: rgba(27, 58, 92, 0.28);
   border-style: dashed;
   background-color: rgba(27, 58, 92, 0.03);
@@ -370,9 +372,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
+  width: var(--contact-photo-size, 80px);
+  height: var(--contact-photo-size, 80px);
+  border-radius: 14px;
   overflow: hidden;
   background-color: rgba(27, 58, 92, 0.06);
   flex-shrink: 0;
@@ -656,8 +658,8 @@ body {
   font-size: 1.1rem;
   font-family: var(--font-family);
   color: var(--color-text);
-  background-color: var(--color-cream);
-  border: 2px solid var(--color-navy);
+  background-color: var(--input-field-bg);
+  border: 1.5px solid var(--input-field-border, rgba(30, 58, 95, 0.14));
   border-radius: 10px;
   box-sizing: border-box;
 }
@@ -747,8 +749,9 @@ body {
   }
 
   .memory-log__person-portrait {
-    width: 96px;
-    height: 96px;
+    width: var(--contact-photo-size, 80px);
+    height: var(--contact-photo-size, 80px);
+    border-radius: 16px;
   }
 
   .memory-log__person-initial {
@@ -790,8 +793,9 @@ body {
   }
 
   .memory-log__person-portrait {
-    width: 108px;
-    height: 108px;
+    width: var(--contact-photo-size, 80px);
+    height: var(--contact-photo-size, 80px);
+    border-radius: 18px;
   }
 
   .memory-log__person-initial {
@@ -812,8 +816,8 @@ body {
   }
 
   .memory-log__person-portrait {
-    width: 72px;
-    height: 72px;
+    width: var(--contact-photo-size, 80px);
+    height: var(--contact-photo-size, 80px);
   }
 
   .memory-log__card-thumb {

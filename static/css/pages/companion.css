@@ -1,6 +1,10 @@
 body {
   min-height: 100vh;
-  background-color: var(--color-cream);
+  /* Brighter calm sky — soft warmth without dull grey */
+  background:
+    radial-gradient(ellipse 120% 80% at 8% 0%, rgba(235, 168, 105, 0.16), transparent 52%),
+    radial-gradient(ellipse 90% 70% at 100% 18%, rgba(120, 180, 220, 0.18), transparent 48%),
+    #f0f7fc;
   font-family: var(--font-family);
   color: var(--color-text);
   font-size: 1.125rem;
@@ -9,6 +13,16 @@ body {
 }
 
 .companion {
+  /*
+   * Layout: chat clears header + input + nav.
+   * Nav is ~92px (items + padding); input bar ~80–84px.
+   * Input z-index sits ABOVE nav so it is never covered.
+   */
+  --companion-header-h: 60px;
+  --companion-nav-h: calc(92px + env(safe-area-inset-bottom, 0px));
+  --companion-input-h: 80px;
+  --companion-chrome-bottom: calc(var(--companion-nav-h) + var(--companion-input-h));
+
   width: 100%;
   max-width: 540px;
   margin: 0 auto;
@@ -17,7 +31,6 @@ body {
   flex-direction: column;
 }
 
-/* TODO: retire per-page header rules after visual verification */
 /* Header */
 .companion__header {
   position: fixed;
@@ -28,10 +41,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60px;
+  min-height: var(--companion-header-h);
   padding: 0.75rem 1rem;
-  background: var(--color-cream);
-  border-bottom: 1px solid rgba(27, 58, 92, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid rgba(30, 58, 95, 0.1);
+  backdrop-filter: blur(6px);
 }
 
 .companion__back {
@@ -71,26 +85,30 @@ body {
   letter-spacing: normal;
 }
 
-/* Subtle status beside newest messages — thinking / speaking only */
+/* Status pill — left-aligned with companion bubbles (never centered) */
 .companion__presence {
   position: fixed;
-  left: max(1.25rem, calc(50% - 270px + 1.25rem));
-  bottom: calc(80px + 72px + env(safe-area-inset-bottom, 0px));
-  z-index: 19;
+  left: 1.25rem;
+  right: auto;
+  bottom: calc(var(--companion-chrome-bottom) + 0.65rem);
+  z-index: 95;
   display: none;
   align-items: center;
   gap: 0.4rem;
-  max-width: calc(100% - 2rem);
+  max-width: calc(100% - 2.5rem);
   width: max-content;
-  padding: 0.35rem 0.7rem;
+  padding: 0.45rem 0.9rem;
   border-radius: 999px;
-  background: rgba(255, 254, 250, 0.92);
-  box-shadow: 0 2px 10px rgba(27, 58, 92, 0.1);
+  background: #ffffff;
+  border: 1.5px solid rgba(30, 58, 95, 0.14);
+  box-shadow: 0 2px 14px rgba(27, 58, 92, 0.14);
   pointer-events: none;
+  transform: none;
 }
 
 .companion__presence[data-state="thinking"],
-.companion__presence[data-state="speaking"] {
+.companion__presence[data-state="speaking"],
+.companion__presence[data-state="listening"] {
   display: inline-flex;
 }
 
@@ -98,7 +116,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-flower-petal, #8FAFC9);
+  background: var(--flower-petal, var(--navy));
   flex-shrink: 0;
 }
 
@@ -111,12 +129,17 @@ body {
   animation: companion-presence-pulse 0.9s ease-in-out infinite;
 }
 
+.companion__presence[data-state="listening"] .companion__presence-dot {
+  background: var(--color-orange);
+  animation: companion-presence-pulse 1s ease-in-out infinite;
+}
+
 .companion__presence-label {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: normal;
-  color: var(--color-text-muted);
+  color: var(--color-navy);
   line-height: 1.2;
 }
 
@@ -133,22 +156,19 @@ body {
   }
 }
 
-/* Chat area */
+/* Chat area — clears header + input + nav */
 .companion__chat {
   position: fixed;
-  top: 60px;
-  bottom: calc(64px + 72px + env(safe-area-inset-bottom, 0px));
+  top: var(--companion-header-h);
+  bottom: var(--companion-chrome-bottom);
   left: 0;
   right: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 0.75rem 1.25rem 1.25rem;
-  /* Extra room at the bottom so the final message is never hidden behind the
-     fixed input form area (input bar height ~ 70-90px). */
-  padding-bottom: 88px;
+  padding: 0.85rem 1.25rem 3.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.15rem;
 }
 
 .companion-message {
@@ -209,8 +229,8 @@ body {
 }
 
 .companion-message__speak--active {
-  color: #D9722C;
-  background-color: rgba(217, 114, 44, 0.14);
+  color: var(--orange);
+  background-color: rgba(212, 119, 46, 0.14);
 }
 
 .companion-message__label {
@@ -223,25 +243,30 @@ body {
 
 .companion-message__bubble {
   margin: 0;
-  padding: 0.875rem 1rem;
-  font-size: 1.125rem;
+  padding: 1rem 1.15rem;
+  font-size: 1.2rem;
   line-height: 1.5;
-  border-radius: 20px;
+  border-radius: 18px;
 }
 
+/* Companion (received) — soft blue bubble, left */
 .companion-message--companion .companion-message__bubble {
-  background-color: #E4EAF3;
-  color: var(--color-text);
+  background-color: var(--icon-tile-blue, #dbeaf5);
+  color: var(--text);
+  border: none;
   border-bottom-left-radius: 6px;
+  box-shadow: 0 1px 3px rgba(34, 54, 74, 0.06);
   flex: 1;
   min-width: 0;
 }
 
+/* User (sent) — soft orange fill, right */
 .companion-message--patient .companion-message__bubble {
-  background-color: #ffffff;
-  color: var(--color-text);
-  box-shadow: 0 2px 12px rgba(27, 58, 92, 0.1);
+  background-color: var(--orange-soft);
+  color: var(--text);
+  border: none;
   border-bottom-right-radius: 6px;
+  box-shadow: 0 1px 3px rgba(212, 119, 46, 0.1);
 }
 
 .companion-typing {
@@ -251,19 +276,23 @@ body {
   color: var(--color-text-muted);
 }
 
-/* Input bar */
+/* Input bar — own white surface above nav, clear visual separation */
 .companion__input-bar {
   position: fixed;
-  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  bottom: var(--companion-nav-h);
   left: 0;
   right: 0;
-  z-index: 20;
+  z-index: 90;
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-cream);
-  border-top: 1px solid rgba(27, 58, 92, 0.08);
+  min-height: var(--companion-input-h);
+  padding: 0.65rem 1rem;
+  background: #ffffff;
+  border-top: 1px solid rgba(30, 58, 95, 0.12);
+  box-shadow:
+    0 -6px 18px rgba(27, 58, 92, 0.1),
+    0 -1px 0 rgba(30, 58, 95, 0.06);
 }
 
 .companion__input-label {
@@ -288,10 +317,7 @@ body {
   font-family: inherit;
   font-size: 1.0625rem;
   color: var(--color-text);
-  /* Solid, opaque white so the field always has its own clear background and
-     never picks up the cream input bar tint or visually blends into the chat
-     bubble sitting just above it. */
-  background-color: #FFFFFF;
+  background-color: var(--input-field-bg, #fbfdff);
   border: 2px solid var(--color-orange);
   border-radius: 24px;
   box-shadow: 0 2px 10px rgba(27, 58, 92, 0.08);
@@ -306,19 +332,23 @@ body {
 
 .companion__input:focus {
   outline: none;
-  border-color: #C45F1F;
+  border-color: #c45f1f;
   box-shadow:
     0 0 0 3px rgba(217, 114, 44, 0.28),
     0 2px 12px rgba(217, 114, 44, 0.22);
 }
 
 .companion__send {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
   padding: 0;
   border: none;
   border-radius: 50%;
@@ -332,7 +362,7 @@ body {
 
 .companion__send:hover,
 .companion__send:focus-visible {
-  background: #C45F1F;
+  background: #c45f1f;
   color: #ffffff;
 }
 
@@ -350,7 +380,6 @@ body {
   height: 20px;
 }
 
-/* Flower mic button — single circular control, no glow box */
 @keyframes companion-mic-heartbeat {
   0%,
   100% {
@@ -364,6 +393,7 @@ body {
 
 .companion__mic-group {
   position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -410,7 +440,6 @@ body {
 .companion__mic--active:hover,
 .companion__mic--active:focus-visible,
 .companion__mic--active:active {
-  /* Keep heartbeat transform dominant while listening */
   transform: none;
 }
 
@@ -423,16 +452,14 @@ body {
 
 .companion__mic-status {
   position: absolute;
-  top: calc(100% + 0.1rem);
-  left: 50%;
-  transform: translateX(-50%);
-  margin: 0;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: normal;
-  color: var(--color-navy);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+  border: 0;
   pointer-events: none;
 }
 
@@ -442,8 +469,15 @@ body {
   }
 
   .companion__presence[data-state="thinking"] .companion__presence-dot,
-  .companion__presence[data-state="speaking"] .companion__presence-dot {
+  .companion__presence[data-state="speaking"] .companion__presence-dot,
+  .companion__presence[data-state="listening"] .companion__presence-dot {
     animation: none;
+  }
+}
+
+@media (max-width: 719px) {
+  body.keyboard-open .companion {
+    --companion-nav-h: 0px;
   }
 }
 
@@ -453,8 +487,19 @@ body {
     padding-right: 1.5rem;
   }
 
+  .companion__presence {
+    left: 1.5rem;
+  }
+
   .companion__input-bar {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .companion {
+    --companion-nav-h: calc(96px + env(safe-area-inset-bottom, 0px));
+    --companion-input-h: 84px;
   }
 }

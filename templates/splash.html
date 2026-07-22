@@ -12,16 +12,32 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--color-cream);
+      background-color: var(--cream);
+      cursor: default;
+    }
+
+    body.splash-ready {
+      cursor: pointer;
     }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0; 
-      }
-      to {
-        opacity: 1;
-      }
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes splash-petal-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes splash-bar-fill {
+      from { width: 0%; }
+      to { width: 100%; }
+    }
+
+    @keyframes splash-prompt-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .splash {
@@ -29,35 +45,186 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
+      padding: 1.5rem;
       animation: fadeIn 1.5s ease-out forwards;
+      width: 100%;
+      max-width: 28rem;
     }
 
-    .title {
-      color: #1B3A5C;
-      font-weight: bold;
-      font-size: 2.8rem;
-      margin-top: 1rem;
+    .splash__icon {
+      width: 120px;
+      height: 120px;
+      display: block;
     }
 
-    .tagline {
-      color: #5F5E5A;
-      font-size: 1.1rem;
-      font-weight: normal;
-      margin-top: 0.5rem;
+    @media (min-width: 768px) {
+      .splash__icon {
+        width: 150px;
+        height: 150px;
+      }
+    }
+
+    /* Spin only the petals; pollen centre stays still */
+    .splash__petals {
+      transform-origin: 60px 60px;
+      transform-box: view-box;
+      animation: splash-petal-spin 3s linear infinite;
+    }
+
+    .splash__title {
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 3.25rem;
+      line-height: 1.15;
+      margin-top: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .splash__progress {
+      width: min(14rem, 70%);
+      height: 4px;
+      margin-top: 1.15rem;
+      border-radius: 999px;
+      background: rgba(30, 58, 95, 0.15);
+      overflow: hidden;
+    }
+
+    .splash__progress-fill {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: var(--navy);
+    }
+
+    .splash__progress-fill.is-running {
+      animation: splash-bar-fill 2.6s ease-in-out forwards;
+    }
+
+    .splash__tagline {
+      color: var(--text-muted);
+      font-size: 1.35rem;
+      font-weight: 500;
+      line-height: 1.4;
+      margin-top: 0.9rem;
+      max-width: 22rem;
+    }
+
+    .splash__continue {
+      margin-top: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--navy);
+      opacity: 0;
+      min-height: 1.5em;
+    }
+
+    .splash__continue.is-visible {
+      animation: splash-prompt-in 0.45s ease-out forwards;
+    }
+
+    @media (min-width: 768px) {
+      .splash__title {
+        font-size: 3.75rem;
+      }
+
+      .splash__tagline {
+        font-size: 1.5rem;
+      }
+
+      .splash__continue {
+        font-size: 1.35rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .splash__petals {
+        animation: none;
+      }
+
+      .splash__progress-fill.is-running {
+        animation: none;
+        width: 100%;
+      }
+
+      .splash__continue.is-visible {
+        animation: none;
+        opacity: 1;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="splash">
-    <img src="{{ url_for('static', filename='assets/memoire-icon.png') }}" alt="Mémoire forget-me-not flower" width="150" style="object-fit: contain;">
-    <h1 class="title">Mémoire</h1>
-    <p class="tagline">Your gentle memory companion</p>
+  <div class="splash" id="splash">
+    <svg class="splash__icon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mémoire forget-me-not flower">
+      <g class="splash__petals">
+        <ellipse cx="60" cy="30" rx="11" ry="22" fill="var(--navy)" transform="rotate(0 60 60)"/>
+        <ellipse cx="60" cy="30" rx="11" ry="22" fill="var(--navy)" transform="rotate(60 60 60)"/>
+        <ellipse cx="60" cy="30" rx="11" ry="22" fill="var(--navy)" transform="rotate(120 60 60)"/>
+        <ellipse cx="60" cy="30" rx="11" ry="22" fill="var(--navy)" transform="rotate(180 60 60)"/>
+        <ellipse cx="60" cy="30" rx="11" ry="22" fill="var(--navy)" transform="rotate(240 60 60)"/>
+        <ellipse cx="60" cy="30" rx="11" ry="22" fill="var(--navy)" transform="rotate(300 60 60)"/>
+      </g>
+      <circle cx="60" cy="60" r="18" fill="var(--orange)"/>
+      <circle cx="60" cy="60" r="9" fill="var(--orange-soft)"/>
+    </svg>
+    <h1 class="splash__title">Mémoire</h1>
+    <div class="splash__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading" id="splash-progress">
+      <span class="splash__progress-fill" id="splash-progress-fill"></span>
+    </div>
+    <p class="splash__tagline">Your gentle memory companion</p>
+    <p class="splash__continue" id="splash-continue" aria-live="polite" hidden>Tap to continue</p>
   </div>
   <script src="{{ url_for('static', filename='js/core.js') }}"></script>
   <script>
-    setTimeout(function () {
-      window.location.href = window.MemoireCore.getActiveProfile() ? '/dashboard' : '/profile';
-    }, 2500);
+    (function () {
+      var ready = false;
+      var navigating = false;
+      var progressEl = document.getElementById('splash-progress');
+      var fillEl = document.getElementById('splash-progress-fill');
+      var continueEl = document.getElementById('splash-continue');
+      var LOAD_MS = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 400 : 2600;
+
+      function enterApp() {
+        if (!ready || navigating) {
+          return;
+        }
+        navigating = true;
+        if (window.MemoireCore && typeof window.MemoireCore.unlockAudio === 'function') {
+          window.MemoireCore.unlockAudio();
+        }
+        window.location.href = window.MemoireCore.getActiveProfile() ? '/dashboard' : '/profile';
+      }
+
+      function markReady() {
+        ready = true;
+        document.body.classList.add('splash-ready');
+        if (progressEl) {
+          progressEl.setAttribute('aria-valuenow', '100');
+        }
+        if (continueEl) {
+          continueEl.hidden = false;
+          continueEl.classList.add('is-visible');
+        }
+      }
+
+      if (fillEl) {
+        /* Kick off fill on next frame so the CSS transition/animation starts cleanly */
+        requestAnimationFrame(function () {
+          fillEl.classList.add('is-running');
+        });
+      }
+
+      setTimeout(markReady, LOAD_MS);
+
+      document.body.addEventListener('click', enterApp);
+      document.body.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          enterApp();
+        }
+      });
+    })();
   </script>
 </body>
 </html>
