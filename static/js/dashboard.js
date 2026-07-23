@@ -10,8 +10,6 @@
   var checkDueReminders = window.MemoireCore.checkDueReminders;
   var requestNotificationPermission = window.MemoireCore.requestNotificationPermission;
 
-  var ITEM_HEIGHT = 56;
-
   function getPreferredName(profile) {
     if (profile && profile.preferredName && String(profile.preferredName).trim()) {
       return String(profile.preferredName).trim();
@@ -109,7 +107,7 @@
 
     banner.classList.remove('dashboard-next-up--empty');
     textEl.textContent =
-      'Next up · ' + formatReminderDisplayTime(next.time) + ' — ' + next.text;
+      'Next up · ' + formatReminderDisplayTime(next.time) + ': ' + next.text;
   }
 
   function renderRemindersList() {
@@ -152,178 +150,26 @@
     }).join('');
   }
 
-  function createWheelOptions(wheelEl, values, formatter) {
-    var html = '<div class="reminder-time-picker__spacer" aria-hidden="true"></div>';
-    values.forEach(function (value) {
-      var label = formatter ? formatter(value) : String(value);
-      html +=
-        '<div class="reminder-time-picker__option" role="option" data-value="' + value + '" aria-selected="false">' +
-          escapeHtml(label) +
-        '</div>';
-    });
-    html += '<div class="reminder-time-picker__spacer" aria-hidden="true"></div>';
-    wheelEl.innerHTML = html;
+  function padMinuteDisplay(value) {
+    var n = parseInt(value, 10);
+    if (isNaN(n)) {
+      return '';
+    }
+    return n < 10 ? '0' + n : String(n);
   }
 
-  function getSelectedWheelValue(wheelEl) {
-    var selected = wheelEl.querySelector('.reminder-time-picker__option.is-selected');
-    if (!selected) {
+  function clampInt(value, min, max) {
+    var n = parseInt(value, 10);
+    if (isNaN(n)) {
       return null;
     }
-    return parseInt(selected.getAttribute('data-value'), 10);
-  }
-
-  function setWheelValue(wheelEl, value, animate) {
-    var options = wheelEl.querySelectorAll('.reminder-time-picker__option');
-    var target = null;
-    options.forEach(function (option) {
-      var optionValue = parseInt(option.getAttribute('data-value'), 10);
-      var isMatch = optionValue === value;
-      option.classList.toggle('is-selected', isMatch);
-      option.setAttribute('aria-selected', isMatch ? 'true' : 'false');
-      if (isMatch) {
-        target = option;
-      }
-    });
-    if (!target) {
-      return;
+    if (n < min) {
+      return min;
     }
-    var index = Array.prototype.indexOf.call(options, target);
-    var top = index * ITEM_HEIGHT;
-    if (animate) {
-      wheelEl.scrollTo({ top: top, behavior: 'smooth' });
-    } else {
-      wheelEl.scrollTop = top;
+    if (n > max) {
+      return max;
     }
-  }
-
-  function syncWheelSelection(wheelEl) {
-    var index = Math.round(wheelEl.scrollTop / ITEM_HEIGHT);
-    var options = wheelEl.querySelectorAll('.reminder-time-picker__option');
-    if (!options.length) {
-      return;
-    }
-    if (index < 0) {
-      index = 0;
-    }
-    if (index >= options.length) {
-      index = options.length - 1;
-    }
-    options.forEach(function (option, i) {
-      var isSelected = i === index;
-      option.classList.toggle('is-selected', isSelected);
-      option.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-    });
-  }
-
-  function attachWheelBehavior(wheelEl) {
-    var scrollEndTimer = null;
-    var dragState = null;
-
-    function snapAndSync() {
-      var index = Math.round(wheelEl.scrollTop / ITEM_HEIGHT);
-      var options = wheelEl.querySelectorAll('.reminder-time-picker__option');
-      if (!options.length) {
-        return;
-      }
-      if (index < 0) {
-        index = 0;
-      }
-      if (index >= options.length) {
-        index = options.length - 1;
-      }
-      var snappedTop = index * ITEM_HEIGHT;
-      if (Math.abs(wheelEl.scrollTop - snappedTop) > 1) {
-        wheelEl.scrollTo({ top: snappedTop, behavior: 'smooth' });
-      }
-      syncWheelSelection(wheelEl);
-    }
-
-    wheelEl.addEventListener('scroll', function () {
-      syncWheelSelection(wheelEl);
-      if (scrollEndTimer) {
-        clearTimeout(scrollEndTimer);
-      }
-      scrollEndTimer = setTimeout(snapAndSync, 90);
-    });
-
-    wheelEl.addEventListener('wheel', function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      var delta = event.deltaY > 0 ? ITEM_HEIGHT : -ITEM_HEIGHT;
-      wheelEl.scrollTop += delta;
-      if (scrollEndTimer) {
-        clearTimeout(scrollEndTimer);
-      }
-      scrollEndTimer = setTimeout(snapAndSync, 90);
-    }, { passive: false });
-
-    wheelEl.addEventListener('pointerdown', function (event) {
-      /* Mouse drag only — touch/pen use native overflow scrolling */
-      if (event.pointerType !== 'mouse' || event.button !== 0) {
-        return;
-      }
-      dragState = {
-        pointerId: event.pointerId,
-        startY: event.clientY,
-        startScroll: wheelEl.scrollTop,
-        moved: false
-      };
-      wheelEl.classList.add('is-dragging');
-      try {
-        wheelEl.setPointerCapture(event.pointerId);
-      } catch (err) {
-        /* ignore */
-      }
-    });
-
-    wheelEl.addEventListener('pointermove', function (event) {
-      if (!dragState || dragState.pointerId !== event.pointerId) {
-        return;
-      }
-      var dy = event.clientY - dragState.startY;
-      if (Math.abs(dy) > 4) {
-        dragState.moved = true;
-      }
-      wheelEl.scrollTop = dragState.startScroll - dy;
-      syncWheelSelection(wheelEl);
-    });
-
-    function endDrag(event) {
-      if (!dragState || dragState.pointerId !== event.pointerId) {
-        return;
-      }
-      var wasDrag = dragState.moved;
-      dragState = null;
-      wheelEl.classList.remove('is-dragging');
-      try {
-        wheelEl.releasePointerCapture(event.pointerId);
-      } catch (err) {
-        /* ignore */
-      }
-      snapAndSync();
-      if (wasDrag) {
-        wheelEl.setAttribute('data-suppress-click', '1');
-        setTimeout(function () {
-          wheelEl.removeAttribute('data-suppress-click');
-        }, 50);
-      }
-    }
-
-    wheelEl.addEventListener('pointerup', endDrag);
-    wheelEl.addEventListener('pointercancel', endDrag);
-
-    wheelEl.addEventListener('click', function (event) {
-      if (wheelEl.getAttribute('data-suppress-click') === '1') {
-        return;
-      }
-      var option = event.target.closest('.reminder-time-picker__option');
-      if (!option || !wheelEl.contains(option)) {
-        return;
-      }
-      var value = parseInt(option.getAttribute('data-value'), 10);
-      setWheelValue(wheelEl, value, true);
-    });
+    return n;
   }
 
   function to24Hour(hour12, minute, isPm) {
@@ -340,6 +186,21 @@
     );
   }
 
+  function parseStoredTimeParts(time24) {
+    var minutesTotal = window.MemoireCore.parseReminderTimeToMinutes(time24);
+    if (minutesTotal === null) {
+      return null;
+    }
+    var hour24 = Math.floor(minutesTotal / 60);
+    var minute = minutesTotal % 60;
+    var isPm = hour24 >= 12;
+    var hour12 = hour24 % 12;
+    if (hour12 === 0) {
+      hour12 = 12;
+    }
+    return { hour12: hour12, minute: minute, isPm: isPm };
+  }
+
   function initRemindersCard() {
     var listEl = document.getElementById('dashboard-reminders-list');
     var addBtn = document.getElementById('dashboard-reminders-add');
@@ -347,32 +208,18 @@
     var form = document.getElementById('reminder-form');
     var textInput = document.getElementById('reminder-text');
     var cancelBtn = document.getElementById('reminder-modal-cancel');
-    var hourWheel = document.getElementById('reminder-hour-wheel');
-    var minuteWheel = document.getElementById('reminder-minute-wheel');
+    var hourInput = document.getElementById('reminder-hour-input');
+    var minuteInput = document.getElementById('reminder-minute-input');
     var amBtn = document.getElementById('reminder-ampm-am');
     var pmBtn = document.getElementById('reminder-ampm-pm');
-    if (!listEl || !addBtn || !modal || !form || !textInput || !hourWheel || !minuteWheel) {
+    var titleEl = document.getElementById('reminder-modal-title');
+    var hintEl = modal ? modal.querySelector('.reminder-modal__hint') : null;
+    if (!listEl || !addBtn || !modal || !form || !textInput || !hourInput || !minuteInput) {
       return;
     }
 
-    var hours = [];
-    var minutes = [];
-    var i;
-    for (i = 1; i <= 12; i++) {
-      hours.push(i);
-    }
-    for (i = 0; i < 60; i++) {
-      minutes.push(i);
-    }
-
-    createWheelOptions(hourWheel, hours, function (value) {
-      return String(value);
-    });
-    createWheelOptions(minuteWheel, minutes, function (value) {
-      return value < 10 ? '0' + value : String(value);
-    });
-    attachWheelBehavior(hourWheel);
-    attachWheelBehavior(minuteWheel);
+    var editingReminderId = null;
+    var RESCHEDULE_KEY = 'memoireRescheduleReminder';
 
     function setAmPm(isPm) {
       amBtn.classList.toggle('is-active', !isPm);
@@ -381,44 +228,154 @@
       pmBtn.setAttribute('aria-pressed', isPm ? 'true' : 'false');
     }
 
-    function openReminderModal() {
-      var now = new Date();
-      var hour24 = now.getHours();
-      var minute = now.getMinutes();
-      var isPm = hour24 >= 12;
-      var hour12 = hour24 % 12;
-      if (hour12 === 0) {
-        hour12 = 12;
+    function setTimeFields(hour12, minute, isPm) {
+      hourInput.value = String(hour12);
+      minuteInput.value = padMinuteDisplay(minute);
+      setAmPm(isPm);
+    }
+
+    function readTimeFields() {
+      var hour12 = clampInt(hourInput.value, 1, 12);
+      var minute = clampInt(minuteInput.value, 0, 59);
+      if (hour12 === null || minute === null) {
+        return null;
+      }
+      return {
+        hour12: hour12,
+        minute: minute,
+        isPm: pmBtn.classList.contains('is-active')
+      };
+    }
+
+    function bindTimeInputGuards(inputEl, min, max, padOnBlur) {
+      inputEl.addEventListener('input', function () {
+        var raw = String(inputEl.value || '').replace(/\D/g, '');
+        if (raw.length > 2) {
+          raw = raw.slice(0, 2);
+        }
+        if (raw === '') {
+          inputEl.value = '';
+          return;
+        }
+        var n = parseInt(raw, 10);
+        if (!isNaN(n) && n > max) {
+          inputEl.value = String(max);
+          return;
+        }
+        inputEl.value = raw;
+      });
+
+      inputEl.addEventListener('blur', function () {
+        var clamped = clampInt(inputEl.value, min, max);
+        if (clamped === null) {
+          inputEl.value = padOnBlur ? padMinuteDisplay(min) : String(min);
+          return;
+        }
+        inputEl.value = padOnBlur ? padMinuteDisplay(clamped) : String(clamped);
+      });
+    }
+
+    bindTimeInputGuards(hourInput, 1, 12, false);
+    bindTimeInputGuards(minuteInput, 0, 59, true);
+
+    function setModalCopy(isReschedule) {
+      if (titleEl) {
+        titleEl.textContent = isReschedule ? 'Choose a new time' : 'Add a reminder';
+      }
+      if (hintEl) {
+        hintEl.textContent = isReschedule
+          ? 'Pick a new time for this reminder.'
+          : 'Write what to remember, then pick a time.';
+      }
+    }
+
+    function openReminderModal(options) {
+      var opts = options || {};
+      editingReminderId = opts.reminderId || null;
+      setModalCopy(!!editingReminderId);
+
+      var hour12;
+      var minute;
+      var isPm;
+      if (opts.time) {
+        var parts = parseStoredTimeParts(opts.time);
+        if (parts) {
+          hour12 = parts.hour12;
+          minute = parts.minute;
+          isPm = parts.isPm;
+        }
+      }
+      if (hour12 == null) {
+        var now = new Date();
+        var hour24 = now.getHours();
+        minute = now.getMinutes();
+        isPm = hour24 >= 12;
+        hour12 = hour24 % 12;
+        if (hour12 === 0) {
+          hour12 = 12;
+        }
       }
 
-      textInput.value = '';
-      setAmPm(isPm);
+      textInput.value = opts.text != null ? String(opts.text) : '';
+      textInput.readOnly = !!editingReminderId;
+      setTimeFields(hour12, minute, isPm);
 
       modal.hidden = false;
       modal.classList.add('is-open');
 
-      /* Apply scroll after the modal is visible — scrollTop is ignored while hidden */
-      requestAnimationFrame(function () {
-        setWheelValue(hourWheel, hour12, false);
-        setWheelValue(minuteWheel, minute, false);
-        requestAnimationFrame(function () {
-          setWheelValue(hourWheel, hour12, false);
-          setWheelValue(minuteWheel, minute, false);
-        });
-      });
-
       setTimeout(function () {
-        textInput.focus();
+        if (editingReminderId) {
+          hourInput.focus();
+        } else {
+          textInput.focus();
+        }
       }, 50);
     }
 
     function closeReminderModal() {
       modal.classList.remove('is-open');
       modal.hidden = true;
+      editingReminderId = null;
+      textInput.readOnly = false;
+      setModalCopy(false);
       addBtn.focus();
     }
 
-    addBtn.addEventListener('click', openReminderModal);
+    function openRescheduleForReminder(reminder) {
+      if (!reminder || !reminder.id) {
+        return;
+      }
+      openReminderModal({
+        reminderId: reminder.id,
+        text: reminder.text,
+        time: reminder.time
+      });
+    }
+
+    function consumePendingReschedule() {
+      var raw = null;
+      try {
+        raw = sessionStorage.getItem(RESCHEDULE_KEY);
+        if (raw) {
+          sessionStorage.removeItem(RESCHEDULE_KEY);
+        }
+      } catch (e) {
+        raw = null;
+      }
+      if (!raw) {
+        return;
+      }
+      try {
+        var pending = JSON.parse(raw);
+        openRescheduleForReminder(pending);
+      } catch (err) {
+        /* ignore malformed pending state */
+      }
+    }
+
+    addBtn.addEventListener('click', function () {
+      openReminderModal();
+    });
 
     if (cancelBtn) {
       cancelBtn.addEventListener('click', closeReminderModal);
@@ -445,21 +402,45 @@
         return;
       }
 
-      var hour12 = getSelectedWheelValue(hourWheel);
-      var minute = getSelectedWheelValue(minuteWheel);
-      if (hour12 === null || minute === null) {
+      var timeParts = readTimeFields();
+      if (!timeParts) {
+        hourInput.focus();
         return;
       }
 
-      var isPm = pmBtn.classList.contains('is-active');
-      var time24 = to24Hour(hour12, minute, isPm);
+      var time24 = to24Hour(timeParts.hour12, timeParts.minute, timeParts.isPm);
       var reminders = getReminders();
-      reminders.push({
-        id: 'reminder-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
-        text: text,
-        time: time24
-      });
-      saveReminders(reminders);
+
+      if (editingReminderId) {
+        var updated = false;
+        reminders = reminders.map(function (item) {
+          if (item.id !== editingReminderId) {
+            return item;
+          }
+          updated = true;
+          return {
+            id: item.id,
+            text: item.text,
+            time: time24
+          };
+        });
+        if (!updated) {
+          closeReminderModal();
+          return;
+        }
+        saveReminders(reminders);
+        if (typeof window.MemoireCore.clearReminderFired === 'function') {
+          window.MemoireCore.clearReminderFired(editingReminderId);
+        }
+      } else {
+        reminders.push({
+          id: 'reminder-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
+          text: text,
+          time: time24
+        });
+        saveReminders(reminders);
+      }
+
       renderRemindersList();
       updateNextUpBanner();
       closeReminderModal();
@@ -497,10 +478,15 @@
       updateNextUpBanner();
     });
     window.addEventListener('memoire:reminder-fired', updateNextUpBanner);
+    window.addEventListener('memoire:reschedule-reminder', function (event) {
+      var reminder = event && event.detail && event.detail.reminder;
+      openRescheduleForReminder(reminder);
+    });
 
     renderRemindersList();
     updateNextUpBanner();
     setInterval(updateNextUpBanner, 30000);
+    consumePendingReschedule();
   }
 
   function initQuickCall() {

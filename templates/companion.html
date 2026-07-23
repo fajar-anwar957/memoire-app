@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-  <title>Your Companion — Mémoire</title>
+  <title>Your Companion-Mémoire</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
@@ -101,6 +101,43 @@
       <div class="modal-footer">
         <div class="modal-actions">
           <button type="button" id="call-modal-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="call-confirm-modal" class="modal-overlay call-confirm" role="dialog" aria-modal="true" aria-labelledby="call-confirm-title" aria-describedby="call-confirm-text" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <p class="modal-title" id="call-confirm-title">Would you like to call someone?</p>
+      </div>
+      <div class="modal-body">
+        <p class="modal-copy" id="call-confirm-text">I can help you reach someone if you would like.</p>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions call-confirm__actions">
+          <button type="button" class="modal-btn modal-btn--primary" id="call-confirm-yes">Yes, call someone</button>
+          <button type="button" class="modal-btn modal-btn--secondary" id="call-confirm-no">No, I&#39;m alright</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLACEHOLDER: crisis helpline number pending verification against current
+       published crisis resources for the deployment region. -->
+  <div id="crisis-support-modal" class="modal-overlay crisis-support" role="dialog" aria-modal="true" aria-labelledby="crisis-support-title" aria-describedby="crisis-support-text" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <p class="modal-title" id="crisis-support-title">You do not have to face this alone</p>
+      </div>
+      <div class="modal-body">
+        <p class="modal-copy" id="crisis-support-text">If you would like to talk with someone specially trained to help, you can call this helpline.</p>
+        <a id="crisis-support-helpline" class="crisis-support__helpline" href="tel:116123">Call 116 123</a>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions crisis-support__actions">
+          <button type="button" class="modal-btn modal-btn--secondary" id="crisis-support-call-known">Call someone I know</button>
+          <button type="button" class="modal-btn modal-btn--secondary" id="crisis-support-stay">Stay here with me</button>
         </div>
       </div>
     </div>

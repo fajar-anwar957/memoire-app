@@ -8,8 +8,23 @@ load_dotenv()
 
 import anthropic
 from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+# Render (and similar hosts) sit behind a proxy — trust one X-Forwarded-For hop
+# so rate limits key on the real client IP, not the proxy.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["500 per day", "100 per hour"],
+    # Only paid/API routes share the defaults; templates and static stay unlimited.
+    default_limits_exempt_when=lambda: not request.path.startswith('/api/'),
+    storage_uri='memory://',
+)
 
 # #region agent log
 _DEBUG_LOG = os.path.join(os.path.dirname(__file__), 'debug-1ac007.log')
@@ -48,6 +63,11 @@ def _debug_not_found(e):
         }, 'H1')
     return e.get_response()
 # #endregion
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    # Same JSON shape as other API errors so clients use their gentle fallbacks.
+    return jsonify({'error': 'Please try again in a moment.'}), 429
 
 SYSTEM_PROMPT = (
     "You are Mémoire, a warm and friendly AI companion for someone with "
@@ -98,6 +118,17 @@ SYSTEM_PROMPT = (
     "(e.g. 'What was your favourite game to play with them when they were small?').\n"
     "- Keep the tone calm, affirming, and gently redirecting — never "
     "confrontational.\n\n"
+    "Reply openings (CRITICAL — always follow):\n"
+    "- Vary the opening of every reply. Never reuse the same sentence structure "
+    "twice in a session.\n"
+    "- Do NOT open by reflecting the user's emotion back at them "
+    "(e.g. avoid 'You have such a warm feeling for...', "
+    "'You have such a loving...', 'That means so much to you...').\n"
+    "- Do NOT open with formulaic praise such as 'how sweet', 'how lovely', "
+    "or 'that is so precious'.\n"
+    "- Lead with substance: the memory, the answer, or a follow-up question.\n"
+    "- Keep warmth, but express it through specificity about what the user "
+    "actually said — not through generic affectionate adjectives.\n\n"
     "Reply length and format:\n"
     "- Keep every reply to a maximum of 2-3 short sentences.\n"
     "- Avoid long explanations, lists, or multiple questions in one reply.\n"
@@ -194,6 +225,7 @@ DAILY_QUIZ_SYSTEM_PROMPT = (
 )
 
 @app.route('/api/daily-quiz', methods=['POST'])
+@limiter.limit('10 per minute')
 def api_daily_quiz():
     try:
         data = request.get_json(silent=True) or {}
@@ -305,6 +337,7 @@ def api_daily_quiz():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/chat', methods=['POST'])
+@limiter.limit('20 per minute')
 def api_chat():
     try:
         data = request.get_json(silent=True)
