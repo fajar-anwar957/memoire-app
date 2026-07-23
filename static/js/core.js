@@ -428,7 +428,43 @@
     }));
   }
 
+  function clearReminderFired(id) {
+    var state = getFiredReminderIds();
+    var nextIds = state.ids.filter(function (firedId) {
+      return firedId !== id;
+    });
+    localStorage.setItem(FIRED_REMINDERS_KEY, JSON.stringify({
+      date: todayKey(),
+      ids: nextIds
+    }));
+  }
+
   var sharedAudioCtx = null;
+  var activeReminderAlert = null;
+  var RESCHEDULE_STORAGE_KEY = 'memoireRescheduleReminder';
+
+  function reminderAlertActionsHtml() {
+    return (
+      '<div class="modal-actions reminder-alert__actions">' +
+        '<button type="button" class="modal-btn modal-btn--primary reminder-alert__dismiss" id="reminder-alert-dismiss">I\'m Done</button>' +
+        '<button type="button" class="modal-btn modal-btn--secondary reminder-alert__okay" id="reminder-alert-okay">Okay</button>' +
+        '<button type="button" class="modal-btn modal-btn--secondary reminder-alert__reschedule" id="reminder-alert-reschedule">Reschedule</button>' +
+      '</div>'
+    );
+  }
+
+  function ensureReminderAlertActions(alertEl) {
+    if (!alertEl) {
+      return;
+    }
+    var footer = alertEl.querySelector('.modal-footer');
+    if (!footer) {
+      return;
+    }
+    if (!document.getElementById('reminder-alert-okay')) {
+      footer.innerHTML = reminderAlertActionsHtml();
+    }
+  }
 
   function unlockAudio() {
     try {
@@ -460,23 +496,35 @@
 
       function tone(freq, start, duration, peak) {
         var osc = ctx.createOscillator();
+        var partial = ctx.createOscillator();
         var gain = ctx.createGain();
+        var partialGain = ctx.createGain();
         osc.type = 'sine';
+        partial.type = 'triangle';
         osc.frequency.setValueAtTime(freq, start);
+        partial.frequency.setValueAtTime(freq * 2, start);
         gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(peak, start + 0.04);
+        gain.gain.exponentialRampToValueAtTime(peak, start + 0.05);
+        gain.gain.exponentialRampToValueAtTime(peak * 0.55, start + duration * 0.45);
         gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        partialGain.gain.setValueAtTime(0.22, start);
         osc.connect(gain);
+        partial.connect(partialGain);
+        partialGain.connect(gain);
         gain.connect(ctx.destination);
         osc.start(start);
+        partial.start(start);
         osc.stop(start + duration + 0.02);
+        partial.stop(start + duration + 0.02);
       }
 
       function play() {
         var now = ctx.currentTime;
-        /* Soft two-note chime (~1s), calm and non-alarming */
-        tone(523.25, now, 0.45, 0.08);
-        tone(659.25, now + 0.28, 0.55, 0.07);
+        /* Warm three-note chime (~1.4s), clearly audible but non-alarming.
+           Mid-range pitches carry better for older hearing. */
+        tone(392.0, now, 0.42, 0.28);
+        tone(523.25, now + 0.32, 0.48, 0.30);
+        tone(659.25, now + 0.68, 0.58, 0.24);
       }
 
       if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
@@ -492,6 +540,7 @@
   function ensureReminderAlertDom() {
     var existing = document.getElementById('reminder-alert');
     if (existing) {
+      ensureReminderAlertActions(existing);
       return existing;
     }
 
@@ -513,7 +562,7 @@
           '<p class="reminder-alert__time" id="reminder-alert-time"></p>' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button type="button" class="reminder-alert__dismiss" id="reminder-alert-dismiss">I\'m done for today</button>' +
+          reminderAlertActionsHtml() +
         '</div>' +
       '</div>';
     document.body.appendChild(alertEl);
@@ -527,6 +576,53 @@
     }
     alertEl.classList.remove('is-open');
     alertEl.hidden = true;
+    activeReminderAlert = null;
+  }
+
+  function completeActiveReminder() {
+    if (activeReminderAlert && activeReminderAlert.id) {
+      var id = activeReminderAlert.id;
+      var reminders = getReminders().filter(function (item) {
+        return item.id !== id;
+      });
+      saveReminders(reminders);
+    }
+    closeInAppReminderAlert();
+  }
+
+  function acknowledgeActiveReminder() {
+    closeInAppReminderAlert();
+  }
+
+  function requestRescheduleReminder(reminder) {
+    if (!reminder || !reminder.id) {
+      closeInAppReminderAlert();
+      return;
+    }
+
+    closeInAppReminderAlert();
+
+    if (document.getElementById('reminder-modal')) {
+      try {
+        window.dispatchEvent(new CustomEvent('memoire:reschedule-reminder', {
+          detail: { reminder: reminder }
+        }));
+      } catch (err) {
+        /* ignore */
+      }
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(RESCHEDULE_STORAGE_KEY, JSON.stringify({
+        id: reminder.id,
+        text: reminder.text,
+        time: reminder.time
+      }));
+    } catch (e) {
+      /* sessionStorage unavailable */
+    }
+    window.location.href = '/dashboard';
   }
 
   function showInAppReminderAlert(reminder) {
@@ -538,6 +634,11 @@
       return;
     }
 
+    activeReminderAlert = {
+      id: reminder.id,
+      text: reminder.text,
+      time: reminder.time
+    };
     textEl.textContent = reminder.text;
     timeEl.textContent = formatReminderDisplayTime(reminder.time);
     alertEl.hidden = false;
@@ -562,7 +663,7 @@
     try {
       var displayTime = formatReminderDisplayTime(reminder.time);
       new Notification('Mémoire reminder', {
-        body: reminder.text + ' — ' + displayTime,
+        body: reminder.text + ': ' + displayTime,
         tag: 'memoire-reminder-' + reminder.id,
         renotify: true
       });
@@ -636,17 +737,31 @@
     ensureReminderAlertDom();
     var alertEl = document.getElementById('reminder-alert');
     var dismissBtn = document.getElementById('reminder-alert-dismiss');
+    var okayBtn = document.getElementById('reminder-alert-okay');
+    var rescheduleBtn = document.getElementById('reminder-alert-reschedule');
 
     if (dismissBtn && !dismissBtn.getAttribute('data-memoire-bound')) {
       dismissBtn.setAttribute('data-memoire-bound', '1');
-      dismissBtn.addEventListener('click', closeInAppReminderAlert);
+      dismissBtn.addEventListener('click', completeActiveReminder);
+    }
+
+    if (okayBtn && !okayBtn.getAttribute('data-memoire-bound')) {
+      okayBtn.setAttribute('data-memoire-bound', '1');
+      okayBtn.addEventListener('click', acknowledgeActiveReminder);
+    }
+
+    if (rescheduleBtn && !rescheduleBtn.getAttribute('data-memoire-bound')) {
+      rescheduleBtn.setAttribute('data-memoire-bound', '1');
+      rescheduleBtn.addEventListener('click', function () {
+        requestRescheduleReminder(activeReminderAlert);
+      });
     }
 
     if (alertEl && !alertEl.getAttribute('data-memoire-bound')) {
       alertEl.setAttribute('data-memoire-bound', '1');
       alertEl.addEventListener('click', function (event) {
         if (event.target === alertEl) {
-          closeInAppReminderAlert();
+          acknowledgeActiveReminder();
         }
       });
     }
@@ -659,7 +774,7 @@
         }
         var openAlert = document.getElementById('reminder-alert');
         if (openAlert && openAlert.classList.contains('is-open')) {
-          closeInAppReminderAlert();
+          acknowledgeActiveReminder();
         }
       });
     }
@@ -697,6 +812,7 @@
     checkDueReminders: checkDueReminders,
     requestNotificationPermission: requestNotificationPermission,
     closeInAppReminderAlert: closeInAppReminderAlert,
+    clearReminderFired: clearReminderFired,
     unlockAudio: unlockAudio
   };
 
