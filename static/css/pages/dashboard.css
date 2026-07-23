@@ -616,10 +616,11 @@ button.dashboard-card {
   border-radius: 16px;
 }
 
-.reminder-time-picker__wheels {
+.reminder-time-picker__fields {
   display: flex;
   flex: 1;
-  gap: 0.5rem;
+  align-items: flex-end;
+  gap: 0.4rem;
   min-width: 0;
 }
 
@@ -627,7 +628,7 @@ button.dashboard-card {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   min-width: 0;
 }
 
@@ -638,55 +639,44 @@ button.dashboard-card {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
+  text-align: center;
 }
 
-.reminder-time-picker__wheel {
-  position: relative;
-  width: 100%;
-  height: 168px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-snap-type: y mandatory;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-  border-radius: 12px;
-  background: var(--surface-tint);
-  border: 1.5px solid rgba(30, 58, 95, 0.1);
-  scrollbar-width: thin;
-  cursor: grab;
-}
-
-.reminder-time-picker__wheel.is-dragging {
-  cursor: grabbing;
-  scroll-snap-type: none;
-  user-select: none;
-}
-
-.reminder-time-picker__spacer {
-  height: 56px;
-  flex-shrink: 0;
-  pointer-events: none;
-}
-
-.reminder-time-picker__option {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 56px;
-  min-height: 56px;
-  font-size: 1.5rem;
+.reminder-time-picker__separator {
+  flex: 0 0 auto;
+  padding-bottom: 0.85rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  color: var(--text-muted);
-  scroll-snap-align: center;
-  cursor: pointer;
-  user-select: none;
+  color: var(--navy);
+  line-height: 1;
 }
 
-.reminder-time-picker__option.is-selected {
+.reminder-time-picker__input {
+  width: 100%;
+  min-height: 64px;
+  padding: 0.65rem 0.4rem;
+  font-family: inherit;
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-align: center;
   color: var(--navy);
-  background: rgba(212, 119, 46, 0.18);
-  border-radius: 10px;
+  background: var(--surface-tint);
+  border: 2px solid rgba(30, 58, 95, 0.18);
+  border-radius: 14px;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+}
+
+.reminder-time-picker__input::-webkit-outer-spin-button,
+.reminder-time-picker__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.reminder-time-picker__input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(212, 119, 46, 0.22);
 }
 
 .reminder-time-picker__ampm {

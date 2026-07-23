@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-  <title>Home — Mémoire</title>
+  <title>Home-Mémoire</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
@@ -211,14 +211,37 @@
           <div class="reminder-form__field">
             <p class="reminder-form__label" id="reminder-time-label">What time?</p>
             <div class="reminder-time-picker" role="group" aria-labelledby="reminder-time-label">
-              <div class="reminder-time-picker__wheels">
+              <div class="reminder-time-picker__fields">
                 <div class="reminder-time-picker__col">
-                  <p class="reminder-time-picker__col-label">Hour</p>
-                  <div class="reminder-time-picker__wheel" id="reminder-hour-wheel" tabindex="0" role="listbox" aria-label="Hour"></div>
+                  <label class="reminder-time-picker__col-label" for="reminder-hour-input">Hour</label>
+                  <input
+                    type="number"
+                    id="reminder-hour-input"
+                    class="reminder-time-picker__input"
+                    inputmode="numeric"
+                    min="1"
+                    max="12"
+                    step="1"
+                    maxlength="2"
+                    aria-label="Hour"
+                    required
+                  >
                 </div>
+                <span class="reminder-time-picker__separator" aria-hidden="true">:</span>
                 <div class="reminder-time-picker__col">
-                  <p class="reminder-time-picker__col-label">Minute</p>
-                  <div class="reminder-time-picker__wheel" id="reminder-minute-wheel" tabindex="0" role="listbox" aria-label="Minute"></div>
+                  <label class="reminder-time-picker__col-label" for="reminder-minute-input">Minute</label>
+                  <input
+                    type="number"
+                    id="reminder-minute-input"
+                    class="reminder-time-picker__input"
+                    inputmode="numeric"
+                    min="0"
+                    max="59"
+                    step="1"
+                    maxlength="2"
+                    aria-label="Minute"
+                    required
+                  >
                 </div>
               </div>
               <div class="reminder-time-picker__ampm" role="group" aria-label="AM or PM">
@@ -248,7 +271,10 @@
         <p class="reminder-alert__time" id="reminder-alert-time"></p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="reminder-alert__dismiss" id="reminder-alert-dismiss">I'm done for today</button>
+        <div class="modal-actions reminder-alert__actions">
+          <button type="button" class="modal-btn modal-btn--primary reminder-alert__dismiss" id="reminder-alert-dismiss">I'm Done</button>
+          <button type="button" class="modal-btn modal-btn--secondary reminder-alert__reschedule" id="reminder-alert-reschedule">Reschedule</button>
+        </div>
       </div>
     </div>
   </div>

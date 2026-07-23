@@ -6,12 +6,19 @@
   var memoireChatSession = 'memoireChatSession';
   var CHAT_SESSION_MAX = 40;
   var SPEECH_RATE = 0.9;
-  var HEALTH_EMERGENCY_REPLY =
-    'I am right here with you. Everything is okay. Let\'s sit together for a moment.';
   var DISTRESS_GROUNDING_REPLY =
     'I am right here with you. Everything is okay. Let\'s sit together for a moment.';
-  var USER_MESSAGE_BUFFER_MAX = 5;
-  var LOOP_DETECT_WINDOW = 3;
+  var CALL_OFFER_DECLINE_REPLY =
+    'That\'s alright. I\'m still right here with you.';
+  var CRISIS_STAY_REPLY =
+    'I\'m right here with you. Take your time — we can keep talking.';
+  var USER_MESSAGE_BUFFER_MAX = 8;
+  var ESCALATION_SESSION_KEY = 'memoireCompanionEscalation';
+  var REPETITION_OFFER_THRESHOLD = 3;
+  // PLACEHOLDER: crisis helpline number pending verification against current
+  // published crisis resources for the deployment region.
+  var CRISIS_HELPLINE_DISPLAY = '116 123';
+  var CRISIS_HELPLINE_TEL = '116123';
 
   var chat = document.getElementById('companion-chat');
   var form = document.getElementById('companion-form');
@@ -364,7 +371,7 @@
     return { message: message, bubble: bubble };
   }
 
-  function finishCompanionReveal(shell, text, skipSessionSave) {
+  function finishCompanionReveal(shell, text, skipSessionSave, onComplete) {
     if (speechSupported) {
       shell.message.insertBefore(createSpeakButton(text), shell.bubble);
     }
@@ -373,15 +380,18 @@
     if (!skipSessionSave) {
       appendToChatSession('assistant', text);
     }
+    if (typeof onComplete === 'function') {
+      onComplete();
+    }
   }
 
-  function appendCompanionMessage(text, skipSessionSave) {
+  function appendCompanionMessage(text, skipSessionSave, onComplete) {
     var shell = createCompanionShell();
     shell.bubble.textContent = text;
-    finishCompanionReveal(shell, text, skipSessionSave);
+    finishCompanionReveal(shell, text, skipSessionSave, onComplete);
   }
 
-  function streamCompanionMessage(text, skipSessionSave) {
+  function streamCompanionMessage(text, skipSessionSave, onComplete) {
     var shell = createCompanionShell();
     var words = String(text || '').split(/\s+/).filter(function (word) {
       return word.length > 0;
@@ -389,7 +399,7 @@
 
     if (!words.length) {
       shell.bubble.textContent = text;
-      finishCompanionReveal(shell, text, skipSessionSave);
+      finishCompanionReveal(shell, text, skipSessionSave, onComplete);
       return;
     }
 
@@ -397,7 +407,7 @@
 
     function revealNextBatch() {
       if (index >= words.length) {
-        finishCompanionReveal(shell, text, skipSessionSave);
+        finishCompanionReveal(shell, text, skipSessionSave, onComplete);
         return;
       }
 
@@ -609,17 +619,28 @@
     };
   }
 
-  // Explicit health/safety keywords (legacy gate) plus contextual distress engine
+  // Explicit health/safety keywords plus contextual distress engine
   // for exit-seeking loops, disorientation, and implicit agitation.
-  var HEALTH_EMERGENCY_KEYWORDS = [
-    'vomit', 'vomiting', 'throw up', 'throwing up',
-    'chest pain', 'chest hurts', 'can\'t breathe', 'cant breathe',
-    'fell', 'fell down', 'fallen',
-    'dizzy', 'dizziness',
-    'severe pain', 'a lot of pain', 'in pain',
-    'bleeding', 'unconscious', 'help me', 'emergency',
+
+  // Physical health — immediate call-card offer (first mention, no counter).
+  var PHYSICAL_HEALTH_IMMEDIATE_PHRASES = [
     'sick', 'unwell', 'not feeling well', 'not well',
-    'ill', 'nausea', 'nauseous'
+    'chest pain', 'chest hurts',
+    'can\'t breathe', 'cant breathe', 'cannot breathe',
+    'fallen', 'i fell', 'i\'ve fallen', 'ive fallen', 'fell down',
+    'dizzy', 'dizziness',
+    'hurts', 'in pain', 'help me'
+  ];
+
+  // Mental health crisis — immediate crisis-support card (not the contact picker).
+  var MENTAL_HEALTH_CRISIS_PHRASES = [
+    'want to die', 'wanna die', 'wanting to die',
+    'kill myself', 'killing myself',
+    'end my life', 'ending my life',
+    'suicide', 'suicidal',
+    'don\'t want to live', 'dont want to live', 'do not want to live',
+    'better off dead',
+    'no reason to live', 'nothing to live for'
   ];
 
   var EXIT_SEEKING_PHRASES = [
@@ -647,7 +668,79 @@
     'in pain', 'so much pain', 'aching', 'ouch'
   ];
 
+  // Canonical intent families — shared cues map paraphrases to one signature.
+  var INTENT_FAMILIES = [
+    {
+      id: 'go_home',
+      cues: ['home', 'leave', 'leaving', 'door', 'taxi', 'bus', 'work', 'kids']
+    },
+    {
+      id: 'lost_confused',
+      cues: ['lost', 'confused', 'where', 'place']
+    },
+    {
+      id: 'feeling_pain',
+      cues: ['hurt', 'hurts', 'pain', 'aching', 'ouch']
+    },
+    {
+      id: 'feeling_unwell',
+      cues: [
+        'sick', 'ill', 'unwell', 'vomit', 'vomiting', 'dizzy', 'dizziness',
+        'nausea', 'nauseous', 'bleeding', 'fallen', 'fell', 'breathe',
+        'chest', 'unconscious', 'emergency'
+      ]
+    }
+  ];
+
   var recentUserMessages = [];
+  var callConfirmPending = null;
+  var callConfirmBound = false;
+  var crisisSupportBound = false;
+
+  function loadEscalationSession() {
+    try {
+      var stored = sessionStorage.getItem(ESCALATION_SESSION_KEY);
+      if (!stored) {
+        return {
+          intentCounts: {},
+          escalatedSignatures: {},
+          declinedSignatures: {},
+          recentSignatures: []
+        };
+      }
+      var parsed = JSON.parse(stored);
+      return {
+        intentCounts: (parsed && parsed.intentCounts) || {},
+        escalatedSignatures: (parsed && parsed.escalatedSignatures) || {},
+        declinedSignatures: (parsed && parsed.declinedSignatures) || {},
+        recentSignatures: Array.isArray(parsed && parsed.recentSignatures)
+          ? parsed.recentSignatures
+          : []
+      };
+    } catch (e) {
+      return {
+        intentCounts: {},
+        escalatedSignatures: {},
+        declinedSignatures: {},
+        recentSignatures: []
+      };
+    }
+  }
+
+  var escalationSession = loadEscalationSession();
+
+  function saveEscalationSession() {
+    try {
+      sessionStorage.setItem(ESCALATION_SESSION_KEY, JSON.stringify({
+        intentCounts: escalationSession.intentCounts,
+        escalatedSignatures: escalationSession.escalatedSignatures,
+        declinedSignatures: escalationSession.declinedSignatures,
+        recentSignatures: escalationSession.recentSignatures.slice(-USER_MESSAGE_BUFFER_MAX)
+      }));
+    } catch (e) {
+      // sessionStorage may be unavailable; in-memory state still works for the visit.
+    }
+  }
 
   function normalizeDistressText(text) {
     return ('' + (text || ''))
@@ -674,19 +767,33 @@
     return false;
   }
 
-  function detectHealthEmergencyKeywords(text) {
+  function detectPhysicalHealthImmediate(text) {
     var normalized = normalizeDistressText(text);
     if (!normalized) {
       return false;
     }
-    return containsAnyPhrase(normalized, HEALTH_EMERGENCY_KEYWORDS);
+    return containsAnyPhrase(normalized, PHYSICAL_HEALTH_IMMEDIATE_PHRASES);
+  }
+
+  function detectMentalHealthCrisis(text) {
+    var normalized = normalizeDistressText(text);
+    if (!normalized) {
+      return false;
+    }
+    return containsAnyPhrase(normalized, MENTAL_HEALTH_CRISIS_PHRASES);
   }
 
   function tokenizeIntent(normalized) {
     var stop = {
       a: true, an: true, the: true, to: true, and: true, or: true,
-      i: true, im: true, am: true, is: true, are: true,
-      me: true, my: true, you: true, please: true, just: true, now: true
+      i: true, im: true, am: true, is: true, are: true, was: true, were: true,
+      me: true, my: true, you: true, your: true, please: true, just: true, now: true,
+      can: true, could: true, would: true, will: true, shall: true, may: true, might: true,
+      want: true, need: true, like: true, gonna: true, wanna: true, gotta: true,
+      of: true, in: true, on: true, at: true, for: true, with: true, from: true,
+      that: true, this: true, it: true, so: true, too: true, very: true, really: true,
+      do: true, did: true, does: true, done: true, have: true, has: true, had: true,
+      get: true, got: true, let: true, into: true, about: true, then: true, than: true
     };
     return normalized.split(' ').filter(function (token) {
       return token && token.length > 1 && !stop[token];
@@ -727,8 +834,63 @@
     return containsAnyPhrase(normalized, PAIN_DISTRESS_PHRASES);
   }
 
-  function isAgitatedContent(normalized) {
-    return isExitSeeking(normalized) || isDisoriented(normalized) || isPainDistress(normalized);
+  function matchIntentFamily(normalized) {
+    var tokens = tokenizeIntent(normalized);
+    var tokenSet = {};
+    for (var t = 0; t < tokens.length; t++) {
+      tokenSet[tokens[t]] = true;
+    }
+    for (var i = 0; i < INTENT_FAMILIES.length; i++) {
+      var family = INTENT_FAMILIES[i];
+      for (var c = 0; c < family.cues.length; c++) {
+        var cue = family.cues[c];
+        if (tokenSet[cue]) {
+          return family.id;
+        }
+        if (cue.length > 5 && normalized.indexOf(cue) !== -1) {
+          return family.id;
+        }
+      }
+    }
+    if (isExitSeeking(normalized)) {
+      return 'go_home';
+    }
+    if (isDisoriented(normalized)) {
+      return 'lost_confused';
+    }
+    if (isPainDistress(normalized)) {
+      return 'feeling_pain';
+    }
+    return null;
+  }
+
+  function extractIntentSignature(normalized) {
+    if (!normalized) {
+      return null;
+    }
+    var familyId = matchIntentFamily(normalized);
+    if (familyId) {
+      return familyId;
+    }
+
+    var tokens = tokenizeIntent(normalized);
+    if (!tokens.length) {
+      return null;
+    }
+
+    var tokenSig = 'tokens:' + tokens.slice().sort().join('_');
+    var existingKeys = Object.keys(escalationSession.intentCounts);
+    for (var i = 0; i < existingKeys.length; i++) {
+      var key = existingKeys[i];
+      if (key.indexOf('tokens:') !== 0) {
+        continue;
+      }
+      var otherText = key.slice(7).split('_').join(' ');
+      if (intentSimilarity(tokens.join(' '), otherText) >= 0.55) {
+        return key;
+      }
+    }
+    return tokenSig;
   }
 
   function pushUserMessageBuffer(text) {
@@ -740,62 +902,97 @@
     }
   }
 
-  function detectRepetitionLoop() {
-    if (recentUserMessages.length < LOOP_DETECT_WINDOW) {
+  function trackIntentRepetition(signature) {
+    if (!signature) {
+      return 0;
+    }
+    var next = (escalationSession.intentCounts[signature] || 0) + 1;
+    escalationSession.intentCounts[signature] = next;
+    if (next >= REPETITION_OFFER_THRESHOLD) {
+      escalationSession.escalatedSignatures[signature] = true;
+    }
+    escalationSession.recentSignatures.push(signature);
+    if (escalationSession.recentSignatures.length > USER_MESSAGE_BUFFER_MAX) {
+      escalationSession.recentSignatures = escalationSession.recentSignatures.slice(
+        -USER_MESSAGE_BUFFER_MAX
+      );
+    }
+    saveEscalationSession();
+    return next;
+  }
+
+  function markIntentEscalated(signature) {
+    if (!signature) {
+      return;
+    }
+    escalationSession.escalatedSignatures[signature] = true;
+    saveEscalationSession();
+  }
+
+  function isIntentEscalated(signature) {
+    return !!(signature && escalationSession.escalatedSignatures[signature]);
+  }
+
+  function markIntentDeclined(signature) {
+    if (!signature) {
+      return;
+    }
+    // Declining suppresses keyword/distress bypass only — not repetition offers.
+    // Counters and escalated flags stay until the session ends.
+    escalationSession.declinedSignatures[signature] = true;
+    saveEscalationSession();
+  }
+
+  function wasIntentDeclined(signature) {
+    return !!(signature && escalationSession.declinedSignatures[signature]);
+  }
+
+  function shouldOfferRepetitionCall(signature, repetitionCount) {
+    if (!signature) {
       return false;
     }
-    var windowMsgs = recentUserMessages.slice(-LOOP_DETECT_WINDOW);
-
-    var exitCount = 0;
-    for (var i = 0; i < windowMsgs.length; i++) {
-      if (isExitSeeking(windowMsgs[i])) exitCount += 1;
-    }
-    if (exitCount >= LOOP_DETECT_WINDOW) {
-      return true;
-    }
-
-    // Similar-intent loop only counts when messages show agitation / exit-seeking
-    var agitatedCount = 0;
-    for (var k = 0; k < windowMsgs.length; k++) {
-      if (isAgitatedContent(windowMsgs[k])) agitatedCount += 1;
-    }
-    if (agitatedCount < 2) {
-      return false;
-    }
-
-    var similarPairs = 0;
-    for (var a = 0; a < windowMsgs.length; a++) {
-      for (var b = a + 1; b < windowMsgs.length; b++) {
-        if (intentSimilarity(windowMsgs[a], windowMsgs[b]) >= 0.55) {
-          similarPairs += 1;
-        }
-      }
-    }
-    return similarPairs >= 3;
+    return repetitionCount >= REPETITION_OFFER_THRESHOLD || isIntentEscalated(signature);
   }
 
   /**
    * Contextual distress engine.
-   * Returns a state string when emergency UI should open, or null otherwise.
-   * States: STATE_HEALTH_EMERGENCY | STATE_HIGH_AGITATION_ELOPEMENT | STATE_IMPLICIT_DISTRESS
+   * Returns a state string when the safety bypass should run, or null otherwise.
+   * States: STATE_IMPLICIT_DISTRESS (disorientation grounding).
+   * Physical health and mental-health crisis escalate after a warm LLM reply
+   * (see sendMessage) — independent of the repetition counter.
+   * Repetition escalation is also handled after a normal reply (not via bypass).
    */
   function analyzeDistressState(userText) {
     pushUserMessageBuffer(userText);
     var normalized = normalizeDistressText(userText);
+    var signature = extractIntentSignature(normalized);
+    var repetitionCount = trackIntentRepetition(signature);
 
-    if (detectHealthEmergencyKeywords(userText)) {
-      return 'STATE_HEALTH_EMERGENCY';
+    // Physical / mental crisis phrases are handled after the companion reply.
+    if (detectMentalHealthCrisis(userText) || detectPhysicalHealthImmediate(userText)) {
+      return {
+        state: null,
+        signature: signature,
+        repetitionCount: repetitionCount
+      };
     }
 
-    if (detectRepetitionLoop()) {
-      return 'STATE_HIGH_AGITATION_ELOPEMENT';
+    if (isDisoriented(normalized)) {
+      if (wasIntentDeclined(signature)) {
+        return { state: null, signature: signature, repetitionCount: repetitionCount };
+      }
+      return {
+        state: 'STATE_IMPLICIT_DISTRESS',
+        signature: signature,
+        repetitionCount: repetitionCount
+      };
     }
 
-    if (isDisoriented(normalized) || isPainDistress(normalized)) {
-      return 'STATE_IMPLICIT_DISTRESS';
-    }
-
-    return null;
+    return {
+      state: null,
+      signature: signature,
+      repetitionCount: repetitionCount
+    };
   }
 
   // Seed buffer from the active chat session so loop detection spans the visit.
@@ -819,17 +1016,133 @@
     window.MemoireQuickCall.open();
   }
 
-  function triggerDistressResponse(userText, state) {
-    var safetyMessage = (state === 'STATE_HEALTH_EMERGENCY')
-      ? HEALTH_EMERGENCY_REPLY
-      : DISTRESS_GROUNDING_REPLY;
+  function ensureCallConfirmDom() {
+    return document.getElementById('call-confirm-modal');
+  }
+
+  function closeCallConfirmCard() {
+    var modal = ensureCallConfirmDom();
+    if (!modal) {
+      return;
+    }
+    modal.classList.remove('is-open');
+    modal.hidden = true;
+    callConfirmPending = null;
+  }
+
+  function acknowledgeCallOfferDeclined() {
+    isWaitingForReply = true;
+    showLoadingIndicator();
+    setTimeout(function () {
+      hideLoadingIndicator();
+      streamCompanionMessage(CALL_OFFER_DECLINE_REPLY);
+      conversationHistory.push({ role: 'assistant', content: CALL_OFFER_DECLINE_REPLY });
+      saveHistoryToStorage();
+      isWaitingForReply = false;
+      if (input) {
+        input.focus();
+      }
+    }, 350);
+  }
+
+  function showCallConfirmCard(options) {
+    var modal = ensureCallConfirmDom();
+    var titleEl = document.getElementById('call-confirm-title');
+    var textEl = document.getElementById('call-confirm-text');
+    var yesBtn = document.getElementById('call-confirm-yes');
+    var noBtn = document.getElementById('call-confirm-no');
+    if (!modal || !titleEl || !textEl || !yesBtn || !noBtn) {
+      return;
+    }
+
+    var variant = (options && options.variant) || 'health';
+    var signature = options && options.signature;
+
+    titleEl.textContent = 'Would you like to call someone?';
+    textEl.textContent = variant === 'repetition'
+      ? 'I can help you reach someone if you would like.'
+      : 'I can stay with you, or help you call someone.';
+    yesBtn.textContent = 'Yes, call someone';
+    noBtn.textContent = variant === 'repetition' ? 'No, thank you' : 'No, I\'m alright';
+
+    callConfirmPending = {
+      variant: variant,
+      signature: signature
+    };
+
+    // Keep counting; once shown at threshold, this intent stays escalated for the session.
+    markIntentEscalated(signature);
+
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    yesBtn.focus();
+  }
+
+  function bindCallConfirmUi() {
+    if (callConfirmBound) {
+      return;
+    }
+    var modal = ensureCallConfirmDom();
+    var yesBtn = document.getElementById('call-confirm-yes');
+    var noBtn = document.getElementById('call-confirm-no');
+    if (!modal || !yesBtn || !noBtn) {
+      return;
+    }
+    callConfirmBound = true;
+
+    yesBtn.addEventListener('click', function () {
+      closeCallConfirmCard();
+      openEmergencyCallModal();
+    });
+
+    noBtn.addEventListener('click', function () {
+      var pending = callConfirmPending;
+      if (pending && pending.signature) {
+        markIntentDeclined(pending.signature);
+      }
+      closeCallConfirmCard();
+      acknowledgeCallOfferDeclined();
+    });
+
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        var pending = callConfirmPending;
+        if (pending && pending.signature) {
+          markIntentDeclined(pending.signature);
+        }
+        closeCallConfirmCard();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      var openModal = ensureCallConfirmDom();
+      if (!openModal || openModal.hidden || !openModal.classList.contains('is-open')) {
+        return;
+      }
+      var pending = callConfirmPending;
+      if (pending && pending.signature) {
+        markIntentDeclined(pending.signature);
+      }
+      closeCallConfirmCard();
+    });
+  }
+
+  function triggerDistressResponse(userText, state, signature) {
+    var safetyMessage = DISTRESS_GROUNDING_REPLY;
 
     isWaitingForReply = true;
     showLoadingIndicator();
     setTimeout(function () {
       hideLoadingIndicator();
-      streamCompanionMessage(safetyMessage);
-      openEmergencyCallModal();
+      streamCompanionMessage(safetyMessage, false, function () {
+        showCallConfirmCard({
+          variant: 'distress',
+          signature: signature
+        });
+      });
       conversationHistory.push({ role: 'user', content: userText });
       conversationHistory.push({ role: 'assistant', content: safetyMessage });
       saveHistoryToStorage();
@@ -838,15 +1151,106 @@
     }, 500);
   }
 
-  function sendMessage(userText) {
-    // SAFETY / DISTRESS BYPASS (safety-critical):
-    // Keyword emergencies, exit-seeking repetition loops, and implicit distress
-    // skip the LLM and open the emergency-contact popup with a short grounding reply.
-    var distressState = analyzeDistressState(userText);
-    if (distressState) {
-      triggerDistressResponse(userText, distressState);
+  function ensureCrisisSupportDom() {
+    return document.getElementById('crisis-support-modal');
+  }
+
+  function closeCrisisSupportCard() {
+    var modal = ensureCrisisSupportDom();
+    if (!modal) {
       return;
     }
+    modal.classList.remove('is-open');
+    modal.hidden = true;
+  }
+
+  function acknowledgeCrisisStay() {
+    isWaitingForReply = true;
+    showLoadingIndicator();
+    setTimeout(function () {
+      hideLoadingIndicator();
+      streamCompanionMessage(CRISIS_STAY_REPLY);
+      conversationHistory.push({ role: 'assistant', content: CRISIS_STAY_REPLY });
+      saveHistoryToStorage();
+      isWaitingForReply = false;
+      if (input) {
+        input.focus();
+      }
+    }, 350);
+  }
+
+  function showCrisisSupportCard() {
+    var modal = ensureCrisisSupportDom();
+    var helpline = document.getElementById('crisis-support-helpline');
+    if (!modal) {
+      return;
+    }
+    if (helpline) {
+      helpline.setAttribute('href', 'tel:' + CRISIS_HELPLINE_TEL);
+      helpline.textContent = 'Call ' + CRISIS_HELPLINE_DISPLAY;
+    }
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    if (helpline) {
+      helpline.focus();
+    }
+  }
+
+  function bindCrisisSupportUi() {
+    if (crisisSupportBound) {
+      return;
+    }
+    var modal = ensureCrisisSupportDom();
+    var callKnownBtn = document.getElementById('crisis-support-call-known');
+    var stayBtn = document.getElementById('crisis-support-stay');
+    if (!modal || !callKnownBtn || !stayBtn) {
+      return;
+    }
+    crisisSupportBound = true;
+
+    callKnownBtn.addEventListener('click', function () {
+      closeCrisisSupportCard();
+      openEmergencyCallModal();
+    });
+
+    stayBtn.addEventListener('click', function () {
+      closeCrisisSupportCard();
+      acknowledgeCrisisStay();
+    });
+
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        closeCrisisSupportCard();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      var openModal = ensureCrisisSupportDom();
+      if (!openModal || openModal.hidden || !openModal.classList.contains('is-open')) {
+        return;
+      }
+      closeCrisisSupportCard();
+    });
+  }
+
+  function sendMessage(userText) {
+    // SAFETY / DISTRESS:
+    // - Mental-health crisis and physical health: warm LLM reply first, then card.
+    // - Disorientation: short grounding bypass, then call confirmation card.
+    // - Repetition (3+): warm LLM reply first, then call confirmation card.
+    var distress = analyzeDistressState(userText);
+    if (distress.state) {
+      triggerDistressResponse(userText, distress.state, distress.signature);
+      return;
+    }
+
+    var offerCrisisAfterReply = detectMentalHealthCrisis(userText);
+    var offerHealthCallAfterReply = !offerCrisisAfterReply && detectPhysicalHealthImmediate(userText);
+    var shouldOfferCallAfterReply = !offerCrisisAfterReply && !offerHealthCallAfterReply &&
+      shouldOfferRepetitionCall(distress.signature, distress.repetitionCount);
 
     isWaitingForReply = true;
     showLoadingIndicator();
@@ -871,10 +1275,8 @@
         hideLoadingIndicator();
 
         if (!result.ok || !result.data.reply) {
-          var errorText = (result.data && result.data.error)
-            ? result.data.error
-            : 'Sorry, I could not respond just now. Please try again.';
-          streamCompanionMessage(errorText);
+          // Never surface raw API/rate-limit text to the patient.
+          streamCompanionMessage('Sorry, I could not respond just now. Please try again.');
           return;
         }
 
@@ -884,7 +1286,21 @@
         conversationHistory.push({ role: 'user', content: userText });
         conversationHistory.push({ role: 'assistant', content: reply });
         saveHistoryToStorage();
-        streamCompanionMessage(reply);
+        streamCompanionMessage(reply, false, function () {
+          if (offerCrisisAfterReply) {
+            showCrisisSupportCard();
+          } else if (offerHealthCallAfterReply) {
+            showCallConfirmCard({
+              variant: 'health',
+              signature: distress.signature
+            });
+          } else if (shouldOfferCallAfterReply) {
+            showCallConfirmCard({
+              variant: 'repetition',
+              signature: distress.signature
+            });
+          }
+        });
       })
       .catch(function () {
         hideLoadingIndicator();
@@ -1005,6 +1421,8 @@
     window.MemoireQuickCall.init();
   }
 
+  bindCallConfirmUi();
+  bindCrisisSupportUi();
   setupSpeechRecognition();
   renderStoredChatSession();
   applyFeelingPrefill();
