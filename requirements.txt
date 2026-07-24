@@ -2,4 +2,3 @@ flask
 anthropic
 python-dotenv
 flask-limiter
-gunicorn

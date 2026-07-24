@@ -26,44 +26,6 @@ limiter = Limiter(
     storage_uri='memory://',
 )
 
-# #region agent log
-_DEBUG_LOG = os.path.join(os.path.dirname(__file__), 'debug-1ac007.log')
-
-def _agent_log(location, message, data, hypothesis_id):
-    try:
-        with open(_DEBUG_LOG, 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                'sessionId': '1ac007',
-                'location': location,
-                'message': message,
-                'data': data,
-                'hypothesisId': hypothesis_id,
-                'timestamp': int(time.time() * 1000),
-                'runId': data.get('runId', 'pre-fix')
-            }) + '\n')
-    except OSError:
-        pass
-
-@app.before_request
-def _debug_log_request():
-    if request.path.startswith('/activities'):
-        rules = [str(r.rule) for r in app.url_map.iter_rules()]
-        _agent_log('app.py:before_request', 'activities request', {
-            'path': request.path,
-            'registeredRoutes': rules,
-            'hasWordAssociationRoute': '/activities/word-association' in rules
-        }, 'H1')
-
-@app.errorhandler(404)
-def _debug_not_found(e):
-    if request.path.startswith('/activities'):
-        _agent_log('app.py:404', 'unmatched activities path', {
-            'path': request.path,
-            'method': request.method
-        }, 'H1')
-    return e.get_response()
-# #endregion
-
 @app.errorhandler(429)
 def ratelimit_handler(e):
     # Same JSON shape as other API errors so clients use their gentle fallbacks.
@@ -167,9 +129,6 @@ def activities():
 
 @app.route('/activities/word-association')
 def word_association():
-    # #region agent log
-    _agent_log('app.py:word_association', 'route hit', {'path': request.path}, 'H1')
-    # #endregion
     return render_template('word-association.html')
 
 @app.route('/activities/photo-recall')
