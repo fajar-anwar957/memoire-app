@@ -1,7 +1,5 @@
-import json
 import os
 import re
-import time
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -119,10 +117,6 @@ def splash():
 @app.route('/favicon.ico')
 def favicon():
     return redirect(url_for('static', filename='assets/memoire-icon.png'))
-
-@app.route('/onboarding')
-def onboarding():
-    return redirect(url_for('profile'))
 
 @app.route('/profile')
 def profile():
@@ -442,7 +436,6 @@ def api_chat():
             unique_memory_lines.append(line)
         memory_lines = unique_memory_lines
 
-        # Deduplicate while preserving order
         seen_topics = set()
         unique_topics = []
         for topic in topics_to_avoid:

@@ -21,7 +21,6 @@ body {
   padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0));
 }
 
-/* TODO: retire per-page header rules after visual verification */
 .cst-activity__header {
   position: fixed;
   top: 0;
@@ -804,10 +803,6 @@ body[data-cst-activity="word-association"] .cst-wa__option--selected {
 
 .cst-pr-modal__line-1 {
   margin: 0 0 0.625rem;
-}
-
-.cst-pr-modal__line-2 {
-  margin: 0 0 0.75rem;
 }
 
 #pr-feedback-modal .cst-wa__replay,

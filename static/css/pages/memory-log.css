@@ -16,8 +16,6 @@ body {
   min-height: 100vh;
 }
 
-/* TODO: retire per-page header rules after visual verification */
-/* Header */
 .memory-log__header {
   position: fixed;
   top: 0;
@@ -674,13 +672,6 @@ body {
   color: #c0392b;
 }
 
-.memory-form__helper {
-  margin: 0.45rem 0 0;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: var(--color-text-muted);
-}
-
 .memory-form__info {
   margin: 0;
   font-size: 0.95rem;
@@ -767,7 +758,6 @@ body {
   }
 }
 
-/* Desktop */
 @media (min-width: 900px) {
   body {
     padding-bottom: 5rem;

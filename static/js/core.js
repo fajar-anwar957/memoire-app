@@ -204,19 +204,6 @@
     return contact.isEmergency === true;
   }
 
-  function readFileAsDataURL(fileInput) {
-    return new Promise(function (resolve) {
-      var file = fileInput && fileInput.files[0];
-      if (!file) {
-        resolve(null);
-        return;
-      }
-      var reader = new FileReader();
-      reader.onload = function () { resolve(reader.result); };
-      reader.readAsDataURL(file);
-    });
-  }
-
   function compressImageToDataURL(fileInput, maxDim, quality) {
     maxDim = maxDim || 800;
     quality = quality === undefined ? 0.7 : quality;
@@ -931,7 +918,6 @@
     formatDisplayName: formatDisplayName,
     normalizeRelationship: normalizeRelationship,
     contactIsEmergency: contactIsEmergency,
-    readFileAsDataURL: readFileAsDataURL,
     compressImageToDataURL: compressImageToDataURL,
     REMINDERS_STORAGE_KEY: REMINDERS_STORAGE_KEY,
     getReminders: getReminders,

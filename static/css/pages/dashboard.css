@@ -345,8 +345,7 @@ body.page-dashboard {
   color: var(--navy-muted);
 }
 
-.card-illustration__tile--blue,
-.card-illustration__tile--peach {
+.card-illustration__tile--blue {
   background: var(--icon-tile-blue);
 }
 
@@ -560,31 +559,6 @@ body.page-dashboard {
 .dashboard-reminders__add:focus-visible {
   outline: 3px solid rgba(30, 58, 95, 0.4);
   outline-offset: 3px;
-}
-
-/* Toast */
-.dashboard-toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0));
-  z-index: 1100;
-  transform: translateX(-50%) translateY(1rem);
-  padding: 0.85rem 1.35rem;
-  font-size: 1rem;
-  font-weight: 700;
-  font-family: var(--font-family);
-  color: #ffffff;
-  background: var(--navy);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(30, 58, 95, 0.25);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.dashboard-toast.is-visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
 }
 
 /* Reminder modal — field/picker chrome only; shell scroll is in modals.css */

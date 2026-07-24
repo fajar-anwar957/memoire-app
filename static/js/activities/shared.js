@@ -199,24 +199,9 @@
     return rel || 'Friend';
   }
 
-  function personDisplayName(name) {
-    var core = window.MemoireCore;
-    if (core && typeof core.formatDisplayName === 'function') {
-      return core.formatDisplayName(name) || String(name || '').trim();
-    }
-    return String(name || '').trim();
-  }
-
   /** Cue: "Someone special to you… your Sister." */
   function formatRelationshipCue(relationship) {
     return 'Someone special to you\u2026 your ' + relationshipLabel(relationship) + '.';
-  }
-
-  /** Identity: "This is Ada. Ada is your Sister." */
-  function formatRelationshipIdentity(name, relationship) {
-    var safeName = personDisplayName(name);
-    var rel = relationshipLabel(relationship);
-    return 'This is ' + safeName + '. ' + safeName + ' is your ' + rel + '.';
   }
 
   /**
@@ -343,7 +328,6 @@
     hideSessionComplete: hideSessionComplete,
     closeFeedbackModal: closeFeedbackModal,
     formatRelationshipCue: formatRelationshipCue,
-    formatRelationshipIdentity: formatRelationshipIdentity,
     buildNameTokens: buildNameTokens,
     maskMessage: maskMessage,
     unmaskReply: unmaskReply

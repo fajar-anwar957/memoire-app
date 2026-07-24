@@ -16,8 +16,6 @@ body {
   flex-direction: column;
 }
 
-/* TODO: retire per-page header rules after visual verification */
-/* Header */
 .activities__header {
   position: fixed;
   top: 0;
@@ -75,7 +73,6 @@ body {
   letter-spacing: normal;
 }
 
-/* Content */
 .activities__content {
   padding: 5.5rem 1.25rem 1.5rem;
 }
@@ -315,13 +312,6 @@ body {
 .activities-card__button:focus-visible {
   outline: 3px solid rgba(27, 58, 92, 0.45);
   outline-offset: 3px;
-}
-
-.activities-card__button--soon {
-  background-color: var(--color-cream);
-  color: var(--color-navy);
-  pointer-events: none;
-  cursor: default;
 }
 
 @media (prefers-reduced-motion: reduce) {

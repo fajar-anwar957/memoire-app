@@ -449,11 +449,6 @@
       tokens.push({ name: trimmed, token: token });
     }
 
-    // [PATIENT] is added FIRST and the `seen` dedup above guarantees the patient's own
-    // name can never be re-mapped to a [FAMILY_n] token later, even if a contact shares
-    // the same name. This is part of the fix for the patient/caregiver name-confusion
-    // bug: the patient's literal name string always resolves to [PATIENT] regardless of
-    // any relationship word ("my mother", "my friend") sitting next to it in a sentence.
     addMapping(profile.preferredName, '[PATIENT]');
     addMapping(profile.fullName, '[PATIENT]');
 
@@ -727,19 +722,6 @@
     }
   }
 
-  // ROOT CAUSE of the "patient's own name treated as a family member" bug:
-  // The frontend masking is already correct and literal. When the patient says
-  // "my mother Yoyo visited me today" and "Yoyo" is the patient's OWN preferred name,
-  // maskMessage() correctly produces "my mother [PATIENT] visited me today". The
-  // confusion is NOT in the masking — it happens on the LLM side: the masked phrase
-  // "my mother [PATIENT]" is stored in conversationHistory and re-sent here on every
-  // turn, so Claude reasonably infers that [PATIENT] refers to the mother and later
-  // replies "your mother [PATIENT]", which unmaskReply() turns back into
-  // "your mother Yoyo". Fully fixing this requires telling Claude in the SYSTEM PROMPT
-  // that [PATIENT] is always the patient themselves and must never be described as a
-  // relative — i.e. a change in the Flask /api/chat route (app.py), NOT in this file.
-  // That backend change is flagged as a separate required fix and intentionally left
-  // untouched here.
   function getPartOfDay(hour) {
     if (hour < 12) return 'morning';
     if (hour < 17) return 'afternoon';

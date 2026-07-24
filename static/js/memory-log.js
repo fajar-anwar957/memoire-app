@@ -84,17 +84,6 @@
     renderMemories();
   }
 
-  function getContacts() {
-    var profile = getActiveProfile();
-    if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
-      return [];
-    }
-
-    return profile.contacts.filter(function (contact) {
-      return contact && (contact.name || contact.relationship || contact.phone);
-    });
-  }
-
   function getContactsWithIndexes() {
     var profile = getActiveProfile();
     if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
