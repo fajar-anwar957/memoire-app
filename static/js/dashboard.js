@@ -1,5 +1,4 @@
 (function () {
-  var contactIsEmergency = window.MemoireCore.contactIsEmergency;
   var getActiveProfile = window.MemoireCore.getActiveProfile;
   var escapeHtml = window.MemoireCore.escapeHtml;
   var formatDisplayName = window.MemoireCore.formatDisplayName;
@@ -18,15 +17,6 @@
       return String(profile.preferredName).trim();
     }
     return 'Friend';
-  }
-
-  function getEmergencyContacts(profile) {
-    if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
-      return [];
-    }
-    return profile.contacts.filter(function (contact) {
-      return contact && contactIsEmergency(contact);
-    });
   }
 
   function initDashboardHeader() {
@@ -589,34 +579,10 @@
     consumePendingReschedule();
   }
 
-  function initQuickCall() {
-    var callCard = document.getElementById('dashboard-call-card');
-    var hasContacts = window.MemoireQuickCall
-      ? window.MemoireQuickCall.hasEmergencyContacts()
-      : getEmergencyContacts(getActiveProfile()).length > 0;
-
-    if (callCard) {
-      callCard.hidden = !hasContacts;
-      if (hasContacts && !callCard.getAttribute('data-memoire-bound')) {
-        callCard.setAttribute('data-memoire-bound', '1');
-        callCard.addEventListener('click', function () {
-          if (window.MemoireQuickCall && typeof window.MemoireQuickCall.open === 'function') {
-            window.MemoireQuickCall.open(callCard);
-          }
-        });
-      }
-    }
-
-    if (window.MemoireQuickCall && typeof window.MemoireQuickCall.syncFab === 'function') {
-      window.MemoireQuickCall.syncFab();
-    }
-  }
-
   document.addEventListener('DOMContentLoaded', function () {
     initDashboardHeader();
     initFeelingButton();
     initRemindersCard();
-    initQuickCall();
     updateNextUpBanner();
   });
 })();

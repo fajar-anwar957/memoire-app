@@ -312,8 +312,7 @@ body.page-dashboard {
 .dashboard-card--activities,
 .dashboard-card--companion,
 .dashboard-card--memories,
-.dashboard-card--reminders,
-.dashboard-card--call {
+.dashboard-card--reminders {
   background: var(--surface);
 }
 
@@ -436,15 +435,6 @@ body.page-dashboard {
 .dashboard-card:focus-visible {
   outline: 3px solid rgba(30, 58, 95, 0.4);
   outline-offset: 3px;
-}
-
-button.dashboard-card {
-  width: 100%;
-  text-align: left;
-}
-
-.dashboard-card--call[hidden] {
-  display: none !important;
 }
 
 /* ── Reminders list ── */
@@ -596,8 +586,6 @@ button.dashboard-card {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
-
-/* Call contacts modal styles live in call-modal.css */
 
 /* Reminder modal — field/picker chrome only; shell scroll is in modals.css */
 .reminder-modal .modal-card {
