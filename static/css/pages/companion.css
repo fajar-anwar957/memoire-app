@@ -12,16 +12,46 @@ body {
   overflow: hidden;
 }
 
+body:has(.companion) {
+  --companion-nav-h: calc(92px + env(safe-area-inset-bottom, 0px));
+  --companion-input-h: 80px;
+  --companion-starters-h: 0px;
+  --companion-composer-h: calc(var(--companion-input-h) + var(--companion-starters-h));
+}
+
+body.companion-starters-visible:has(.companion) {
+  /* One horizontal chip row */
+  --companion-starters-h: 3.75rem;
+}
+
+@media (min-width: 768px) {
+  body:has(.companion) {
+    --companion-nav-h: calc(96px + env(safe-area-inset-bottom, 0px));
+    --companion-input-h: 84px;
+  }
+
+  body.companion-starters-visible:has(.companion) {
+    --companion-starters-h: 3.85rem;
+  }
+}
+
+@media (max-width: 719px) {
+  body.keyboard-open.companion-starters-visible:has(.companion) {
+    --companion-starters-h: 0px;
+  }
+}
+
 .companion {
   /*
-   * Layout: chat clears header + input + nav.
-   * Nav is ~92px (items + padding); input bar ~80–84px.
-   * Input z-index sits ABOVE nav so it is never covered.
+   * Layout: chat clears header + composer (starters + input) + nav.
+   * Composer is full-bleed; chat column stays comfortably narrow.
    */
   --companion-header-h: 60px;
   --companion-nav-h: calc(92px + env(safe-area-inset-bottom, 0px));
   --companion-input-h: 80px;
-  --companion-chrome-bottom: calc(var(--companion-nav-h) + var(--companion-input-h));
+  --companion-starters-h: 0px;
+  --companion-composer-h: calc(var(--companion-input-h) + var(--companion-starters-h));
+  --companion-chrome-bottom: calc(var(--companion-nav-h) + var(--companion-composer-h));
 
   width: 100%;
   max-width: 540px;
@@ -29,6 +59,10 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+body.companion-starters-visible .companion {
+  --companion-starters-h: 3.75rem;
 }
 
 /* Header */
@@ -276,16 +310,39 @@ body {
   color: var(--color-text-muted);
 }
 
-/* Input bar — own white surface above nav, clear visual separation */
-.companion__input-bar {
+/* Composer — full-bleed above the nav; starters + input stack edge to edge */
+.companion__composer {
   position: fixed;
-  bottom: var(--companion-nav-h);
   left: 0;
   right: 0;
+  bottom: var(--companion-nav-h);
   z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.companion__composer > * {
+  pointer-events: auto;
+}
+
+/* Input bar — full viewport width, flush above the bottom nav */
+.companion__input-bar {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  right: auto;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.625rem;
+  width: 100%;
+  box-sizing: border-box;
   min-height: var(--companion-input-h);
   padding: 0.65rem 1rem;
   background: #ffffff;
@@ -501,6 +558,101 @@ body {
   .companion {
     --companion-nav-h: calc(96px + env(safe-area-inset-bottom, 0px));
     --companion-input-h: 84px;
+  }
+
+  body.companion-starters-visible .companion {
+    --companion-starters-h: 3.85rem;
+  }
+}
+
+/* Starter chips — single horizontal row above the input; scroll, never wrap */
+.companion__starters {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 1rem;
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.companion__starters::-webkit-scrollbar {
+  display: none;
+}
+
+.companion__starters[hidden] {
+  display: none !important;
+}
+
+.companion__starter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0.55rem 0.95rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-align: center;
+  color: var(--orange);
+  background: rgba(217, 122, 52, 0.12);
+  border: 1.5px solid rgba(217, 122, 52, 0.55);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.companion__starter-chip:focus-visible {
+  outline: 3px solid rgba(30, 58, 95, 0.45);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .companion__starter-chip:hover {
+    background: rgba(217, 122, 52, 0.2);
+    border-color: var(--orange);
+  }
+}
+
+.companion__starter-chip:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 719px) {
+  body.keyboard-open .companion__starters {
+    display: none !important;
+  }
+
+  body.keyboard-open.companion-starters-visible .companion {
+    --companion-starters-h: 0px;
+  }
+}
+
+@media (min-width: 480px) {
+  .companion__starters {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .companion__composer .companion__input-bar {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 

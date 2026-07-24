@@ -274,6 +274,60 @@
     return value < 10 ? '0' + value : String(value);
   }
 
+  function todayKey() {
+    var now = new Date();
+    var month = now.getMonth() + 1;
+    var day = now.getDate();
+    return (
+      now.getFullYear() +
+      '-' +
+      (month < 10 ? '0' + month : String(month)) +
+      '-' +
+      (day < 10 ? '0' + day : String(day))
+    );
+  }
+
+  function normalizeReminderDate(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      return null;
+    }
+    var parts = raw.split('-');
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var day = parseInt(parts[2], 10);
+    if (year < 2000 || month < 1 || month > 12 || day < 1 || day > 31) {
+      return null;
+    }
+    var probe = new Date(year, month - 1, day);
+    if (
+      probe.getFullYear() !== year ||
+      probe.getMonth() !== month - 1 ||
+      probe.getDate() !== day
+    ) {
+      return null;
+    }
+    return raw;
+  }
+
+  function formatReminderDateLabel(isoDate) {
+    var normalized = normalizeReminderDate(isoDate);
+    if (!normalized) {
+      return '';
+    }
+    var parts = normalized.split('-');
+    var date = new Date(
+      parseInt(parts[0], 10),
+      parseInt(parts[1], 10) - 1,
+      parseInt(parts[2], 10)
+    );
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'long'
+    });
+  }
+
   function parseReminderTimeToMinutes(time) {
     if (typeof time !== 'string') {
       return null;
@@ -328,11 +382,35 @@
     var minutesTotal = parseReminderTimeToMinutes(time);
     var hour24 = Math.floor(minutesTotal / 60);
     var minute = minutesTotal % 60;
+    var repeat = item.repeat === 'once' ? 'once' : 'daily';
+    var date = repeat === 'once' ? normalizeReminderDate(item.date) : null;
+    if (repeat === 'once' && !date) {
+      return null;
+    }
     return {
       id: String(item.id || ('reminder-' + Date.now() + '-' + Math.floor(Math.random() * 10000))),
       text: text,
-      time: padTimePart(hour24) + ':' + padTimePart(minute)
+      time: padTimePart(hour24) + ':' + padTimePart(minute),
+      repeat: repeat,
+      date: date,
+      completed: repeat === 'once' ? !!item.completed : false
     };
+  }
+
+  function compareReminders(a, b) {
+    if (!!a.completed !== !!b.completed) {
+      return a.completed ? 1 : -1;
+    }
+    if (a.repeat === 'once' && b.repeat === 'once') {
+      if (a.date !== b.date) {
+        return a.date < b.date ? -1 : 1;
+      }
+    } else if (a.repeat === 'once' && b.repeat !== 'once') {
+      return -1;
+    } else if (a.repeat !== 'once' && b.repeat === 'once') {
+      return 1;
+    }
+    return parseReminderTimeToMinutes(a.time) - parseReminderTimeToMinutes(b.time);
   }
 
   function getReminders() {
@@ -348,9 +426,7 @@
       return parsed
         .map(normalizeReminder)
         .filter(Boolean)
-        .sort(function (a, b) {
-          return parseReminderTimeToMinutes(a.time) - parseReminderTimeToMinutes(b.time);
-        });
+        .sort(compareReminders);
     } catch (err) {
       return [];
     }
@@ -360,9 +436,7 @@
     var cleaned = (Array.isArray(reminders) ? reminders : [])
       .map(normalizeReminder)
       .filter(Boolean)
-      .sort(function (a, b) {
-        return parseReminderTimeToMinutes(a.time) - parseReminderTimeToMinutes(b.time);
-      });
+      .sort(compareReminders);
     localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(cleaned));
     try {
       window.dispatchEvent(new CustomEvent('memoire:reminders-changed', {
@@ -376,30 +450,31 @@
 
   function remindersToCompanionFact(reminders) {
     var list = Array.isArray(reminders) ? reminders : getReminders();
-    if (!list.length) {
+    var today = todayKey();
+    var relevant = list.filter(function (item) {
+      if (item.completed) {
+        return false;
+      }
+      if (item.repeat === 'once') {
+        return item.date === today || item.date > today;
+      }
+      return true;
+    });
+    if (!relevant.length) {
       return '';
     }
-    return list.map(function (item) {
-      return item.text + ' at ' + formatReminderDisplayTime(item.time);
+    return relevant.map(function (item) {
+      if (item.repeat === 'once') {
+        return item.text + ' on ' + formatReminderDateLabel(item.date) +
+          ' at ' + formatReminderDisplayTime(item.time);
+      }
+      return item.text + ' every day at ' + formatReminderDisplayTime(item.time);
     }).join('; ');
   }
 
   /* ── Global gentle-reminder scheduler (every page) ── */
   var FIRED_REMINDERS_KEY = 'dashboardRemindersFired';
   var REMINDER_CHECK_MS = 30000;
-
-  function todayKey() {
-    var now = new Date();
-    var month = now.getMonth() + 1;
-    var day = now.getDate();
-    return (
-      now.getFullYear() +
-      '-' +
-      (month < 10 ? '0' + month : String(month)) +
-      '-' +
-      (day < 10 ? '0' + day : String(day))
-    );
-  }
 
   function getFiredReminderIds() {
     try {
@@ -582,15 +657,44 @@
   function completeActiveReminder() {
     if (activeReminderAlert && activeReminderAlert.id) {
       var id = activeReminderAlert.id;
-      var reminders = getReminders().filter(function (item) {
-        return item.id !== id;
-      });
-      saveReminders(reminders);
+      var reminders = getReminders();
+      var target = null;
+      var i;
+      for (i = 0; i < reminders.length; i++) {
+        if (reminders[i].id === id) {
+          target = reminders[i];
+          break;
+        }
+      }
+      if (target && target.repeat === 'once') {
+        reminders = reminders.map(function (item) {
+          if (item.id !== id) {
+            return item;
+          }
+          return Object.assign({}, item, { completed: true });
+        });
+        saveReminders(reminders);
+      } else {
+        reminders = reminders.filter(function (item) {
+          return item.id !== id;
+        });
+        saveReminders(reminders);
+      }
     }
     closeInAppReminderAlert();
   }
 
   function acknowledgeActiveReminder() {
+    if (activeReminderAlert && activeReminderAlert.id) {
+      var id = activeReminderAlert.id;
+      var reminders = getReminders().map(function (item) {
+        if (item.id !== id || item.repeat !== 'once') {
+          return item;
+        }
+        return Object.assign({}, item, { completed: true });
+      });
+      saveReminders(reminders);
+    }
     closeInAppReminderAlert();
   }
 
@@ -617,7 +721,9 @@
       sessionStorage.setItem(RESCHEDULE_STORAGE_KEY, JSON.stringify({
         id: reminder.id,
         text: reminder.text,
-        time: reminder.time
+        time: reminder.time,
+        repeat: reminder.repeat || 'daily',
+        date: reminder.date || null
       }));
     } catch (e) {
       /* sessionStorage unavailable */
@@ -637,10 +743,17 @@
     activeReminderAlert = {
       id: reminder.id,
       text: reminder.text,
-      time: reminder.time
+      time: reminder.time,
+      repeat: reminder.repeat || 'daily',
+      date: reminder.date || null
     };
     textEl.textContent = reminder.text;
-    timeEl.textContent = formatReminderDisplayTime(reminder.time);
+    if (reminder.repeat === 'once' && reminder.date) {
+      timeEl.textContent =
+        formatReminderDateLabel(reminder.date) + ' · ' + formatReminderDisplayTime(reminder.time);
+    } else {
+      timeEl.textContent = 'Every day · ' + formatReminderDisplayTime(reminder.time);
+    }
     alertEl.hidden = false;
     alertEl.classList.add('is-open');
     dismissBtn.focus();
@@ -694,11 +807,20 @@
 
     var now = new Date();
     var currentMinutes = (now.getHours() * 60) + now.getMinutes();
+    var today = todayKey();
     var fired = getFiredReminderIds();
 
     reminders.forEach(function (reminder) {
+      if (reminder.completed) {
+        return;
+      }
       if (fired.ids.indexOf(reminder.id) !== -1) {
         return;
+      }
+      if (reminder.repeat === 'once') {
+        if (reminder.date !== today) {
+          return;
+        }
       }
       var reminderMinutes = parseReminderTimeToMinutes(reminder.time);
       if (reminderMinutes === null) {
@@ -722,12 +844,21 @@
     }
     var now = new Date();
     var currentMinutes = (now.getHours() * 60) + now.getMinutes();
+    var today = todayKey();
     var i;
     var minutes;
+    var reminder;
     for (i = 0; i < reminders.length; i++) {
-      minutes = parseReminderTimeToMinutes(reminders[i].time);
+      reminder = reminders[i];
+      if (reminder.completed) {
+        continue;
+      }
+      if (reminder.repeat === 'once' && reminder.date !== today) {
+        continue;
+      }
+      minutes = parseReminderTimeToMinutes(reminder.time);
       if (minutes !== null && minutes > currentMinutes) {
-        return reminders[i];
+        return reminder;
       }
     }
     return null;
@@ -806,8 +937,11 @@
     getReminders: getReminders,
     saveReminders: saveReminders,
     formatReminderDisplayTime: formatReminderDisplayTime,
+    formatReminderDateLabel: formatReminderDateLabel,
     remindersToCompanionFact: remindersToCompanionFact,
     parseReminderTimeToMinutes: parseReminderTimeToMinutes,
+    normalizeReminderDate: normalizeReminderDate,
+    todayKey: todayKey,
     getNextUpcomingReminder: getNextUpcomingReminder,
     checkDueReminders: checkDueReminders,
     requestNotificationPermission: requestNotificationPermission,

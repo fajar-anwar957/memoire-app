@@ -162,6 +162,10 @@
   <meta property="og:type" content="website">
 </head>
 <body>
+  <script>
+    // Splash never shows main tabs; class blocks any stray/cached nav markup.
+    document.documentElement.classList.add('no-main-nav');
+  </script>
   <div class="splash" id="splash">
     <svg class="splash__icon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mémoire forget-me-not flower">
       <g class="splash__petals">
@@ -182,9 +186,23 @@
     <p class="splash__tagline">Your gentle memory companion</p>
     <p class="splash__continue" id="splash-continue" aria-live="polite" hidden>Tap to continue</p>
   </div>
+  <!-- Bottom nav is intentionally omitted on splash until a profile exists. -->
+  <style>
+    /* Belt-and-suspenders: block any cached/stray main tab bar on splash. */
+    .dashboard-nav { display: none !important; }
+  </style>
   <script src="{{ url_for('static', filename='js/core.js') }}"></script>
   <script>
     (function () {
+      // Safety: never show main tab nav before onboarding is complete.
+      document.documentElement.classList.add('no-main-nav');
+      if (window.MemoireCore && !window.MemoireCore.getActiveProfile()) {
+        var strayNav = document.querySelector('.dashboard-nav');
+        if (strayNav) {
+          strayNav.hidden = true;
+          strayNav.remove();
+        }
+      }
       var ready = false;
       var navigating = false;
       var progressEl = document.getElementById('splash-progress');

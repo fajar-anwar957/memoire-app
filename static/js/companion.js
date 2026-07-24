@@ -19,6 +19,37 @@
   // published crisis resources for the deployment region.
   var CRISIS_HELPLINE_DISPLAY = '116 123';
   var CRISIS_HELPLINE_TEL = '116123';
+  // Sequences of 3+ digits, optionally grouped with spaces/dashes or a leading +.
+  var PHONE_LIKE_PATTERN = /\+?[\d][\d\s\-.]{1,}\d/g;
+
+  function stripHallucinatedPhoneNumbers(text) {
+    var raw = String(text == null ? '' : text);
+    if (!raw) {
+      return raw;
+    }
+    var match = raw.match(PHONE_LIKE_PATTERN);
+    if (!match) {
+      return raw;
+    }
+    var hasDigitRun = match.some(function (chunk) {
+      return (chunk.match(/\d/g) || []).length >= 3;
+    });
+    if (!hasDigitRun) {
+      return raw;
+    }
+    console.warn(
+      '[Mémoire safety] Stripped phone-number-like text from companion reply before display:',
+      match
+    );
+    return raw
+      .replace(PHONE_LIKE_PATTERN, function (chunk) {
+        return (chunk.match(/\d/g) || []).length >= 3 ? '' : chunk;
+      })
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/ ?([,;:.!?])/g, '$1')
+      .replace(/\s+\n/g, '\n')
+      .trim();
+  }
 
   var chat = document.getElementById('companion-chat');
   var form = document.getElementById('companion-form');
@@ -27,6 +58,108 @@
   var micStatus = document.getElementById('companion-mic-status');
   var presenceEl = document.getElementById('companion-presence');
   var presenceLabel = document.getElementById('companion-presence-label');
+  var startersEl = document.getElementById('companion-starters');
+  var companionTitleEl = document.querySelector('.companion__title');
+
+  var COMPANION_NAME_KEY = 'memoireCompanionName';
+  var COMPANION_NAME_SKIP_KEY = 'memoireCompanionNameSkipped';
+  var DEFAULT_COMPANION_NAME = 'Companion';
+  var CONVERSATION_STARTERS = [
+    { text: 'Tell me about a happy memory' },
+    { text: 'What day is it today?' },
+    { text: "I'd like some company" },
+    { text: 'Can we talk for a bit?' }
+  ];
+  var NAMING_OPENERS = [
+    "Hello, I hope you're doing well today. I'm your friend, and you can call me whatever you like. What would you like to name me?",
+    "Hello — it's lovely to see you. I'm here as your friend. You can give me any name you like. What shall I be called?",
+    "Hi there. I hope your day is going gently. I'm your companion — what would you like to name me?",
+    "Hello. I'm glad you're here. I'm your friend, and I'd like a name from you. What would you like to call me?"
+  ];
+  var NAMING_CONFIRMATIONS = [
+    '{name} — that\'s a lovely name. I\'ll answer to {name} from now on.',
+    'I\'ll answer to {name}. Thank you for naming me.',
+    '{name} — I like that. You can call me {name}.',
+    'What a nice name. From now on, I\'m {name}.'
+  ];
+  var NAMING_REASKS = [
+    'I\'m glad you shared that. When you\'re ready, what would you like to call me?',
+    'Thank you for telling me. I\'d still love a simple name — what shall I answer to?',
+    'That matters, and I\'m listening. What name would you like me to have?'
+  ];
+
+  var COMPANION_OPENERS = [
+    'Hello — I\'m glad you\'re here. What would you like to talk about?',
+    'Hi there. I\'m ready whenever you are.',
+    'Welcome back. We can chat about anything you like.',
+    'It\'s nice to see you. Shall we begin with a memory, or just a quiet chat?',
+    'I\'m here with you. Take your time — I\'m listening.',
+    'Hello. Would you like to share something from your day?'
+  ];
+
+  var namingMode = false;
+  var namingAskCount = 0;
+
+  function pickRandom(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function getStoredCompanionName() {
+    try {
+      var stored = localStorage.getItem(COMPANION_NAME_KEY);
+      if (!stored) {
+        return '';
+      }
+      return String(stored).trim();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function setStoredCompanionName(name) {
+    var cleaned = String(name || '').trim();
+    if (!cleaned) {
+      return '';
+    }
+    try {
+      localStorage.setItem(COMPANION_NAME_KEY, cleaned);
+    } catch (e) {
+      /* ignore quota errors */
+    }
+    return cleaned;
+  }
+
+  function wasNamingSkippedThisSession() {
+    try {
+      return sessionStorage.getItem(COMPANION_NAME_SKIP_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function skipNamingThisSession() {
+    try {
+      sessionStorage.setItem(COMPANION_NAME_SKIP_KEY, '1');
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function needsCompanionNaming() {
+    return !getStoredCompanionName() && !wasNamingSkippedThisSession();
+  }
+
+  function getCompanionNameForApi() {
+    return getStoredCompanionName() || DEFAULT_COMPANION_NAME;
+  }
+
+  function updateCompanionHeader() {
+    if (!companionTitleEl) {
+      return;
+    }
+    var stored = getStoredCompanionName();
+    companionTitleEl.textContent = stored || 'Your Companion';
+  }
 
   var speechApi = window.MemoireActivities || {};
   var speechSupported = !!speechApi.speechSupported;
@@ -105,6 +238,163 @@
       time: new Date().toISOString()
     });
     saveChatSessionToStorage();
+  }
+
+  function sessionHasUserMessage() {
+    return chatSessionMessages.some(function (entry) {
+      return entry && entry.role === 'user';
+    });
+  }
+
+  function setStartersVisible(visible) {
+    if (!startersEl) {
+      return;
+    }
+    startersEl.hidden = !visible;
+    document.body.classList.toggle('companion-starters-visible', !!visible);
+  }
+
+  function hideStartersAfterFirstUserMessage() {
+    if (namingMode) {
+      return;
+    }
+    setStartersVisible(false);
+  }
+
+  function renderConversationStarterChips() {
+    if (!startersEl) {
+      return;
+    }
+    startersEl.innerHTML = CONVERSATION_STARTERS.map(function (item) {
+      return (
+        '<button type="button" class="companion__starter-chip" data-starter="' +
+        escapeAttr(item.text) +
+        '">' +
+        escapeHtmlText(item.text) +
+        '</button>'
+      );
+    }).join('');
+  }
+
+  function escapeHtmlText(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escapeAttr(text) {
+    return escapeHtmlText(text).replace(/'/g, '&#39;');
+  }
+
+  function looksLikeCompanionName(text) {
+    var raw = String(text || '').trim();
+    if (!raw) {
+      return false;
+    }
+    if (/\?/.test(raw)) {
+      return false;
+    }
+    if (raw.length > 40) {
+      return false;
+    }
+    var words = raw.split(/\s+/).filter(Boolean);
+    if (words.length === 0 || words.length > 3) {
+      return false;
+    }
+    if (/^(can you|could you|please|i want|i need|i would|tell me|what|why|how|when|where|who|help|i feel|i'm|im |thanks|thank you)\b/i.test(raw)) {
+      return false;
+    }
+    return /^[A-Za-z][A-Za-z'\-]*(?:\s+[A-Za-z][A-Za-z'\-]*){0,2}$/.test(raw);
+  }
+
+  function formatNamingTemplate(template, name) {
+    return String(template || '').split('{name}').join(name);
+  }
+
+  function finishNaming(chosenName) {
+    var name = setStoredCompanionName(chosenName);
+    if (!name) {
+      return;
+    }
+    namingMode = false;
+    namingAskCount = 0;
+    updateCompanionHeader();
+    setStartersVisible(false);
+    var confirmText = formatNamingTemplate(pickRandom(NAMING_CONFIRMATIONS), name);
+    appendCompanionMessage(confirmText, false);
+    conversationHistory.push({ role: 'assistant', content: confirmText });
+    saveHistoryToStorage();
+    renderConversationStarterChips();
+    setStartersVisible(true);
+  }
+
+  function abandonNamingSilently() {
+    skipNamingThisSession();
+    namingMode = false;
+    namingAskCount = 0;
+    updateCompanionHeader();
+    setStartersVisible(false);
+    renderConversationStarterChips();
+  }
+
+  function handleNamingUserReply(text) {
+    if (looksLikeCompanionName(text)) {
+      finishNaming(text);
+      return 'named';
+    }
+
+    if (namingAskCount < 2) {
+      namingAskCount += 1;
+      var reask = pickRandom(NAMING_REASKS);
+      appendCompanionMessage(reask, false);
+      conversationHistory.push({ role: 'assistant', content: reask });
+      saveHistoryToStorage();
+      return 'reasked';
+    }
+
+    abandonNamingSilently();
+    return 'abandoned';
+  }
+
+  function maybeSeedOpeningMessage() {
+    if (chatSessionMessages.length > 0) {
+      return;
+    }
+    if (needsCompanionNaming()) {
+      var namingOpener = pickRandom(NAMING_OPENERS);
+      namingAskCount = 1;
+      appendCompanionMessage(namingOpener, false);
+      conversationHistory.push({ role: 'assistant', content: namingOpener });
+      saveHistoryToStorage();
+      return;
+    }
+    var opener = pickRandom(COMPANION_OPENERS);
+    appendCompanionMessage(opener, false);
+    conversationHistory.push({ role: 'assistant', content: opener });
+    saveHistoryToStorage();
+  }
+
+  function bootstrapCompanionUi() {
+    updateCompanionHeader();
+    renderStoredChatSession();
+
+    if (needsCompanionNaming()) {
+      namingMode = true;
+      if (chatSessionMessages.length === 0) {
+        maybeSeedOpeningMessage();
+      } else if (namingAskCount < 1) {
+        namingAskCount = 1;
+      }
+      setStartersVisible(false);
+      return;
+    }
+
+    namingMode = false;
+    maybeSeedOpeningMessage();
+    renderConversationStarterChips();
+    setStartersVisible(!sessionHasUserMessage());
   }
 
   function renderStoredChatSession() {
@@ -594,6 +884,8 @@
     if (remindersFact) {
       profileFacts.remindersForToday = maskMessage(remindersFact, nameTokens);
     }
+
+    profileFacts.companionName = getCompanionNameForApi();
 
     var datedMemories = buildDatedMemoriesForPrompt(nameTokens);
     if (datedMemories.length) {
@@ -1281,7 +1573,9 @@
         }
 
         console.log('Raw AI reply (before unmasking):', result.data.reply);
-        var reply = cleanResponseText(unmaskReply(result.data.reply, nameTokens));
+        var reply = stripHallucinatedPhoneNumbers(
+          cleanResponseText(unmaskReply(result.data.reply, nameTokens))
+        );
         console.log('Unmasked reply:', reply);
         conversationHistory.push({ role: 'user', content: userText });
         conversationHistory.push({ role: 'assistant', content: reply });
@@ -1369,10 +1663,41 @@
       return;
     }
 
+    if (namingMode) {
+      appendPatientMessage(text);
+      input.value = '';
+      var namingResult = handleNamingUserReply(text);
+      if (namingResult === 'abandoned') {
+        hideStartersAfterFirstUserMessage();
+        sendMessage(text);
+      }
+      return;
+    }
+
+    hideStartersAfterFirstUserMessage();
     appendPatientMessage(text);
     input.value = '';
     sendMessage(text);
   });
+
+  if (startersEl) {
+    startersEl.addEventListener('click', function (event) {
+      var chip = event.target.closest('.companion__starter-chip');
+      if (!chip || !startersEl.contains(chip) || isWaitingForReply || namingMode) {
+        return;
+      }
+
+      var text = (chip.getAttribute('data-starter') || chip.textContent || '').trim();
+      if (!text) {
+        return;
+      }
+      hideStartersAfterFirstUserMessage();
+      input.value = text;
+      appendPatientMessage(text);
+      input.value = '';
+      sendMessage(text);
+    });
+  }
 
   mic.addEventListener('click', function () {
     if (!recognition) {
@@ -1424,6 +1749,6 @@
   bindCallConfirmUi();
   bindCrisisSupportUi();
   setupSpeechRecognition();
-  renderStoredChatSession();
+  bootstrapCompanionUi();
   applyFeelingPrefill();
 })();

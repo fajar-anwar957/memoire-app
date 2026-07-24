@@ -208,9 +208,12 @@ body {
 }
 
 .wizard-panel .card {
-  max-height: 85vh;
-  max-height: 85dvh;
+  /* Leave room for wizard controls + fixed bottom nav so the last fields
+     (including Step 1 photo) stay tappable and are not covered by the nav. */
+  max-height: calc(100vh - 14.5rem);
+  max-height: calc(100dvh - 14.5rem);
   overflow-y: auto;
+  padding-bottom: 2.75rem;
 }
 
 .field {
@@ -1109,6 +1112,93 @@ body {
 .switch-profile-add:focus-visible {
   outline: 3px solid rgba(27, 58, 92, 0.45);
   outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.profile-companion-name {
+  margin-top: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-companion-name__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+.profile-companion-name__hint {
+  margin: 0 0 0.85rem;
+}
+
+.profile-companion-name__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.profile-companion-name__input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  font-family: inherit;
+  font-size: 1.05rem;
+  color: var(--text);
+  background: var(--input-field-bg);
+  border: 1.5px solid var(--input-field-border, rgba(30, 58, 95, 0.14));
+  border-radius: 10px;
+}
+
+.profile-companion-name__input:focus {
+  outline: 3px solid rgba(30, 58, 95, 0.35);
+  outline-offset: 2px;
+}
+
+.profile-companion-name__row .btn {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 48px;
+  padding: 0.75rem 1.15rem;
+}
+
+.profile-companion-name__save {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0.75rem 1.15rem;
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  background: #fff;
+  border: 2px solid rgba(30, 58, 95, 0.2);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.profile-companion-name__save:focus-visible {
+  outline: 3px solid rgba(30, 58, 95, 0.45);
+  outline-offset: 2px;
+}
+
+.profile-companion-name__status {
+  margin: 0.65rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--orange);
 }
 
 @media (hover: hover) and (pointer: fine) {

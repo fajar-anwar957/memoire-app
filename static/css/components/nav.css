@@ -18,6 +18,13 @@
   z-index: 80;
 }
 
+/* Author display:flex must not defeat the HTML hidden attribute.
+   html.no-main-nav is set on splash + pre-onboarding profile only. */
+.dashboard-nav[hidden],
+html.no-main-nav .dashboard-nav {
+  display: none !important;
+}
+
 /* Companion chat input sits above this nav (z-index 90) */
 
 .dashboard-nav__item {

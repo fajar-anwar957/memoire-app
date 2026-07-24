@@ -395,6 +395,8 @@
     });
 
     if (memoryPhotoInput && memoryPhotoPreview) {
+      memoryPhotoInput.setAttribute('accept', 'image/*');
+      memoryPhotoInput.removeAttribute('capture');
       memoryPhotoInput.addEventListener('change', function () {
         var file = memoryPhotoInput.files[0];
         if (!file) return;

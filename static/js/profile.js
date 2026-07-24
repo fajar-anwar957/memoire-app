@@ -177,13 +177,16 @@
     var input = document.getElementById(inputId);
     var preview = document.getElementById(previewId);
     if (!input || !preview) return;
+    // Gallery-first: never force the camera.
+    input.setAttribute('accept', 'image/*');
+    input.removeAttribute('capture');
     input.addEventListener('change', function () {
       var file = input.files[0];
       if (!file) return;
       compressImageToDataURL(input).then(function (dataUrl) {
         if (!dataUrl) return;
         preview.innerHTML =
-          '<img src="' + dataUrl + '" alt="Contact photo" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
+          '<img src="' + dataUrl + '" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
       });
     });
   }
@@ -348,6 +351,54 @@
     }
   }
 
+  function syncBottomNavVisibility() {
+    var nav = document.getElementById('profile-dashboard-nav');
+    var hasProfile = !!getActiveProfile();
+    document.documentElement.classList.toggle('no-main-nav', !hasProfile);
+    if (!nav) return;
+    // Only show main tabs once an active profile exists.
+    nav.hidden = !hasProfile;
+  }
+
+  var COMPANION_NAME_KEY = 'memoireCompanionName';
+
+  function loadCompanionNameIntoForm() {
+    var input = document.getElementById('companion-name-input');
+    if (!input) return;
+    try {
+      input.value = localStorage.getItem(COMPANION_NAME_KEY) || '';
+    } catch (err) {
+      input.value = '';
+    }
+  }
+
+  function initCompanionNameEditor() {
+    var input = document.getElementById('companion-name-input');
+    var saveBtn = document.getElementById('btn-save-companion-name');
+    var statusEl = document.getElementById('companion-name-status');
+    if (!input || !saveBtn) return;
+
+    loadCompanionNameIntoForm();
+
+    saveBtn.addEventListener('click', function () {
+      var name = String(input.value || '').trim();
+      if (!name) {
+        input.focus();
+        return;
+      }
+      try {
+        localStorage.setItem(COMPANION_NAME_KEY, name);
+      } catch (err) {
+        /* ignore */
+      }
+      input.value = name;
+      if (statusEl) {
+        statusEl.hidden = false;
+        statusEl.textContent = 'Saved — your companion is called ' + name + '.';
+      }
+    });
+  }
+
   function showSummaryView(profile) {
     editingProfileId = null;
     if (profileWizard) profileWizard.classList.add('profile-wizard--hidden');
@@ -358,8 +409,9 @@
       pageSubheading.textContent = '';
     }
     setProfileActionsVisible(true);
-    restoreHiddenPatientSections();
     renderSummary(profile);
+    loadCompanionNameIntoForm();
+    syncBottomNavVisibility();
   }
 
   function showWizardView() {
@@ -370,136 +422,12 @@
       pageSubheading.hidden = false;
       pageSubheading.textContent = profileMode === 'caregiver' ? "Let's get to know them." : "Let's get to know you.";
     }
+    syncBottomNavVisibility();
   }
 
   function setProfileActionsVisible(visible) {
     var actions = document.querySelector('.profile-summary__actions');
     if (actions) actions.hidden = !visible;
-  }
-
-  function getContactKnownAs(contact) {
-    if (contact && contact.preferredName && String(contact.preferredName).trim()) {
-      return String(contact.preferredName).trim();
-    }
-    var name = contact && contact.name ? String(contact.name).trim() : '';
-    if (!name) return '';
-    return name.split(/\s+/)[0] || '';
-  }
-
-  function setDetailLabel(ddId, labelText) {
-    var dd = document.getElementById(ddId);
-    if (!dd) return;
-    var detail = dd.closest('.profile-summary__detail');
-    if (!detail) return;
-    var dt = detail.querySelector('dt');
-    if (dt) dt.textContent = labelText;
-  }
-
-  function setSectionTitle(id, text) {
-    var el = document.getElementById(id);
-    if (el) el.textContent = text;
-  }
-
-  function resetPatientSummaryLabels() {
-    setSectionTitle('summary-section-about', 'About You');
-    setSectionTitle('summary-section-life', 'Life & Interests');
-    setDetailLabel('summary-age', 'Age');
-    setDetailLabel('summary-hometown', 'Hometown');
-    setDetailLabel('summary-work', 'Work');
-    setDetailLabel('summary-favourite-food', 'Favourite Food');
-  }
-
-  function renderContactSummary(contact) {
-    if (!contact) return;
-
-    var photoEl = document.getElementById('summary-photo');
-    if (photoEl) {
-      if (contact.photo && String(contact.photo).trim()) {
-        photoEl.innerHTML = '<img src="' + contact.photo + '" alt="Photo of ' + escapeHtml(formatDisplayName(contact.name) || 'contact') + '">';
-      } else {
-        photoEl.innerHTML = '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.75"/><path d="M21 15l-5-5L5 21"/></svg>';
-      }
-    }
-
-    function setText(id, value) {
-      var el = document.getElementById(id);
-      if (el) el.textContent = value;
-    }
-
-    var displayName = formatDisplayName(contact.name) || displayValue(contact.name);
-    var knownAs = formatDisplayName(getContactKnownAs(contact)) || '—';
-    var relationship = contact.relationship
-      ? (normalizeRelationship(contact.relationship) || String(contact.relationship).trim())
-      : '';
-    var phone = contact.phone ? String(contact.phone).trim() : '';
-
-    setText('summary-full-name', displayName);
-    setText('summary-preferred-name', knownAs);
-
-    setSectionTitle('summary-section-about', 'About Them');
-    setDetailLabel('summary-age', 'Relationship');
-    setDetailLabel('summary-hometown', 'Phone');
-    setText('summary-age', displayValue(relationship));
-    setText('summary-hometown', displayValue(phone));
-    setText('summary-work', '—');
-    setText('summary-favourite-food', '—');
-    setText('summary-hobbies', '—');
-    setText('summary-favourite-media', '—');
-    setText('summary-pets', '—');
-    setText('summary-happy-memory', '—');
-
-    ['summary-work', 'summary-favourite-food'].forEach(function (id) {
-      var dd = document.getElementById(id);
-      var detail = dd && dd.closest('.profile-summary__detail');
-      if (detail) detail.hidden = true;
-    });
-
-    var lifeSection = document.getElementById('summary-section-life');
-    if (lifeSection) {
-      lifeSection.hidden = true;
-      if (lifeSection.nextElementSibling) lifeSection.nextElementSibling.hidden = true;
-    }
-
-    var happyMemory = document.getElementById('summary-happy-memory');
-    if (happyMemory) {
-      var happyBlock = happyMemory.closest('.profile-summary__happy-memory');
-      if (happyBlock) happyBlock.hidden = true;
-    }
-
-    var contactsWrap = document.getElementById('summary-contacts-wrap');
-    if (contactsWrap) contactsWrap.hidden = true;
-  }
-
-  function showContactSummaryView(contact) {
-    editingProfileId = null;
-    if (profileWizard) profileWizard.classList.add('profile-wizard--hidden');
-    if (profileSummary) profileSummary.hidden = false;
-    if (pageHeading) pageHeading.textContent = 'Their Profile';
-    if (pageSubheading) {
-      pageSubheading.hidden = true;
-      pageSubheading.textContent = '';
-    }
-    setProfileActionsVisible(false);
-    renderContactSummary(contact);
-  }
-
-  function restoreHiddenPatientSections() {
-    resetPatientSummaryLabels();
-    ['summary-work', 'summary-favourite-food'].forEach(function (id) {
-      var dd = document.getElementById(id);
-      var detail = dd && dd.closest('.profile-summary__detail');
-      if (detail) detail.hidden = false;
-    });
-    var lifeSection = document.getElementById('summary-section-life');
-    if (lifeSection) {
-      lifeSection.hidden = false;
-      if (lifeSection.nextElementSibling) lifeSection.nextElementSibling.hidden = false;
-    }
-    var happyMemory = document.getElementById('summary-happy-memory');
-    if (happyMemory) {
-      var happyBlock = happyMemory.closest('.profile-summary__happy-memory');
-      if (happyBlock) happyBlock.hidden = false;
-    }
   }
 
   function resetWizardForm() {
@@ -641,6 +569,7 @@
   }
 
   var activeProfile = getActiveProfile();
+  syncBottomNavVisibility();
 
   function openImportantPeopleWizard() {
     var profile = getActiveProfile();
@@ -685,35 +614,6 @@
     editingProfileId = null;
     resetWizardForm();
     showWizardView();
-  } else if (urlParams.has('contact')) {
-    var contactIndex = parseInt(urlParams.get('contact'), 10);
-    var contactProfile = getActiveProfile();
-    var selectedContact = contactProfile &&
-      contactProfile.contacts &&
-      Array.isArray(contactProfile.contacts) &&
-      !isNaN(contactIndex) &&
-      contactIndex >= 0 &&
-      contactIndex < contactProfile.contacts.length
-      ? contactProfile.contacts[contactIndex]
-      : null;
-
-    if (selectedContact && (selectedContact.name || selectedContact.relationship || selectedContact.phone || selectedContact.photo)) {
-      showContactSummaryView(selectedContact);
-      var backLink = document.querySelector('.profile__back');
-      if (backLink) {
-        if (urlParams.get('from') === 'call') {
-          backLink.setAttribute('href', '/dashboard');
-          backLink.setAttribute('aria-label', 'Back to home');
-        } else {
-          backLink.setAttribute('href', '/memory-log');
-          backLink.setAttribute('aria-label', 'Back to Memories & People');
-        }
-      }
-    } else if (contactProfile) {
-      showSummaryView(contactProfile);
-    } else {
-      showWizardView();
-    }
   } else if (activeProfile) {
     showSummaryView(activeProfile);
   } else {
@@ -724,6 +624,8 @@
         localStorage.setItem('activeProfileId', String(fallbackProfiles[0].id));
       } catch (err) { /* ignore */ }
       showSummaryView(fallbackProfiles[0]);
+    } else {
+      showWizardView();
     }
   }
 
@@ -835,6 +737,7 @@
       closeModal('delete-profile-modal');
       resetWizardForm();
       showWizardView();
+      syncBottomNavVisibility();
     });
   }
 
@@ -875,21 +778,11 @@
     });
   }
 
-  var patientPhotoInput = document.getElementById('profile-photo');
-  var patientPhotoPreview = document.getElementById('profile-photo-preview');
-  if (patientPhotoInput && patientPhotoPreview) {
-    patientPhotoInput.addEventListener('change', function () {
-      var file = patientPhotoInput.files[0];
-      if (!file) return;
-      compressImageToDataURL(patientPhotoInput).then(function (dataUrl) {
-        if (!dataUrl) return;
-        patientPhotoPreview.innerHTML =
-          '<img src="' + dataUrl + '" alt="Your photo" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
-      });
-    });
-  }
+  // Same photo-upload path as Step 3 contacts.
+  setupContactPhoto('profile-photo', 'profile-photo-preview');
 
   wirePersonCard(1);
+  initCompanionNameEditor();
 
   function hasEmergencyContactInWizard() {
     var cards = getPersonCards();

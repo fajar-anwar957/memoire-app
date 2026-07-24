@@ -216,6 +216,60 @@
             >
           </div>
           <div class="reminder-form__field">
+            <p class="reminder-form__label" id="reminder-repeat-label">How often?</p>
+            <div class="reminder-repeat-picker" role="group" aria-labelledby="reminder-repeat-label">
+              <button type="button" class="reminder-repeat-picker__btn is-active" id="reminder-repeat-daily" aria-pressed="true">Every day</button>
+              <button type="button" class="reminder-repeat-picker__btn" id="reminder-repeat-once" aria-pressed="false">Just once</button>
+            </div>
+          </div>
+          <div class="reminder-form__field" id="reminder-date-field" hidden>
+            <p class="reminder-form__label" id="reminder-date-label">Which day?</p>
+            <div class="reminder-date-picker" role="group" aria-labelledby="reminder-date-label">
+              <div class="reminder-date-picker__col">
+                <label class="reminder-time-picker__col-label" for="reminder-day-input">Day</label>
+                <input
+                  type="number"
+                  id="reminder-day-input"
+                  class="reminder-time-picker__input"
+                  inputmode="numeric"
+                  min="1"
+                  max="31"
+                  step="1"
+                  maxlength="2"
+                  aria-label="Day"
+                >
+              </div>
+              <div class="reminder-date-picker__col">
+                <label class="reminder-time-picker__col-label" for="reminder-month-input">Month</label>
+                <input
+                  type="number"
+                  id="reminder-month-input"
+                  class="reminder-time-picker__input"
+                  inputmode="numeric"
+                  min="1"
+                  max="12"
+                  step="1"
+                  maxlength="2"
+                  aria-label="Month"
+                >
+              </div>
+              <div class="reminder-date-picker__col reminder-date-picker__col--year">
+                <label class="reminder-time-picker__col-label" for="reminder-year-input">Year</label>
+                <input
+                  type="number"
+                  id="reminder-year-input"
+                  class="reminder-time-picker__input"
+                  inputmode="numeric"
+                  min="2020"
+                  max="2100"
+                  step="1"
+                  maxlength="4"
+                  aria-label="Year"
+                >
+              </div>
+            </div>
+          </div>
+          <div class="reminder-form__field">
             <p class="reminder-form__label" id="reminder-time-label">What time?</p>
             <div class="reminder-time-picker" role="group" aria-labelledby="reminder-time-label">
               <div class="reminder-time-picker__fields">

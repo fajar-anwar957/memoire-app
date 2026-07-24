@@ -632,6 +632,8 @@
     });
 
     if (personModalState.photoInput && personModalState.photoPreview) {
+      personModalState.photoInput.setAttribute('accept', 'image/*');
+      personModalState.photoInput.removeAttribute('capture');
       personModalState.photoInput.addEventListener('change', function () {
         var file = personModalState.photoInput.files[0];
         if (!file) return;
@@ -780,18 +782,7 @@
               }
             });
           }
-          return;
         }
-
-        if (sectionEditMode.people) return;
-
-        var card = event.target.closest('.memory-log__person');
-        if (!card) return;
-
-        var index = parseInt(card.getAttribute('data-contact-index'), 10);
-        if (isNaN(index)) return;
-
-        window.location.href = '/profile?contact=' + encodeURIComponent(String(index));
       });
     }
 

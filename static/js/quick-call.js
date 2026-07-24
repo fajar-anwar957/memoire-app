@@ -102,6 +102,9 @@
           (relationship
             ? '<span class="call-contact-item__relationship">' + escapeHtml(relationship) + '</span>'
             : '') +
+          (dialNumber
+            ? '<span class="call-contact-item__phone">' + escapeHtml(phone) + '</span>'
+            : '<span class="call-contact-item__no-number">No number saved</span>') +
         '</span>' +
       '</span>';
 
@@ -110,7 +113,6 @@
         '<li>' +
           '<button type="button" class="call-contact-item" data-tel="' + escapeHtml(dialNumber) + '" aria-label="Call ' + escapeHtml(contactName) + ', ' + escapeHtml(phone) + '">' +
             identityHtml +
-            '<span class="call-contact-item__phone">' + escapeHtml(phone) + '</span>' +
           '</button>' +
         '</li>'
       );
@@ -120,7 +122,6 @@
       '<li>' +
         '<div class="call-contact-item call-contact-item--no-phone">' +
           identityHtml +
-          '<span class="call-contact-item__no-number">No number saved</span>' +
         '</div>' +
       '</li>'
     );

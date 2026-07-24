@@ -6,6 +6,9 @@
   var getReminders = window.MemoireCore.getReminders;
   var saveReminders = window.MemoireCore.saveReminders;
   var formatReminderDisplayTime = window.MemoireCore.formatReminderDisplayTime;
+  var formatReminderDateLabel = window.MemoireCore.formatReminderDateLabel;
+  var normalizeReminderDate = window.MemoireCore.normalizeReminderDate;
+  var todayKey = window.MemoireCore.todayKey;
   var getNextUpcomingReminder = window.MemoireCore.getNextUpcomingReminder;
   var checkDueReminders = window.MemoireCore.checkDueReminders;
   var requestNotificationPermission = window.MemoireCore.requestNotificationPermission;
@@ -106,8 +109,10 @@
     }
 
     banner.classList.remove('dashboard-next-up--empty');
-    textEl.textContent =
-      'Next up · ' + formatReminderDisplayTime(next.time) + ': ' + next.text;
+    var scheduleBit = next.repeat === 'once' && next.date
+      ? formatReminderDateLabel(next.date) + ' · ' + formatReminderDisplayTime(next.time)
+      : formatReminderDisplayTime(next.time);
+    textEl.textContent = 'Next up · ' + scheduleBit + ': ' + next.text;
   }
 
   function renderRemindersList() {
@@ -132,9 +137,18 @@
 
     listEl.innerHTML = reminders.map(function (item) {
       var displayTime = formatReminderDisplayTime(item.time);
+      var scheduleLabel = item.repeat === 'once'
+        ? (item.completed
+          ? 'Done · ' + formatReminderDateLabel(item.date)
+          : formatReminderDateLabel(item.date))
+        : 'Every day';
+      var doneClass = item.completed ? ' dashboard-reminders__item--done' : '';
       return (
-        '<li class="dashboard-reminders__item" data-reminder-id="' + escapeHtml(item.id) + '">' +
-          '<span class="dashboard-reminders__time">' + escapeHtml(displayTime) + '</span>' +
+        '<li class="dashboard-reminders__item' + doneClass + '" data-reminder-id="' + escapeHtml(item.id) + '">' +
+          '<span class="dashboard-reminders__meta">' +
+            '<span class="dashboard-reminders__time">' + escapeHtml(displayTime) + '</span>' +
+            '<span class="dashboard-reminders__schedule">' + escapeHtml(scheduleLabel) + '</span>' +
+          '</span>' +
           '<span class="dashboard-reminders__text">' + escapeHtml(item.text) + '</span>' +
           '<button type="button" class="dashboard-reminders__delete" data-delete-id="' + escapeHtml(item.id) + '" aria-label="Delete reminder: ' + escapeHtml(item.text) + '">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -212,9 +226,16 @@
     var minuteInput = document.getElementById('reminder-minute-input');
     var amBtn = document.getElementById('reminder-ampm-am');
     var pmBtn = document.getElementById('reminder-ampm-pm');
+    var dailyBtn = document.getElementById('reminder-repeat-daily');
+    var onceBtn = document.getElementById('reminder-repeat-once');
+    var dateField = document.getElementById('reminder-date-field');
+    var dayInput = document.getElementById('reminder-day-input');
+    var monthInput = document.getElementById('reminder-month-input');
+    var yearInput = document.getElementById('reminder-year-input');
     var titleEl = document.getElementById('reminder-modal-title');
     var hintEl = modal ? modal.querySelector('.reminder-modal__hint') : null;
-    if (!listEl || !addBtn || !modal || !form || !textInput || !hourInput || !minuteInput) {
+    if (!listEl || !addBtn || !modal || !form || !textInput || !hourInput || !minuteInput ||
+        !dailyBtn || !onceBtn || !dateField || !dayInput || !monthInput || !yearInput) {
       return;
     }
 
@@ -226,6 +247,49 @@
       pmBtn.classList.toggle('is-active', isPm);
       amBtn.setAttribute('aria-pressed', !isPm ? 'true' : 'false');
       pmBtn.setAttribute('aria-pressed', isPm ? 'true' : 'false');
+    }
+
+    function setRepeatMode(isOnce) {
+      dailyBtn.classList.toggle('is-active', !isOnce);
+      onceBtn.classList.toggle('is-active', isOnce);
+      dailyBtn.setAttribute('aria-pressed', !isOnce ? 'true' : 'false');
+      onceBtn.setAttribute('aria-pressed', isOnce ? 'true' : 'false');
+      dateField.hidden = !isOnce;
+    }
+
+    function isOnceMode() {
+      return onceBtn.classList.contains('is-active');
+    }
+
+    function setDateFieldsFromIso(isoDate) {
+      var normalized = normalizeReminderDate(isoDate) || todayKey();
+      var parts = normalized.split('-');
+      yearInput.value = parts[0];
+      monthInput.value = String(parseInt(parts[1], 10));
+      dayInput.value = String(parseInt(parts[2], 10));
+    }
+
+    function readDateFields() {
+      var day = clampInt(dayInput.value, 1, 31);
+      var month = clampInt(monthInput.value, 1, 12);
+      var year = clampInt(yearInput.value, 2020, 2100);
+      if (day === null || month === null || year === null) {
+        return null;
+      }
+      var iso =
+        year +
+        '-' +
+        (month < 10 ? '0' + month : String(month)) +
+        '-' +
+        (day < 10 ? '0' + day : String(day));
+      var normalized = normalizeReminderDate(iso);
+      if (!normalized) {
+        return null;
+      }
+      if (normalized < todayKey()) {
+        return null;
+      }
+      return normalized;
     }
 
     function setTimeFields(hour12, minute, isPm) {
@@ -277,6 +341,19 @@
 
     bindTimeInputGuards(hourInput, 1, 12, false);
     bindTimeInputGuards(minuteInput, 0, 59, true);
+    bindTimeInputGuards(dayInput, 1, 31, false);
+    bindTimeInputGuards(monthInput, 1, 12, false);
+    bindTimeInputGuards(yearInput, 2020, 2100, false);
+
+    dailyBtn.addEventListener('click', function () {
+      setRepeatMode(false);
+    });
+    onceBtn.addEventListener('click', function () {
+      setRepeatMode(true);
+      if (!dayInput.value || !monthInput.value || !yearInput.value) {
+        setDateFieldsFromIso(todayKey());
+      }
+    });
 
     function setModalCopy(isReschedule) {
       if (titleEl) {
@@ -320,6 +397,10 @@
       textInput.readOnly = !!editingReminderId;
       setTimeFields(hour12, minute, isPm);
 
+      var isOnce = opts.repeat === 'once';
+      setRepeatMode(isOnce);
+      setDateFieldsFromIso(opts.date || todayKey());
+
       modal.hidden = false;
       modal.classList.add('is-open');
 
@@ -337,6 +418,7 @@
       modal.hidden = true;
       editingReminderId = null;
       textInput.readOnly = false;
+      setRepeatMode(false);
       setModalCopy(false);
       addBtn.focus();
     }
@@ -348,7 +430,9 @@
       openReminderModal({
         reminderId: reminder.id,
         text: reminder.text,
-        time: reminder.time
+        time: reminder.time,
+        repeat: reminder.repeat || 'daily',
+        date: reminder.date || null
       });
     }
 
@@ -409,6 +493,16 @@
       }
 
       var time24 = to24Hour(timeParts.hour12, timeParts.minute, timeParts.isPm);
+      var repeat = isOnceMode() ? 'once' : 'daily';
+      var dateIso = null;
+      if (repeat === 'once') {
+        dateIso = readDateFields();
+        if (!dateIso) {
+          dayInput.focus();
+          return;
+        }
+      }
+
       var reminders = getReminders();
 
       if (editingReminderId) {
@@ -421,7 +515,10 @@
           return {
             id: item.id,
             text: item.text,
-            time: time24
+            time: time24,
+            repeat: repeat,
+            date: dateIso,
+            completed: false
           };
         });
         if (!updated) {
@@ -436,7 +533,10 @@
         reminders.push({
           id: 'reminder-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
           text: text,
-          time: time24
+          time: time24,
+          repeat: repeat,
+          date: dateIso,
+          completed: false
         });
         saveReminders(reminders);
       }

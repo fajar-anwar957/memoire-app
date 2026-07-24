@@ -100,29 +100,34 @@
 .call-contact-item__details {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.2rem;
   min-width: 0;
+  flex: 1;
 }
 
 .call-contact-item__name {
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .call-contact-item__relationship {
   font-size: 0.9375rem;
   color: var(--color-text-muted);
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .call-contact-item__phone {
-  flex-shrink: 0;
+  display: block;
+  margin-top: 0.15rem;
   font-size: 1rem;
   font-weight: 600;
   color: var(--navy);
   line-height: 1.35;
   letter-spacing: normal;
+  overflow-wrap: anywhere;
   pointer-events: none;
 }
 
@@ -132,6 +137,8 @@
 }
 
 .call-contact-item__no-number {
+  display: block;
+  margin-top: 0.15rem;
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--color-text-muted);
@@ -193,20 +200,20 @@
   outline-offset: 3px;
 }
 
-/* Companion: clear input bar + nav */
+/* Companion: clear composer (starters + input) + nav */
 body:has(.companion__input-bar) .memoire-call-fab {
-  bottom: calc(92px + 80px + 0.85rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--companion-nav-h, 92px) + var(--companion-composer-h, 80px) + 0.85rem);
 }
 
 @media (min-width: 768px) {
   body:has(.companion__input-bar) .memoire-call-fab {
-    bottom: calc(96px + 84px + 0.85rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--companion-nav-h, 96px) + var(--companion-composer-h, 84px) + 0.85rem);
   }
 }
 
 @media (max-width: 719px) {
   body.keyboard-open:has(.companion__input-bar) .memoire-call-fab {
-    bottom: calc(80px + 0.85rem);
+    bottom: calc(var(--companion-input-h, 80px) + 0.85rem);
   }
 }
 

@@ -21,6 +21,20 @@
   <meta property="og:type" content="website">
 </head>
 <body>
+  <script>
+    // Hide main tabs until an active profile exists (prevents flash during wizard).
+    (function () {
+      try {
+        var raw = localStorage.getItem('patientProfiles');
+        var profiles = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(profiles) || !profiles.length) {
+          document.documentElement.classList.add('no-main-nav');
+        }
+      } catch (err) {
+        document.documentElement.classList.add('no-main-nav');
+      }
+    })();
+  </script>
   <div class="page">
     <header class="profile__header page-header">
       <a href="/dashboard" class="profile__back page-header__back" aria-label="Back to home">
@@ -111,6 +125,17 @@
         <button type="button" id="btn-switch-profile" class="btn profile-summary-btn" hidden>Switch Profile</button>
         <button type="button" id="btn-delete-profile" class="save-btn profile-summary-btn profile-summary-btn--delete">Delete Profile</button>
       </div>
+
+      <section class="profile-companion-name card" id="companion-name-card" aria-labelledby="companion-name-heading">
+        <h2 class="profile-companion-name__title" id="companion-name-heading">Companion name</h2>
+        <p class="helper-text profile-companion-name__hint">What should we call your companion?</p>
+        <div class="profile-companion-name__row">
+          <label class="visually-hidden" for="companion-name-input">Companion name</label>
+          <input type="text" id="companion-name-input" class="profile-companion-name__input" maxlength="40" autocomplete="off" placeholder="e.g. Nora">
+          <button type="button" id="btn-save-companion-name" class="profile-companion-name__save">Save name</button>
+        </div>
+        <p class="profile-companion-name__status" id="companion-name-status" aria-live="polite" hidden></p>
+      </section>
     </section>
 
     <div class="wizard" id="profile-wizard">
@@ -153,7 +178,7 @@
             </div>
 
             <div class="field">
-              <span class="field-label">Photo</span>
+              <label class="field-label" for="profile-photo">Photo</label>
               <div class="photo-upload">
                 <div class="photo-preview" id="profile-photo-preview">
                   <svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -333,7 +358,7 @@
     </div>
   </div>
 
-  <nav class="dashboard-nav" aria-label="Main navigation">
+  <nav class="dashboard-nav" id="profile-dashboard-nav" aria-label="Main navigation" hidden>
     <a href="/dashboard" class="dashboard-nav__item">
       <svg class="dashboard-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
       <span class="dashboard-nav__label">Home</span>

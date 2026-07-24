@@ -277,4 +277,6 @@ p.modal-body {
   height: 100%;
   opacity: 0;
   cursor: pointer;
+  z-index: 2;
+  font-size: 0;
 }
