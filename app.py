@@ -103,6 +103,10 @@ SYSTEM_PROMPT = (
 def splash():
     return render_template('splash.html')
 
+@app.route('/favicon.ico')
+def favicon():
+    return redirect(url_for('static', filename='assets/memoire-icon.png'))
+
 @app.route('/onboarding')
 def onboarding():
     return redirect(url_for('profile'))
