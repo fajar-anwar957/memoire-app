@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-  <title>Memories &amp; People-Mémoire</title>
+  <title>Memories &amp; People — Mémoire</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/nav.css') }}">
@@ -11,6 +11,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/call-modal.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/memory-log.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/memoire-icon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='assets/memoire-icon.png') }}">
+  <meta property="og:title" content="Mémoire">
+  <meta property="og:description" content="Your gentle memory companion">
+  <meta property="og:image" content="https://my-memoire.vercel.app/static/assets/memoire-icon.png">
+  <meta property="og:url" content="https://my-memoire.vercel.app">
+  <meta property="og:type" content="website">
 </head>
 <body>
   <main class="memory-log">
