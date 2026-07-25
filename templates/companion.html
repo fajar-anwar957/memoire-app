@@ -49,35 +49,65 @@
           placeholder="Type a message..."
           autocomplete="off"
         >
-        <button type="submit" class="companion__send" aria-label="Send message">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M22 2L11 13"/>
-            <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
-          </svg>
-        </button>
-        <div class="companion__mic-group">
-          <button type="button" class="companion__mic" id="companion-mic" aria-label="Voice input" aria-pressed="false">
-            <svg class="companion__mic-flower" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <g>
-                <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(0 50 50)"/>
-                <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(60 50 50)"/>
-                <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(120 50 50)"/>
-                <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(180 50 50)"/>
-                <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(240 50 50)"/>
-                <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(300 50 50)"/>
-              </g>
-              <circle cx="50" cy="50" r="24" fill="var(--orange)"/>
-              <g stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
-                <rect x="41" y="33" width="18" height="22" rx="9" fill="#ffffff" stroke="none"/>
-                <path d="M37,55 Q37,67 50,67 Q63,67 63,55"/>
-                <line x1="50" y1="67" x2="50" y2="75"/>
-                <line x1="42" y1="75" x2="58" y2="75"/>
-              </g>
-            </svg>
-          </button>
-          <span class="companion__mic-status" id="companion-mic-status" hidden aria-live="polite">Listening…</span>
+        <div class="companion__actions">
+          <div class="companion__action">
+            <button type="submit" class="companion__send companion__action-btn" aria-label="Send">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 2L11 13"/>
+                <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+              </svg>
+            </button>
+            <span class="companion__action-label" id="companion-send-label">Send</span>
+          </div>
+          <div class="companion__action">
+            <button type="button" class="companion__mic companion__action-btn companion__action-btn--flower" id="voice-mode-enter" aria-label="Talk to me">
+              <svg class="companion__mic-flower" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <g>
+                  <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(0 50 50)"/>
+                  <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(60 50 50)"/>
+                  <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(120 50 50)"/>
+                  <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(180 50 50)"/>
+                  <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(240 50 50)"/>
+                  <ellipse cx="50" cy="20" rx="11" ry="20" fill="var(--navy)" transform="rotate(300 50 50)"/>
+                </g>
+                <circle cx="50" cy="50" r="24" fill="var(--orange)"/>
+                <g stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                  <rect x="41" y="33" width="18" height="22" rx="9" fill="#ffffff" stroke="none"/>
+                  <path d="M37,55 Q37,67 50,67 Q63,67 63,55"/>
+                  <line x1="50" y1="67" x2="50" y2="75"/>
+                  <line x1="42" y1="75" x2="58" y2="75"/>
+                </g>
+              </svg>
+            </button>
+            <span class="companion__action-label" id="companion-talk-label">Talk to me</span>
+          </div>
+          <div class="companion__action">
+            <button type="button" class="companion__voice-enter companion__action-btn" id="companion-mic" aria-label="Speak to type" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+                <path d="M8 22h8"/>
+              </svg>
+            </button>
+            <span class="companion__action-label" id="companion-dictate-label">Speak to type</span>
+          </div>
         </div>
+        <span class="companion__mic-status" id="companion-mic-status" hidden aria-live="polite">Listening…</span>
       </form>
+    </div>
+  </div>
+
+  <div id="voice-mode" class="voice-mode" hidden aria-hidden="true">
+    <div class="voice-mode__inner">
+      <button type="button" id="voice-orb" class="voice-orb" data-state="idle" aria-label="Tap to interrupt and speak">
+        <span class="voice-orb__core" aria-hidden="true"></span>
+        <span class="voice-orb__ring voice-orb__ring--outer" aria-hidden="true"></span>
+        <span class="voice-orb__ring voice-orb__ring--inner" aria-hidden="true"></span>
+      </button>
+      <p id="voice-status" class="voice-mode__status" aria-live="polite">Listening…</p>
+      <p id="voice-transcript" class="voice-mode__transcript" aria-live="polite"></p>
+      <button type="button" id="voice-exit" class="voice-mode__exit">I'm done for today</button>
     </div>
   </div>
 

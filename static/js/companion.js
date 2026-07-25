@@ -19,7 +19,8 @@
   // published crisis resources for the deployment region.
   var CRISIS_HELPLINE_DISPLAY = '116 123';
   var CRISIS_HELPLINE_TEL = '116123';
-  // Sequences of 3+ digits, optionally grouped with spaces/dashes or a leading +.
+  // Sequences of digits, optionally grouped with spaces/dashes or a leading +.
+  // Years (1900–2099) are preserved; only 7+ digit runs are stripped as phone-like.
   var PHONE_LIKE_PATTERN = /\+?[\d][\d\s\-.]{1,}\d/g;
 
   function stripHallucinatedPhoneNumbers(text) {
@@ -31,9 +32,24 @@
     if (!match) {
       return raw;
     }
-    var hasDigitRun = match.some(function (chunk) {
-      return (chunk.match(/\d/g) || []).length >= 3;
-    });
+
+    function isBareYearChunk(chunk) {
+      var bare = String(chunk || '').replace(/[\s\-.]/g, '');
+      if (!/^\d{4}$/.test(bare)) {
+        return false;
+      }
+      var year = parseInt(bare, 10);
+      return year >= 1900 && year <= 2099;
+    }
+
+    function shouldStripChunk(chunk) {
+      if (isBareYearChunk(chunk)) {
+        return false;
+      }
+      return (chunk.match(/\d/g) || []).length >= 7;
+    }
+
+    var hasDigitRun = match.some(shouldStripChunk);
     if (!hasDigitRun) {
       return raw;
     }
@@ -43,11 +59,26 @@
     );
     return raw
       .replace(PHONE_LIKE_PATTERN, function (chunk) {
-        return (chunk.match(/\d/g) || []).length >= 3 ? '' : chunk;
+        return shouldStripChunk(chunk) ? '' : chunk;
       })
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/ ?([,;:.!?])/g, '$1')
       .replace(/\s+\n/g, '\n')
+      .trim();
+  }
+
+  function stripCompanionSelfNaming(text) {
+    var name = getStoredCompanionName();
+    if (!name) return text;
+    var esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return String(text || '')
+      // leading "Nora:" / "Nora —" / "Nora," at the very start
+      .replace(new RegExp('^\\s*' + esc + '\\s*[:,\\-–—]\\s*', 'i'), '')
+      // third-person self-reference: "Nora is", "Nora has", "Nora will"
+      .replace(new RegExp('\\b' + esc + '\\b(?=\\s+(is|was|has|have|will|can|would|does|did)\\b)', 'gi'), 'I')
+      .replace(/\bI is\b/g, 'I am')
+      .replace(/\bI has\b/g, 'I have')
+      .replace(/\bI does\b/g, 'I do')
       .trim();
   }
 
@@ -56,6 +87,12 @@
   var input = document.getElementById('companion-input');
   var mic = document.getElementById('companion-mic');
   var micStatus = document.getElementById('companion-mic-status');
+  var voiceEnterBtn = document.getElementById('voice-mode-enter');
+  var voiceModeEl = document.getElementById('voice-mode');
+  var voiceOrbEl = document.getElementById('voice-orb');
+  var voiceStatusEl = document.getElementById('voice-status');
+  var voiceTranscriptEl = document.getElementById('voice-transcript');
+  var voiceExitBtn = document.getElementById('voice-exit');
   var presenceEl = document.getElementById('companion-presence');
   var presenceLabel = document.getElementById('companion-presence-label');
   var startersEl = document.getElementById('companion-starters');
@@ -82,11 +119,6 @@
     '{name} — I like that. You can call me {name}.',
     'What a nice name. From now on, I\'m {name}.'
   ];
-  var NAMING_REASKS = [
-    'I\'m glad you shared that. When you\'re ready, what would you like to call me?',
-    'Thank you for telling me. I\'d still love a simple name — what shall I answer to?',
-    'That matters, and I\'m listening. What name would you like me to have?'
-  ];
 
   var COMPANION_OPENERS = [
     'Hello — I\'m glad you\'re here. What would you like to talk about?',
@@ -98,7 +130,6 @@
   ];
 
   var namingMode = false;
-  var namingAskCount = 0;
 
   function pickRandom(list) {
     return list[Math.floor(Math.random() * list.length)];
@@ -154,11 +185,43 @@
   }
 
   function updateCompanionHeader() {
-    if (!companionTitleEl) {
-      return;
-    }
     var stored = getStoredCompanionName();
-    companionTitleEl.textContent = stored || 'Your Companion';
+    if (companionTitleEl) {
+      companionTitleEl.textContent = stored
+        ? 'Your Companion — ' + stored
+        : 'Your Companion';
+    }
+    updateCompanionActionLabels();
+  }
+
+  function updateCompanionActionLabels() {
+    var talkBtn = document.getElementById('voice-mode-enter');
+    var talkLabel = document.getElementById('companion-talk-label');
+    var dictateBtn = document.getElementById('companion-mic');
+    var dictateLabel = document.getElementById('companion-dictate-label');
+    var sendBtn = form ? form.querySelector('.companion__send') : null;
+    var sendLabel = document.getElementById('companion-send-label');
+    var stored = getStoredCompanionName();
+    var talkText = stored ? ('Talk to ' + stored) : 'Talk to me';
+
+    if (talkLabel) {
+      talkLabel.textContent = talkText;
+    }
+    if (talkBtn) {
+      talkBtn.setAttribute('aria-label', talkText);
+    }
+    if (dictateLabel) {
+      dictateLabel.textContent = 'Speak to type';
+    }
+    if (dictateBtn) {
+      dictateBtn.setAttribute('aria-label', 'Speak to type');
+    }
+    if (sendLabel) {
+      sendLabel.textContent = 'Send';
+    }
+    if (sendBtn) {
+      sendBtn.setAttribute('aria-label', 'Send');
+    }
   }
 
   var speechApi = window.MemoireActivities || {};
@@ -319,7 +382,6 @@
       return;
     }
     namingMode = false;
-    namingAskCount = 0;
     updateCompanionHeader();
     setStartersVisible(false);
     var confirmText = formatNamingTemplate(pickRandom(NAMING_CONFIRMATIONS), name);
@@ -333,29 +395,9 @@
   function abandonNamingSilently() {
     skipNamingThisSession();
     namingMode = false;
-    namingAskCount = 0;
     updateCompanionHeader();
     setStartersVisible(false);
     renderConversationStarterChips();
-  }
-
-  function handleNamingUserReply(text) {
-    if (looksLikeCompanionName(text)) {
-      finishNaming(text);
-      return 'named';
-    }
-
-    if (namingAskCount < 2) {
-      namingAskCount += 1;
-      var reask = pickRandom(NAMING_REASKS);
-      appendCompanionMessage(reask, false);
-      conversationHistory.push({ role: 'assistant', content: reask });
-      saveHistoryToStorage();
-      return 'reasked';
-    }
-
-    abandonNamingSilently();
-    return 'abandoned';
   }
 
   function maybeSeedOpeningMessage() {
@@ -364,7 +406,6 @@
     }
     if (needsCompanionNaming()) {
       var namingOpener = pickRandom(NAMING_OPENERS);
-      namingAskCount = 1;
       appendCompanionMessage(namingOpener, false);
       conversationHistory.push({ role: 'assistant', content: namingOpener });
       saveHistoryToStorage();
@@ -384,8 +425,6 @@
       namingMode = true;
       if (chatSessionMessages.length === 0) {
         maybeSeedOpeningMessage();
-      } else if (namingAskCount < 1) {
-        namingAskCount = 1;
       }
       setStartersVisible(false);
       return;
@@ -418,6 +457,512 @@
   var isWaitingForReply = false;
   var recognition = null;
   var isListening = false;
+  var voiceSpeechWatchTimer = null;
+  var voiceMode = {
+    isActive: false,
+    phase: 'idle',
+    consecutiveErrors: 0,
+    wasSuspendedForSafety: false,
+    resumeInFlight: false,
+    bargeInAvailable: false,
+    mediaStream: null,
+    audioContext: null,
+    analyser: null,
+    bargeInTimer: null,
+    bargeInArmedAt: 0,
+    echoFloor: 0,
+    echoCalibrated: false,
+    echoSamples: [],
+    aboveCount: 0,
+
+    setOrb: function (state) {
+      var prev = voiceOrbEl ? voiceOrbEl.getAttribute('data-state') : '';
+      if (voiceOrbEl) {
+        voiceOrbEl.setAttribute('data-state', state || 'idle');
+      }
+      if (state === 'speaking') {
+        this.startBargeInWatch();
+      } else if (prev === 'speaking' && state !== 'speaking') {
+        this.stopBargeInWatch();
+      }
+    },
+
+    setStatus: function (text) {
+      if (voiceStatusEl) {
+        voiceStatusEl.textContent = text || '';
+      }
+    },
+
+    setTranscript: function (text) {
+      if (voiceTranscriptEl) {
+        voiceTranscriptEl.textContent = text || '';
+      }
+    },
+
+    isSpeechBusy: function () {
+      return !!(
+        window.speechSynthesis &&
+        (window.speechSynthesis.speaking || window.speechSynthesis.pending)
+      );
+    },
+
+    clearSpeechWatch: function () {
+      if (voiceSpeechWatchTimer) {
+        clearInterval(voiceSpeechWatchTimer);
+        voiceSpeechWatchTimer = null;
+      }
+    },
+
+    measureRms: function () {
+      if (!this.analyser) {
+        return 0;
+      }
+      var buf = new Uint8Array(this.analyser.fftSize);
+      this.analyser.getByteTimeDomainData(buf);
+      var sum = 0;
+      var i;
+      for (i = 0; i < buf.length; i++) {
+        var v = (buf[i] - 128) / 128;
+        sum += v * v;
+      }
+      return Math.sqrt(sum / buf.length);
+    },
+
+    stopBargeInWatch: function () {
+      if (this.bargeInTimer) {
+        clearInterval(this.bargeInTimer);
+        this.bargeInTimer = null;
+      }
+      this.bargeInArmedAt = 0;
+      this.echoFloor = 0;
+      this.echoCalibrated = false;
+      this.echoSamples = [];
+      this.aboveCount = 0;
+    },
+
+    startBargeInWatch: function () {
+      var self = this;
+      this.stopBargeInWatch();
+      if (!this.bargeInAvailable || !this.analyser) {
+        return;
+      }
+
+      this.bargeInArmedAt = Date.now();
+      this.echoSamples = [];
+      this.echoFloor = 0;
+      this.echoCalibrated = false;
+      this.aboveCount = 0;
+
+      this.bargeInTimer = setInterval(function () {
+        if (!self.isActive || self.phase !== 'speaking') {
+          self.stopBargeInWatch();
+          return;
+        }
+
+        var elapsed = Date.now() - self.bargeInArmedAt;
+        // Arm delay: ignore first 500ms
+        if (elapsed < 500) {
+          return;
+        }
+
+        var rms = self.measureRms();
+
+        // Calibration window: next 400ms
+        if (elapsed < 900) {
+          self.echoSamples.push(rms);
+          return;
+        }
+
+        if (!self.echoCalibrated) {
+          var total = 0;
+          var s;
+          for (s = 0; s < self.echoSamples.length; s++) {
+            total += self.echoSamples[s];
+          }
+          self.echoFloor = self.echoSamples.length
+            ? total / self.echoSamples.length
+            : 0;
+          self.echoCalibrated = true;
+        }
+
+        var threshold = Math.max(self.echoFloor * 2.5, 0.045);
+        if (rms > threshold) {
+          self.aboveCount += 1;
+          if (self.aboveCount >= 4) {
+            self.interruptSpeaking();
+          }
+        } else {
+          self.aboveCount = 0;
+        }
+      }, 100);
+    },
+
+    interruptSpeaking: function () {
+      if (!this.isActive || this.phase !== 'speaking') {
+        return;
+      }
+
+      this.stopBargeInWatch();
+
+      if (typeof speechApi.cancelSpeech === 'function') {
+        speechApi.cancelSpeech();
+      } else if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      this.clearSpeechWatch();
+      clearSpeakActiveState();
+
+      this.phase = 'listening';
+      this.setOrb('listening');
+      this.setStatus('Listening…');
+      this.startListening();
+    },
+
+    releaseBargeInAudio: function () {
+      this.stopBargeInWatch();
+      if (this.mediaStream) {
+        this.mediaStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      }
+      if (this.audioContext) {
+        try {
+          this.audioContext.close();
+        } catch (e) {
+          /* already closed */
+        }
+      }
+      this.mediaStream = null;
+      this.audioContext = null;
+      this.analyser = null;
+      this.bargeInAvailable = false;
+    },
+
+    acquireBargeInAudio: function () {
+      var self = this;
+      this.bargeInAvailable = false;
+      this.mediaStream = null;
+      this.audioContext = null;
+      this.analyser = null;
+
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        console.warn('[Mémoire voice] Barge-in unavailable: getUserMedia not supported');
+        return Promise.resolve();
+      }
+
+      return navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      }).then(function (stream) {
+        if (!self.isActive) {
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          return;
+        }
+
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+          console.warn('[Mémoire voice] Barge-in unavailable: AudioContext not supported');
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          return;
+        }
+
+        self.mediaStream = stream;
+        self.audioContext = new AudioCtx();
+        if (self.audioContext.state === 'suspended' && typeof self.audioContext.resume === 'function') {
+          self.audioContext.resume();
+        }
+        var source = self.audioContext.createMediaStreamSource(stream);
+        self.analyser = self.audioContext.createAnalyser();
+        self.analyser.fftSize = 512;
+        source.connect(self.analyser);
+        // Never connect analyser to destination — that would feed the mic to speakers.
+        self.bargeInAvailable = true;
+      }).catch(function (err) {
+        console.warn('[Mémoire voice] Barge-in unavailable:', err);
+        self.bargeInAvailable = false;
+      });
+    },
+
+    stopRecognitionQuietly: function () {
+      if (!recognition) {
+        return;
+      }
+      try {
+        recognition.stop();
+      } catch (e) {
+        /* already stopped */
+      }
+    },
+
+    startListening: function () {
+      if (!this.isActive || !recognition) {
+        return;
+      }
+      if (this.phase !== 'listening') {
+        return;
+      }
+      if (this.isSpeechBusy() || isWaitingForReply) {
+        return;
+      }
+      try {
+        recognition.start();
+      } catch (e) {
+        /* InvalidStateError if already started */
+      }
+    },
+
+    watchSpeechThenListen: function () {
+      var self = this;
+      this.clearSpeechWatch();
+      voiceSpeechWatchTimer = setInterval(function () {
+        if (!self.isActive) {
+          self.clearSpeechWatch();
+          return;
+        }
+        if (!window.speechSynthesis ||
+            (!window.speechSynthesis.speaking && !window.speechSynthesis.pending)) {
+          self.clearSpeechWatch();
+          if (!self.isActive) {
+            return;
+          }
+          self.phase = 'listening';
+          self.setOrb('listening');
+          self.setStatus('Listening…');
+          self.setTranscript('');
+          self.startListening();
+        }
+      }, 200);
+    },
+
+    handleCompanionReply: function (replyText) {
+      if (!this.isActive) {
+        return;
+      }
+      var text = String(replyText || '').trim();
+      if (!text || !speechSupported || typeof speechApi.speakSegments !== 'function') {
+        this.phase = 'listening';
+        this.setOrb('listening');
+        this.setStatus('Listening…');
+        this.startListening();
+        return;
+      }
+
+      this.phase = 'speaking';
+      this.setOrb('speaking');
+      this.setStatus('Speaking…');
+      this.stopRecognitionQuietly();
+
+      if (typeof speechApi.cancelSpeech === 'function') {
+        speechApi.cancelSpeech();
+      } else if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+
+      speechApi.speakSegments(textToSpeechSegments(text), SPEECH_RATE);
+      this.watchSpeechThenListen();
+    },
+
+    onFinalTranscript: function (transcript) {
+      if (!this.isActive) {
+        return;
+      }
+      var text = String(transcript || '').trim();
+      if (!text) {
+        return;
+      }
+
+      this.consecutiveErrors = 0;
+      this.phase = 'thinking';
+      this.setOrb('thinking');
+      this.setStatus('Thinking…');
+      this.setTranscript(text);
+      this.stopRecognitionQuietly();
+      submitCompanionText(text);
+    },
+
+    onRecognitionEnd: function () {
+      if (!this.isActive) {
+        return;
+      }
+      if (this.phase !== 'listening') {
+        return;
+      }
+      if (this.isSpeechBusy() || isWaitingForReply) {
+        return;
+      }
+      var self = this;
+      setTimeout(function () {
+        self.startListening();
+      }, 120);
+    },
+
+    onRecognitionError: function (errorName) {
+      if (!this.isActive) {
+        return;
+      }
+      if (errorName === 'aborted' || this.phase !== 'listening') {
+        return;
+      }
+      this.consecutiveErrors += 1;
+      if (this.consecutiveErrors >= 2) {
+        this.exit();
+      }
+    },
+
+    enter: function () {
+      if (this.isActive || !recognition) {
+        return;
+      }
+
+      this.wasSuspendedForSafety = false;
+      this.resumeInFlight = false;
+
+      if (isListening) {
+        this.stopRecognitionQuietly();
+        setListeningUi(false);
+      }
+
+      if (typeof speechApi.cancelSpeech === 'function') {
+        speechApi.cancelSpeech();
+      } else if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      clearSpeakActiveState();
+      this.clearSpeechWatch();
+      this.stopBargeInWatch();
+
+      this.isActive = true;
+      this.phase = 'listening';
+      this.consecutiveErrors = 0;
+
+      if (voiceModeEl) {
+        voiceModeEl.hidden = false;
+        voiceModeEl.setAttribute('aria-hidden', 'false');
+      }
+      this.setOrb('listening');
+      this.setStatus('Listening…');
+      this.setTranscript('');
+      if (voiceExitBtn) {
+        voiceExitBtn.focus();
+      }
+
+      var self = this;
+      this.acquireBargeInAudio().then(function () {
+        if (!self.isActive) {
+          return;
+        }
+        self.startListening();
+      });
+    },
+
+    suspendForSafety: function () {
+      if (!this.isActive) {
+        return;
+      }
+
+      this.stopBargeInWatch();
+      this.stopRecognitionQuietly();
+      this.clearSpeechWatch();
+
+      if (typeof speechApi.cancelSpeech === 'function') {
+        speechApi.cancelSpeech();
+      } else if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      clearSpeakActiveState();
+      this.releaseBargeInAudio();
+
+      this.isActive = false;
+      this.phase = 'idle';
+      this.resumeInFlight = false;
+      this.wasSuspendedForSafety = true;
+
+      if (voiceModeEl) {
+        voiceModeEl.hidden = true;
+        voiceModeEl.setAttribute('aria-hidden', 'true');
+      }
+    },
+
+    resume: function () {
+      if (!this.wasSuspendedForSafety) {
+        return;
+      }
+      if (this.isActive || this.resumeInFlight) {
+        this.wasSuspendedForSafety = false;
+        return;
+      }
+
+      this.wasSuspendedForSafety = false;
+      this.resumeInFlight = true;
+      this.isActive = true;
+      this.phase = 'listening';
+      this.consecutiveErrors = 0;
+
+      if (voiceModeEl) {
+        voiceModeEl.hidden = false;
+        voiceModeEl.setAttribute('aria-hidden', 'false');
+      }
+      this.setOrb('listening');
+      this.setStatus('Listening…');
+      this.setTranscript('');
+
+      var self = this;
+      // Kick off getUserMedia / AudioContext during the user-gesture stack.
+      this.acquireBargeInAudio().then(function () {
+        self.resumeInFlight = false;
+        if (!self.isActive) {
+          return;
+        }
+        self.startListening();
+      });
+    },
+
+    clearSafetySuspend: function () {
+      this.wasSuspendedForSafety = false;
+      this.resumeInFlight = false;
+    },
+
+    exit: function () {
+      if (!this.isActive && !this.wasSuspendedForSafety) {
+        return;
+      }
+
+      this.isActive = false;
+      this.phase = 'idle';
+      this.consecutiveErrors = 0;
+      this.wasSuspendedForSafety = false;
+      this.resumeInFlight = false;
+      this.clearSpeechWatch();
+      this.stopRecognitionQuietly();
+      this.releaseBargeInAudio();
+
+      if (typeof speechApi.cancelSpeech === 'function') {
+        speechApi.cancelSpeech();
+      } else if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      clearSpeakActiveState();
+
+      this.setOrb('idle');
+      this.setStatus('');
+      this.setTranscript('');
+
+      if (voiceModeEl) {
+        voiceModeEl.hidden = true;
+        voiceModeEl.setAttribute('aria-hidden', 'true');
+      }
+      if (input) {
+        input.focus();
+      }
+    }
+  };
 
   function scrollChatToBottom() {
     // Defer to the next tick so the just-appended message element is fully laid
@@ -426,6 +971,62 @@
     setTimeout(function () {
       chat.scrollTop = chat.scrollHeight;
     }, 0);
+  }
+
+  function getAllKnownPeople() {
+    var profile = getActiveProfile();
+    var people = [];
+    var seen = {};
+    var contactIsEmergency = window.MemoireCore && window.MemoireCore.contactIsEmergency;
+
+    function add(name, relationship, source) {
+      var trimmed = String(name || '').trim();
+      if (!trimmed) return;
+      var key = trimmed.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      people.push({
+        name: trimmed,
+        relationship: String(relationship || '').trim(),
+        source: source
+      });
+    }
+
+    // Memories & People row reads the same profile.contacts array:
+    // emergency contacts (isEmergency true) and Memory Log people (isEmergency false).
+    if (profile && Array.isArray(profile.contacts)) {
+      profile.contacts.forEach(function (c) {
+        if (!c) return;
+        var isEmergency = typeof contactIsEmergency === 'function'
+          ? contactIsEmergency(c)
+          : c.isEmergency !== false;
+        add(
+          c.name,
+          c.relationship,
+          isEmergency ? 'emergency' : 'important'
+        );
+      });
+    }
+
+    return people;
+  }
+
+  function buildPeopleRoster(nameTokens) {
+    var tokenByName = {};
+    nameTokens.forEach(function (entry) {
+      tokenByName[entry.name.toLowerCase()] = entry.token;
+    });
+
+    return getAllKnownPeople().map(function (person) {
+      var token = tokenByName[person.name.toLowerCase()];
+      if (!token) return null;
+      var label = token;
+      if (person.relationship) label += ' - ' + person.relationship;
+      label += person.source === 'emergency'
+        ? ' (emergency contact)'
+        : ' (important person)';
+      return label;
+    }).filter(Boolean);
   }
 
   function buildNameTokens(profile) {
@@ -453,14 +1054,10 @@
     addMapping(profile.fullName, '[PATIENT]');
 
     var familyIndex = 1;
-    if (profile.contacts && Array.isArray(profile.contacts)) {
-      profile.contacts.forEach(function (contact) {
-        if (contact && contact.name) {
-          addMapping(contact.name, '[FAMILY_' + familyIndex + ']');
-          familyIndex += 1;
-        }
-      });
-    }
+    getAllKnownPeople().forEach(function (person) {
+      addMapping(person.name, '[FAMILY_' + familyIndex + ']');
+      familyIndex += 1;
+    });
 
     return tokens;
   }
@@ -668,6 +1265,9 @@
     if (typeof onComplete === 'function') {
       onComplete();
     }
+    if (voiceMode.isActive) {
+      voiceMode.handleCompanionReply(text);
+    }
   }
 
   function appendCompanionMessage(text, skipSessionSave, onComplete) {
@@ -790,7 +1390,8 @@
     });
   }
 
-  function buildApiPayload(maskedUserText, nameTokens) {
+  function buildApiPayload(maskedUserText, nameTokens, safetyHint) {
+    safetyHint = safetyHint || 'none';
     var recentHistory = conversationHistory.slice(-8);
     var maskedHistory = recentHistory.map(function (entry) {
       return {
@@ -869,6 +1470,18 @@
 
     profileFacts.companionName = getCompanionNameForApi();
 
+    var roster = buildPeopleRoster(nameTokens);
+    if (roster.length) {
+      profileFacts.peopleTheyKnow = roster;
+      profileFacts.peopleGuidance =
+        'These are the people in their life. Refer to them naturally by ' +
+        'the token shown; it is replaced with the real name before display. ' +
+        'Use ONLY the relationships listed - never guess or invent a ' +
+        'relationship, and never invent a person who is not on this list. ' +
+        'If asked about someone not listed, say you do not know them yet ' +
+        'and invite them to tell you.';
+    }
+
     var datedMemories = buildDatedMemoriesForPrompt(nameTokens);
     if (datedMemories.length) {
       profileFacts.recentMemoriesWithDates = datedMemories.map(function (entry) {
@@ -889,7 +1502,8 @@
       currentLocalDateIso: todayIso,
       currentLocalTime: timeLabel,
       partOfDay: partOfDay,
-      memories: datedMemories
+      memories: datedMemories,
+      safetyHint: safetyHint
     };
   }
 
@@ -898,12 +1512,12 @@
 
   // Physical health — immediate call-card offer (first mention, no counter).
   var PHYSICAL_HEALTH_IMMEDIATE_PHRASES = [
-    'sick', 'unwell', 'not feeling well', 'not well',
+    'unwell', 'not feeling well',
     'chest pain', 'chest hurts',
     'can\'t breathe', 'cant breathe', 'cannot breathe',
     'fallen', 'i fell', 'i\'ve fallen', 'ive fallen', 'fell down',
     'dizzy', 'dizziness',
-    'hurts', 'in pain', 'help me'
+    'in pain'
   ];
 
   // Mental health crisis — immediate crisis-support card (not the contact picker).
@@ -1269,6 +1883,35 @@
     };
   }
 
+  /** Pure read-only safety check — does not touch escalationSession counters. */
+  function preflightSafety(text) {
+    if (detectMentalHealthCrisis(text)) {
+      return { level: 'crisis' };
+    }
+    if (detectPhysicalHealthImmediate(text)) {
+      return { level: 'health' };
+    }
+    if (isDisoriented(normalizeDistressText(text))) {
+      return { level: 'distress' };
+    }
+    return { level: 'none' };
+  }
+
+  var SAFETY_TAG_PATTERN = /\[\[SAFETY:(NONE|DISTRESS|HEALTH|CRISIS)\]\]/i;
+  var SAFETY_RANK = { none: 0, distress: 1, health: 2, crisis: 3 };
+
+  function extractSafetyVerdict(reply) {
+    var match = String(reply || '').match(SAFETY_TAG_PATTERN);
+    return {
+      level: match ? match[1].toLowerCase() : 'none',
+      text: String(reply || '').replace(SAFETY_TAG_PATTERN, '').trim()
+    };
+  }
+
+  function highestLevel(a, b) {
+    return SAFETY_RANK[a] >= SAFETY_RANK[b] ? a : b;
+  }
+
   // Seed buffer from the active chat session so loop detection spans the visit.
   (function seedUserMessageBuffer() {
     if (!chatSessionMessages || !chatSessionMessages.length) return;
@@ -1304,22 +1947,37 @@
     callConfirmPending = null;
   }
 
-  function acknowledgeCallOfferDeclined() {
+  function acknowledgeCallOfferDeclined(onComplete) {
+    var speakInVoice = voiceMode.isActive;
+    if (speakInVoice) {
+      voiceMode.phase = 'thinking';
+      voiceMode.setOrb('thinking');
+      voiceMode.setStatus('Thinking…');
+      voiceMode.stopRecognitionQuietly();
+    }
+
     isWaitingForReply = true;
     showLoadingIndicator();
     setTimeout(function () {
       hideLoadingIndicator();
-      streamCompanionMessage(CALL_OFFER_DECLINE_REPLY);
+      streamCompanionMessage(CALL_OFFER_DECLINE_REPLY, false, function () {
+        if (typeof onComplete === 'function') {
+          onComplete();
+        }
+      });
       conversationHistory.push({ role: 'assistant', content: CALL_OFFER_DECLINE_REPLY });
       saveHistoryToStorage();
       isWaitingForReply = false;
-      if (input) {
+      if (input && !speakInVoice) {
         input.focus();
       }
     }, 350);
   }
 
   function showCallConfirmCard(options) {
+    if (voiceMode.isActive) {
+      voiceMode.suspendForSafety();
+    }
     var modal = ensureCallConfirmDom();
     var titleEl = document.getElementById('call-confirm-title');
     var textEl = document.getElementById('call-confirm-text');
@@ -1365,11 +2023,13 @@
     callConfirmBound = true;
 
     yesBtn.addEventListener('click', function () {
+      voiceMode.clearSafetySuspend();
       closeCallConfirmCard();
       openEmergencyCallModal();
     });
 
     noBtn.addEventListener('click', function () {
+      voiceMode.resume();
       var pending = callConfirmPending;
       if (pending && pending.signature) {
         markIntentDeclined(pending.signature);
@@ -1380,6 +2040,7 @@
 
     modal.addEventListener('click', function (event) {
       if (event.target === modal) {
+        voiceMode.resume();
         var pending = callConfirmPending;
         if (pending && pending.signature) {
           markIntentDeclined(pending.signature);
@@ -1396,6 +2057,7 @@
       if (!openModal || openModal.hidden || !openModal.classList.contains('is-open')) {
         return;
       }
+      voiceMode.resume();
       var pending = callConfirmPending;
       if (pending && pending.signature) {
         markIntentDeclined(pending.signature);
@@ -1405,6 +2067,9 @@
   }
 
   function triggerDistressResponse(userText, state, signature) {
+    if (voiceMode.isActive) {
+      voiceMode.suspendForSafety();
+    }
     var safetyMessage = DISTRESS_GROUNDING_REPLY;
 
     isWaitingForReply = true;
@@ -1438,22 +2103,37 @@
     modal.hidden = true;
   }
 
-  function acknowledgeCrisisStay() {
+  function acknowledgeCrisisStay(onComplete) {
+    var speakInVoice = voiceMode.isActive;
+    if (speakInVoice) {
+      voiceMode.phase = 'thinking';
+      voiceMode.setOrb('thinking');
+      voiceMode.setStatus('Thinking…');
+      voiceMode.stopRecognitionQuietly();
+    }
+
     isWaitingForReply = true;
     showLoadingIndicator();
     setTimeout(function () {
       hideLoadingIndicator();
-      streamCompanionMessage(CRISIS_STAY_REPLY);
+      streamCompanionMessage(CRISIS_STAY_REPLY, false, function () {
+        if (typeof onComplete === 'function') {
+          onComplete();
+        }
+      });
       conversationHistory.push({ role: 'assistant', content: CRISIS_STAY_REPLY });
       saveHistoryToStorage();
       isWaitingForReply = false;
-      if (input) {
+      if (input && !speakInVoice) {
         input.focus();
       }
     }, 350);
   }
 
   function showCrisisSupportCard() {
+    if (voiceMode.isActive) {
+      voiceMode.suspendForSafety();
+    }
     var modal = ensureCrisisSupportDom();
     var helpline = document.getElementById('crisis-support-helpline');
     if (!modal) {
@@ -1477,23 +2157,33 @@
     var modal = ensureCrisisSupportDom();
     var callKnownBtn = document.getElementById('crisis-support-call-known');
     var stayBtn = document.getElementById('crisis-support-stay');
+    var helpline = document.getElementById('crisis-support-helpline');
     if (!modal || !callKnownBtn || !stayBtn) {
       return;
     }
     crisisSupportBound = true;
 
     callKnownBtn.addEventListener('click', function () {
+      voiceMode.clearSafetySuspend();
       closeCrisisSupportCard();
       openEmergencyCallModal();
     });
 
+    if (helpline) {
+      helpline.addEventListener('click', function () {
+        voiceMode.clearSafetySuspend();
+      });
+    }
+
     stayBtn.addEventListener('click', function () {
+      voiceMode.resume();
       closeCrisisSupportCard();
       acknowledgeCrisisStay();
     });
 
     modal.addEventListener('click', function (event) {
       if (event.target === modal) {
+        voiceMode.resume();
         closeCrisisSupportCard();
       }
     });
@@ -1506,25 +2196,51 @@
       if (!openModal || openModal.hidden || !openModal.classList.contains('is-open')) {
         return;
       }
+      voiceMode.resume();
       closeCrisisSupportCard();
     });
   }
 
-  function sendMessage(userText) {
+  function sendMessage(userText, preflight) {
     // SAFETY / DISTRESS:
     // - Mental-health crisis and physical health: warm LLM reply first, then card.
     // - Disorientation: short grounding bypass, then call confirmation card.
     // - Repetition (3+): warm LLM reply first, then call confirmation card.
+    // - Model [[SAFETY:...]] tags merge with client preflight (highest wins).
+    preflight = preflight || preflightSafety(userText);
     var distress = analyzeDistressState(userText);
     if (distress.state) {
       triggerDistressResponse(userText, distress.state, distress.signature);
       return;
     }
 
-    var offerCrisisAfterReply = detectMentalHealthCrisis(userText);
-    var offerHealthCallAfterReply = !offerCrisisAfterReply && detectPhysicalHealthImmediate(userText);
-    var shouldOfferCallAfterReply = !offerCrisisAfterReply && !offerHealthCallAfterReply &&
+    var shouldOfferCallAfterReply =
       shouldOfferRepetitionCall(distress.signature, distress.repetitionCount);
+
+    function offerSafetyCardAfterReply(finalLevel) {
+      if (finalLevel === 'crisis') {
+        showCrisisSupportCard();
+      } else if (finalLevel === 'health') {
+        showCallConfirmCard({ variant: 'health', signature: distress.signature });
+      } else if (finalLevel === 'distress') {
+        if (!wasIntentDeclined(distress.signature)) {
+          showCallConfirmCard({ variant: 'distress', signature: distress.signature });
+        }
+      } else if (shouldOfferCallAfterReply) {
+        showCallConfirmCard({ variant: 'repetition', signature: distress.signature });
+      }
+    }
+
+    function offerPreflightFailSafe() {
+      if (preflight.level === 'crisis') {
+        showCrisisSupportCard();
+      } else if (preflight.level === 'health' || preflight.level === 'distress') {
+        showCallConfirmCard({
+          variant: preflight.level,
+          signature: distress.signature
+        });
+      }
+    }
 
     isWaitingForReply = true;
     showLoadingIndicator();
@@ -1538,7 +2254,7 @@
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(buildApiPayload(maskedUserText, nameTokens))
+      body: JSON.stringify(buildApiPayload(maskedUserText, nameTokens, preflight.level))
     })
       .then(function (response) {
         return response.json().then(function (data) {
@@ -1550,37 +2266,37 @@
 
         if (!result.ok || !result.data.reply) {
           // Never surface raw API/rate-limit text to the patient.
-          streamCompanionMessage('Sorry, I could not respond just now. Please try again.');
+          streamCompanionMessage(
+            'Sorry, I could not respond just now. Please try again.',
+            false,
+            offerPreflightFailSafe
+          );
           return;
         }
 
         console.log('Raw AI reply (before unmasking):', result.data.reply);
+        var verdict = extractSafetyVerdict(result.data.reply);
         var reply = stripHallucinatedPhoneNumbers(
-          cleanResponseText(unmaskReply(result.data.reply, nameTokens))
+          stripCompanionSelfNaming(
+            cleanResponseText(unmaskReply(verdict.text, nameTokens))
+          )
         );
+        var finalLevel = highestLevel(preflight.level, verdict.level);
         console.log('Unmasked reply:', reply);
         conversationHistory.push({ role: 'user', content: userText });
         conversationHistory.push({ role: 'assistant', content: reply });
         saveHistoryToStorage();
         streamCompanionMessage(reply, false, function () {
-          if (offerCrisisAfterReply) {
-            showCrisisSupportCard();
-          } else if (offerHealthCallAfterReply) {
-            showCallConfirmCard({
-              variant: 'health',
-              signature: distress.signature
-            });
-          } else if (shouldOfferCallAfterReply) {
-            showCallConfirmCard({
-              variant: 'repetition',
-              signature: distress.signature
-            });
-          }
+          offerSafetyCardAfterReply(finalLevel);
         });
       })
       .catch(function () {
         hideLoadingIndicator();
-        streamCompanionMessage('Sorry, I could not respond just now. Please try again.');
+        streamCompanionMessage(
+          'Sorry, I could not respond just now. Please try again.',
+          false,
+          offerPreflightFailSafe
+        );
       })
       .finally(function () {
         isWaitingForReply = false;
@@ -1608,6 +2324,9 @@
   function setupSpeechRecognition() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
+      if (voiceEnterBtn) {
+        voiceEnterBtn.hidden = true;
+      }
       return;
     }
 
@@ -1618,48 +2337,79 @@
 
     recognition.addEventListener('result', function (event) {
       var transcript = event.results[0][0].transcript.trim();
-      if (transcript) {
-        input.value = transcript;
-        input.focus();
+      if (!transcript) {
+        return;
       }
+      if (voiceMode.isActive) {
+        voiceMode.onFinalTranscript(transcript);
+        return;
+      }
+      input.value = transcript;
+      input.focus();
     });
 
     recognition.addEventListener('end', function () {
+      if (voiceMode.isActive) {
+        voiceMode.onRecognitionEnd();
+        return;
+      }
       setListeningUi(false);
     });
 
-    recognition.addEventListener('error', function () {
+    recognition.addEventListener('error', function (event) {
+      if (voiceMode.isActive) {
+        voiceMode.onRecognitionError(event && event.error);
+        return;
+      }
       setListeningUi(false);
     });
   }
 
+  function submitCompanionText(text) {
+    text = String(text || '').trim();
+    if (!text || isWaitingForReply) {
+      return false;
+    }
+
+    var preflight = preflightSafety(text);
+
+    if (namingMode) {
+      if (preflight.level !== 'none' || !looksLikeCompanionName(text)) {
+        abandonNamingSilently();
+        hideStartersAfterFirstUserMessage();
+        appendPatientMessage(text);
+        if (input) {
+          input.value = '';
+        }
+        sendMessage(text, preflight);
+        return true;
+      }
+      appendPatientMessage(text);
+      if (input) {
+        input.value = '';
+      }
+      finishNaming(text);
+      return true;
+    }
+
+    hideStartersAfterFirstUserMessage();
+    appendPatientMessage(text);
+    if (input) {
+      input.value = '';
+    }
+    sendMessage(text, preflight);
+    return true;
+  }
+
   form.addEventListener('submit', function (event) {
     event.preventDefault();
-
-    if (isWaitingForReply) {
-      return;
-    }
 
     var text = input.value.trim();
     if (!text) {
       return;
     }
 
-    if (namingMode) {
-      appendPatientMessage(text);
-      input.value = '';
-      var namingResult = handleNamingUserReply(text);
-      if (namingResult === 'abandoned') {
-        hideStartersAfterFirstUserMessage();
-        sendMessage(text);
-      }
-      return;
-    }
-
-    hideStartersAfterFirstUserMessage();
-    appendPatientMessage(text);
-    input.value = '';
-    sendMessage(text);
+    submitCompanionText(text);
   });
 
   if (startersEl) {
@@ -1677,12 +2427,12 @@
       input.value = text;
       appendPatientMessage(text);
       input.value = '';
-      sendMessage(text);
+      sendMessage(text, preflightSafety(text));
     });
   }
 
   mic.addEventListener('click', function () {
-    if (!recognition) {
+    if (!recognition || voiceMode.isActive) {
       return;
     }
 
@@ -1692,7 +2442,47 @@
     }
 
     setListeningUi(true);
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      setListeningUi(false);
+    }
+  });
+
+  if (voiceEnterBtn) {
+    voiceEnterBtn.addEventListener('click', function () {
+      voiceMode.enter();
+    });
+  }
+
+  if (voiceExitBtn) {
+    voiceExitBtn.addEventListener('click', function () {
+      voiceMode.exit();
+    });
+  }
+
+  if (voiceOrbEl) {
+    voiceOrbEl.addEventListener('click', function () {
+      if (voiceMode.isActive && voiceMode.phase === 'speaking') {
+        voiceMode.interruptSpeaking();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape' || !voiceMode.isActive) {
+      return;
+    }
+    var callOpen = ensureCallConfirmDom();
+    var crisisOpen = ensureCrisisSupportDom();
+    if (callOpen && !callOpen.hidden && callOpen.classList.contains('is-open')) {
+      return;
+    }
+    if (crisisOpen && !crisisOpen.hidden && crisisOpen.classList.contains('is-open')) {
+      return;
+    }
+    event.preventDefault();
+    voiceMode.exit();
   });
 
   function applyFeelingPrefill() {
