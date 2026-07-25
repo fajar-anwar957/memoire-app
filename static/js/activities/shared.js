@@ -3,6 +3,7 @@
 
   var speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   var DEFAULT_SPEECH_RATE = 0.9;
+  var selectedSpeechVoice = null;
   var GENTLE_SUPPORT_LINE = 'That\u2019s alright \u2014 every try helps keep your mind active.';
 
   var FLOWER_FALLBACK_SVG =
@@ -16,6 +17,42 @@
     '<ellipse cx="50" cy="22" rx="10" ry="18" fill="var(--navy)" transform="rotate(300 50 50)"/>' +
     '<circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>' +
     '</svg>';
+
+  function selectSpeechVoice() {
+    if (!speechSupported || typeof window.speechSynthesis.getVoices !== 'function') {
+      selectedSpeechVoice = null;
+      return;
+    }
+
+    var englishVoices = window.speechSynthesis.getVoices().filter(function (voice) {
+      return voice && /^en(?:-|$)/i.test(String(voice.lang || ''));
+    });
+
+    function findByName(substring) {
+      var needle = substring.toLowerCase();
+      return englishVoices.find(function (voice) {
+        return String(voice.name || '').toLowerCase().indexOf(needle) !== -1;
+      });
+    }
+
+    selectedSpeechVoice =
+      findByName('Natural') ||
+      findByName('Google UK English Female') ||
+      findByName('Samantha') ||
+      englishVoices.find(function (voice) {
+        return /enhanced|premium/i.test(String(voice.name || ''));
+      }) ||
+      englishVoices.find(function (voice) {
+        return voice.localService === false;
+      }) ||
+      englishVoices[0] ||
+      null;
+  }
+
+  if (speechSupported) {
+    selectSpeechVoice();
+    window.speechSynthesis.addEventListener('voiceschanged', selectSpeechVoice);
+  }
 
   function cancelSpeech() {
     if (speechSupported) {
@@ -79,7 +116,11 @@
         continue;
       }
       var utterance = new SpeechSynthesisUtterance(text);
+      if (selectedSpeechVoice) {
+        utterance.voice = selectedSpeechVoice;
+      }
       utterance.rate = speechRate;
+      utterance.pitch = 1.0;
       window.speechSynthesis.speak(utterance);
     }
   }
