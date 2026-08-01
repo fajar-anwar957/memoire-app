@@ -195,6 +195,10 @@
     return window.MemoireCore.getActiveProfile();
   }
 
+  // Fisher-Yates shuffle, Durstenfeld variant. Returns a reordered copy so
+  // the caller's array is untouched. Used so the correct answer never sits
+  // in a fixed position, which would let a user succeed by learning the
+  // position rather than recognising the content.
   function shuffleOptions(options) {
     var copy = options.slice();
     for (var i = copy.length - 1; i > 0; i--) {
@@ -286,6 +290,13 @@
     return tokens;
   }
 
+  // Mozilla Developer Network, 2026. Regular expressions guide, "Escaping"
+  // section. JavaScript has no built-in escape function for this, so this
+  // character class is MDN's published solution. Used unmodified.
+  // A native RegExp.escape() now exists but is only supported in recent
+  // browser versions; this project targets older adults who may be on older
+  // devices, and a tokenisation failure would send real names to the API,
+  // so the compatible hand-rolled version is retained deliberately.
   function escapeRegex(text) {
     return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }

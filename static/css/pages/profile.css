@@ -1050,6 +1050,13 @@ body {
   outline-offset: 3px;
 }
 
+/* Adapted from Bootstrap, 2026. Visually hidden (v5.3).
+   Hides content from sighted users while keeping it in the accessibility
+   tree. display:none and visibility:hidden both remove the element from
+   that tree, so neither works for this purpose.
+   Modified: Bootstrap marks every declaration !important; those are
+   dropped here as no competing rules exist in this stylesheet.
+   Bootstrap CSS is licensed under the MIT Licence. */
 .visually-hidden {
   position: absolute;
   width: 1px;

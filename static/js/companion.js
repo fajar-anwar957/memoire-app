@@ -513,6 +513,13 @@
       }
     },
 
+    // Adapted from Mozilla Developer Network, 2026. Visualizations with Web
+    // Audio API. MDN's example feeds getByteTimeDomainData into a canvas
+    // oscilloscope; here the same buffer is reduced to a root-mean-square
+    // amplitude and compared against a calibrated echo floor, so the companion
+    // can detect the user speaking over its own speech output. The echo-floor
+    // calibration and the four-sample sustained threshold are not part of the
+    // MDN example.
     measureRms: function () {
       if (!this.analyser) {
         return 0;
@@ -1062,6 +1069,13 @@
     return tokens;
   }
 
+  // Mozilla Developer Network, 2026. Regular expressions guide, "Escaping"
+  // section. JavaScript has no built-in escape function for this, so this
+  // character class is MDN's published solution. Used unmodified.
+  // A native RegExp.escape() now exists but is only supported in recent
+  // browser versions; this project targets older adults who may be on older
+  // devices, and a tokenisation failure would send real names to the API,
+  // so the compatible hand-rolled version is retained deliberately.
   function escapeRegex(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
@@ -1688,6 +1702,10 @@
     });
   }
 
+  // Jaccard similarity coefficient: |A intersect B| / |A union B| over
+  // content words. Repeated distress is matched by meaning rather than exact
+  // string, so "I want to go home" and "take me home now" register as the
+  // same intent. This is what allows a recurring concern to escalate.
   function intentSimilarity(a, b) {
     if (!a || !b) return 0;
     if (a === b) return 1;
