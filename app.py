@@ -6,28 +6,8 @@ load_dotenv()
 
 import anthropic
 from flask import Flask, render_template, request, jsonify, redirect, url_for
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
-# Render (and similar hosts) sit behind a proxy — trust one X-Forwarded-For hop
-# so rate limits key on the real client IP, not the proxy.
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
-
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=["500 per day", "100 per hour"],
-    # Only paid/API routes share the defaults; templates and static stay unlimited.
-    default_limits_exempt_when=lambda: not request.path.startswith('/api/'),
-    storage_uri='memory://',
-)
-
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    # Same JSON shape as other API errors so clients use their gentle fallbacks.
-    return jsonify({'error': 'Please try again in a moment.'}), 429
 
 SYSTEM_PROMPT = (
     "You are Mémoire, a warm and friendly AI companion for someone with "
@@ -223,7 +203,6 @@ DAILY_QUIZ_SYSTEM_PROMPT = (
 )
 
 @app.route('/api/daily-quiz', methods=['POST'])
-@limiter.limit('10 per minute')
 def api_daily_quiz():
     try:
         data = request.get_json(silent=True) or {}
@@ -335,7 +314,6 @@ def api_daily_quiz():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/chat', methods=['POST'])
-@limiter.limit('20 per minute')
 def api_chat():
     try:
         data = request.get_json(silent=True)
