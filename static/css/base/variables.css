@@ -8,11 +8,11 @@
   --navy: #1e3a5f;
   --navy-deep: #16293f;
   --navy-muted: #3a5575;
-  --orange: #d4772e;
+  --orange: #b0570f;
   --orange-soft: #f0c08a;
   --orange-banner: #e8b06a;
   --text: #22364a;
-  --text-muted: #5f7488;
+  --text-muted: #56697c;
 
   /* Soft icon tile tints */
   --icon-tile-blue: #dbeaf5;
@@ -33,7 +33,7 @@
   /* Dashboard accent surfaces (dashboard.css) */
   --nextup-active-bg: #ffe0b3;
   --nextup-empty-bg: #dce8d5;
-  --feeling-btn-bg: #e8914a;
+  --feeling-btn-bg: #b0570f;
 
   /* Soft warm wash for activity + dashboard cards */
   --activity-card-tint: #fffcfa;
