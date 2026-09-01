@@ -3,9 +3,10 @@
 
   var speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   var DEFAULT_SPEECH_RATE = 0.95; // used in speakSegments when no rate is passed; exported on MemoireActivities
-  var DEFAULT_SPEECH_PITCH = 1.05; // warmer delivery; set on each utterance in speakSegments
-  var selectedSpeechVoice = null; // set by selectSpeechVoice; used in enqueueUtterances
-  var pendingSpeak = null; // queued while getVoices() is still empty
+  var DEFAULT_SPEECH_PITCH = 1.05; // warmer delivery; set on each utterance in applySpeechVoice
+  var selectedSpeechVoice = null; // cached SpeechSynthesisVoice; applied in applySpeechVoice
+  var voicesReady = false; // true once getVoices() has returned a non-empty list
+  var pendingSpeak = null; // queued while getVoices() is still empty (Chrome first call)
   var voicesWaitTimer = null;
   var GENTLE_SUPPORT_LINE = 'That\u2019s alright \u2014 every try helps keep your mind active.'; // used in photo-recall.js (232) and daily-quiz.js (301)
 
@@ -21,20 +22,20 @@
     '<circle cx="50" cy="50" r="14" fill="var(--color-orange)"/>' +
     '</svg>';
 
-  // Called at load, on voiceschanged, and immediately before speakSegments.
-  // getVoices() is often [] on the first call; voiceschanged populates the list.
+  // Called at load and on voiceschanged only — the resolved voice is cached.
+  // getVoices() is often [] on the first Chrome call; do not wipe a cached voice.
   // Null means "leave utterance.voice unset" so the browser default is used.
   function selectSpeechVoice() {
     if (!speechSupported || typeof window.speechSynthesis.getVoices !== 'function') {
-      selectedSpeechVoice = null;
       return;
     }
 
     var voices = window.speechSynthesis.getVoices() || [];
     if (!voices.length) {
-      selectedSpeechVoice = null;
       return;
     }
+
+    voicesReady = true;
 
     function findByName(substring) {
       var needle = substring.toLowerCase();
@@ -44,14 +45,24 @@
     }
 
     selectedSpeechVoice =
-      findByName('Microsoft Sonia') ||
-      findByName('Microsoft Hazel') ||
+      findByName('Hazel') ||
       findByName('Google UK English Female') ||
       voices.find(function (voice) {
         var lang = String((voice && voice.lang) || '').replace(/_/g, '-');
         return /^en-GB/i.test(lang);
       }) ||
       null;
+  }
+
+  function applySpeechVoice(utterance) {
+    if (selectedSpeechVoice) {
+      utterance.voice = selectedSpeechVoice;
+      if (selectedSpeechVoice.lang) {
+        utterance.lang = selectedSpeechVoice.lang;
+      }
+    }
+    utterance.rate = DEFAULT_SPEECH_RATE;
+    utterance.pitch = DEFAULT_SPEECH_PITCH;
   }
 
   if (speechSupported) {
@@ -136,19 +147,15 @@
    * speechSynthesis.cancel() clears the entire queue.
    */
   // Called from word-association.js (366, 380), photo-recall.js (176, 191), daily-quiz.js (258, 272), companion.js (829, 1309).
-  // If getVoices() is empty, wait for voiceschanged (with a short fallback) before speaking.
+  // Voice conversation mode uses this same path (companion.js handleCompanionReply / createSpeakButton).
   function speakSegments(segments, rate) {
     if (!speechSupported) {
       return;
     }
     window.speechSynthesis.cancel();
     clearPendingSpeak();
-    selectSpeechVoice();
 
-    var voices = typeof window.speechSynthesis.getVoices === 'function'
-      ? window.speechSynthesis.getVoices()
-      : [];
-    if (!voices.length) {
+    if (!voicesReady) {
       pendingSpeak = { segments: segments, rate: rate };
       voicesWaitTimer = setTimeout(flushPendingSpeak, 100);
       return;
@@ -158,7 +165,6 @@
   }
 
   function enqueueUtterances(segments, rate) {
-    selectSpeechVoice();
     var speechRate = rate == null ? DEFAULT_SPEECH_RATE : rate;
     var list = Array.isArray(segments) ? segments : [segments];
     var i;
@@ -168,11 +174,8 @@
         continue;
       }
       var utterance = new SpeechSynthesisUtterance(text);
-      if (selectedSpeechVoice) {
-        utterance.voice = selectedSpeechVoice;
-      }
+      applySpeechVoice(utterance);
       utterance.rate = speechRate;
-      utterance.pitch = DEFAULT_SPEECH_PITCH;
       window.speechSynthesis.speak(utterance);
     }
   }
