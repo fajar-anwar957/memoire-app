@@ -1,23 +1,23 @@
 (function () {
   'use strict';
 
-  var shared = window.MemoireActivities;
-  var speechSupported = shared.speechSupported;
+  var shared = window.MemoireActivities; // shared.js: speakSegments, shuffleOptions, maskMessage, unmaskReply, logs
+  var speechSupported = shared.speechSupported; // speak btn setup in initDailyQuiz, openFeedbackModal, toggleSpeech
 
-  var SESSION_LIMIT = 5;
-  var MORE_BATCH_SIZE = 3;
-  var STORAGE_KEY = 'cstDailyQuiz';
-  var QUIZ_CACHE_KEY = 'cstDailyQuizCache';
-  var MEMORIES_STORAGE_KEY = 'dashboardMemories';
-  var FEEDBACK_DELAY_MS = 1200;
-  var SPEECH_RATE = 0.9;
-  var TOKEN_LEFTOVER_RE = /\[PATIENT\]|\[FAMILY_\d+\]|\bPATIENT\b|\bFAMILY_\d+\b/;
+  var SESSION_LIMIT = 5; // loadTodaysQuiz (379, 396-402), loadMoreQuiz (432)
+  var MORE_BATCH_SIZE = 3; // loadMoreQuiz (443, 444, 446, 449, 460)
+  var STORAGE_KEY = 'cstDailyQuiz'; // initDailyQuiz (157), readQuizCacheObject (1002), saveRound (1181, 1189)
+  var QUIZ_CACHE_KEY = 'cstDailyQuizCache'; // readQuizCacheObject (983), writeQuizCacheObject (1031), clearQuizCache (1059)
+  var MEMORIES_STORAGE_KEY = 'dashboardMemories'; // fetchApiQuestions (481), getMaskedMemories (540+); written by add-memory.js saveMemory
+  var FEEDBACK_DELAY_MS = 1200; // optionsEl click setTimeout in initDailyQuiz (329)
+  var SPEECH_RATE = 0.95; // speakQuestionBtn (258), speakWarmBtn (272) → shared.js speakSegments
+  var TOKEN_LEFTOVER_RE = /\[PATIENT\]|\[FAMILY_\d+\]|\bPATIENT\b|\bFAMILY_\d+\b/; // hasLeftoverToken (636)
 
-  var MODAL_HEADINGS = ['Lovely!', 'Wonderful!', "That's a nice one!"];
-  var EXHAUSTED_MESSAGE =
+  var MODAL_HEADINGS = ['Lovely!', 'Wonderful!', "That's a nice one!"]; // pickModalHeading (1194)
+  var EXHAUSTED_MESSAGE = // showCompleteScreen (202)
     "We've had a lovely long session today — let's rest and play again tomorrow!";
 
-  var FALLBACK_GENERAL = [
+  var FALLBACK_GENERAL = [ // pickFallbackFillers (936)
     {
       id: 'fallback-fruit',
       type: 'general',
@@ -123,6 +123,8 @@
     initDailyQuiz();
   });
 
+  // Called from DOMContentLoaded (daily-quiz.js 123; page templates/daily-quiz.html).
+  // Next: setQuizState('loading'), loadTodaysQuiz → startSession or showCompleteScreen.
   function initDailyQuiz() {
     var loadingEl = document.getElementById('dq-loading');
     var gameEl = document.getElementById('dq-game');
@@ -168,12 +170,15 @@
       exhausted: false
     };
 
+    // Called from setQuizState (line 193). Next: toggles exitFooterEl.hidden; nothing else runs.
     function setExitFooterVisible(visible) {
       if (exitFooterEl) {
         exitFooterEl.hidden = !visible;
       }
     }
 
+    // Called from showCompleteScreen (211), startSession (229), requestMoreQuestions (236), nextBtn click (344), initDailyQuiz (361).
+    // Next: setExitFooterVisible when next==='question'; caller then continues.
     function setQuizState(next) {
       state.quizState = next;
       if (loadingEl) {
@@ -188,6 +193,8 @@
       setExitFooterVisible(next === 'question');
     }
 
+    // Called from startSession (225), loadMoreQuiz.then (240), nextBtn click (337), doneTodayBtn click (357), loadTodaysQuiz.then (364).
+    // Next: setQuizState('complete').
     function showCompleteScreen(exhausted) {
       state.exhausted = !!exhausted;
       if (doneMessageEl) {
@@ -204,6 +211,8 @@
       setQuizState('complete');
     }
 
+    // Called from loadTodaysQuiz.then (367), requestMoreQuestions.then (243).
+    // Next: setQuizState('question') then renderRound, or showCompleteScreen if no questions.
     function startSession(questions) {
       state.quiz = questions || [];
       state.currentIndex = 0;
@@ -221,6 +230,7 @@
       renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state);
     }
 
+    // Called from moreBtns click (line 249). Next: shared.closeFeedbackModal (shared.js), loadMoreQuiz → startSession or showCompleteScreen.
     function requestMoreQuestions() {
       shared.closeFeedbackModal(modalEl);
       setQuizState('loading');
@@ -358,6 +368,8 @@
     });
   }
 
+  // Called from initDailyQuiz (line 362). Next: readQuizCacheObject; on miss, fetchApiQuestions → sanitizeQuestions → writeQuizCacheObject.
+  // Result goes to startSession or showCompleteScreen.
   function loadTodaysQuiz() {
     var cache = readQuizCacheObject();
     if (cache && cache.questions.length) {
@@ -408,6 +420,7 @@
       });
   }
 
+  // Called from requestMoreQuestions (line 238). Next: unused cache or fetchApiQuestions; result goes to requestMoreQuestions.then → startSession or showCompleteScreen.
   function loadMoreQuiz() {
     var cache = readQuizCacheObject() || {
       date: shared.getTodayKey(),
@@ -454,6 +467,8 @@
       });
   }
 
+  // Called from loadTodaysQuiz (393), loadMoreQuiz (441). Next: getMaskedMemories, getMaskedPeople, POST /api/daily-quiz (app.py api_daily_quiz line 217).
+  // Then parseQuizJson → dePseudonymiseQuestions; array returns to caller.
   function fetchApiQuestions(personalCount, generalCount, avoidQuestions) {
     var profile = shared.getActiveProfile();
     var nameTokens = shared.buildNameTokens(profile);
@@ -517,6 +532,8 @@
       });
   }
 
+  // Called from fetchApiQuestions (line 475). Next: reads MEMORIES_STORAGE_KEY (add-memory.js saveMemory writes it), shared.maskMessage (shared.js).
+  // Array goes into the /api/daily-quiz POST body.
   function getMaskedMemories(nameTokens) {
     var memories = [];
     try {
@@ -544,6 +561,7 @@
       });
   }
 
+  // Called from fetchApiQuestions (line 476). Next: shared.maskMessage (shared.js) on profile.contacts; array goes into the /api/daily-quiz POST body.
   function getMaskedPeople(profile, nameTokens) {
     if (!profile || !Array.isArray(profile.contacts)) {
       return [];
@@ -562,6 +580,7 @@
       });
   }
 
+  // Called from fetchApiQuestions (line 526). Next: parsed array goes to dePseudonymiseQuestions in the same then-chain.
   function parseQuizJson(raw) {
     if (!raw || typeof raw !== 'string') {
       console.error('Daily Quiz: expected raw string from Claude, got', typeof raw, raw);
@@ -594,6 +613,7 @@
     }
   }
 
+  // Called from fetchApiQuestions (line 531). Next: shared.unmaskReply (shared.js); array returns to loadTodaysQuiz/loadMoreQuiz then sanitizeQuestions.
   function dePseudonymiseQuestions(questions, nameTokens) {
     return questions.map(function (item, index) {
       var options = Array.isArray(item.options) ? item.options : [];
@@ -611,10 +631,12 @@
     });
   }
 
+  // Called from isQuestionValid (line 666). Next: true/false goes back to isQuestionValid; invalid questions are dropped in sanitizeQuestions.
   function hasLeftoverToken(text) {
     return TOKEN_LEFTOVER_RE.test(String(text || ''));
   }
 
+  // Called from sanitizeQuestions (line 704). Next: if false the question is discarded; if true, sanitizeQuestions calls normalizeQuestion.
   function isQuestionValid(item) {
     if (!item || !item.question) {
       return false;
@@ -649,6 +671,8 @@
     return true;
   }
 
+  // Called from loadTodaysQuiz (396), loadMoreQuiz (443). Next: isQuestionValid + normalizeQuestion, maybe pickFallbackFillers.
+  // Cleaned array goes back to the caller then writeQuizCacheObject.
   function sanitizeQuestions(questions, excludeList) {
     var usedIds = {};
     var excludeItems = [];
@@ -712,6 +736,7 @@
     return valid;
   }
 
+  // Called from sanitizeQuestions (704, 713), normalizeQuiz (775). Next: object/null goes back to caller; keeps only well-formed questions.
   function normalizeQuestion(item) {
     if (!item || !item.question) {
       return null;
@@ -745,10 +770,13 @@
     };
   }
 
+  // Called from getUnusedQuestions (974), readQuizCacheObject (991). Next: each item through normalizeQuestion; array becomes cache.questions or the unused list.
   function normalizeQuiz(questions) {
     return (questions || []).map(normalizeQuestion).filter(Boolean);
   }
 
+  // Called from loadTodaysQuiz (391), buildFallbackQuiz (899). Next: runs buildDayQuestion / buildSeasonQuestion / buildTimeOfDayQuestion / buildMonthQuestion.
+  // Array is concatenated into the quiz.
   function buildOrientationQuestions(count) {
     var builders = [
       buildDayQuestion,
@@ -765,6 +793,7 @@
     return questions;
   }
 
+  // Called from buildOrientationQuestions (line 791, shuffled builders). Next: uniqueOptions; question object is pushed into the orientation list.
   function buildDayQuestion() {
     var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     var today = days[new Date().getDay()];
@@ -779,6 +808,7 @@
     };
   }
 
+  // Called from buildOrientationQuestions (line 791, shuffled builders). Next: getCurrentSeason then uniqueOptions; object goes into the orientation list.
   function buildSeasonQuestion() {
     var season = getCurrentSeason();
     var seasons = ['Spring', 'Summer', 'Autumn', 'Winter'];
@@ -792,6 +822,7 @@
     };
   }
 
+  // Called from buildOrientationQuestions (line 791, shuffled builders). Next: getTimeOfDay then uniqueOptions; object goes into the orientation list.
   function buildTimeOfDayQuestion() {
     var period = getTimeOfDay();
     var periods = ['Morning', 'Afternoon', 'Evening'];
@@ -805,6 +836,7 @@
     };
   }
 
+  // Called from buildOrientationQuestions (line 791, shuffled builders). Next: uniqueOptions; object goes into the orientation list.
   function buildMonthQuestion() {
     var months = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -821,6 +853,7 @@
     };
   }
 
+  // Called from buildSeasonQuestion (line 813). Next: season string becomes the correct answer and goes into uniqueOptions.
   function getCurrentSeason() {
     var month = new Date().getMonth();
     if (month === 11 || month <= 1) {
@@ -835,6 +868,7 @@
     return 'Autumn';
   }
 
+  // Called from buildTimeOfDayQuestion (line 827). Next: period string becomes the correct answer and goes into uniqueOptions.
   function getTimeOfDay() {
     var hour = new Date().getHours();
     if (hour < 12) {
@@ -846,6 +880,8 @@
     return 'Evening';
   }
 
+  // Called from buildDayQuestion (800), buildSeasonQuestion (819), buildTimeOfDayQuestion (833), buildMonthQuestion (850).
+  // Next: shuffled 3 options go onto the question object.
   function uniqueOptions(correct, pool) {
     var options = [correct];
     var shuffled = shared.shuffleOptions(pool.filter(function (item) {
@@ -858,12 +894,15 @@
     return shared.shuffleOptions(options);
   }
 
+  // Called from loadTodaysQuiz catch (line 413). Next: buildOrientationQuestions + pickFallbackFillers; quiz is written via writeQuizCacheObject then returned to initDailyQuiz → startSession.
   function buildFallbackQuiz() {
     var orientation = buildOrientationQuestions(2);
     var fillers = pickFallbackFillers(3, orientation);
     return shared.shuffleOptions(orientation.concat(fillers));
   }
 
+  // Called from loadTodaysQuiz (399), loadMoreQuiz (446, 460), sanitizeQuestions (724), buildFallbackQuiz (900).
+  // Next: copies from FALLBACK_GENERAL; array is concatenated into the quiz batch.
   function pickFallbackFillers(count, existing) {
     var usedIds = {};
     var usedQuestions = {};
@@ -910,6 +949,7 @@
     });
   }
 
+  // Called from loadMoreQuiz (line 439). Next: id list is passed to sanitizeQuestions as excludeIds.
   function collectUsedIds(cache) {
     var ids = [];
     (cache.questions || []).forEach(function (item) {
@@ -925,6 +965,7 @@
     return ids;
   }
 
+  // Called from loadTodaysQuiz (376), loadMoreQuiz (430). Next: normalizeQuiz then filter; unused questions go to startSession (sliced to SESSION_LIMIT).
   function getUnusedQuestions(cache) {
     var answered = {};
     (cache.answeredIds || []).forEach(function (id) {
@@ -935,6 +976,8 @@
     });
   }
 
+  // Called from loadTodaysQuiz (374), loadMoreQuiz (425), pickFallbackFillers (921), markQuestionAnswered (1043).
+  // Next: may writeQuizCacheObject to hydrate answeredIds; cache object returns to caller.
   function readQuizCacheObject() {
     try {
       var stored = localStorage.getItem(QUIZ_CACHE_KEY);
@@ -982,6 +1025,8 @@
     }
   }
 
+  // Called from loadTodaysQuiz (403, 414), loadMoreQuiz (454, 465), readQuizCacheObject (1009), markQuestionAnswered (1053).
+  // Next: writes QUIZ_CACHE_KEY; caller continues with the saved cache.
   function writeQuizCacheObject(cache) {
     localStorage.setItem(QUIZ_CACHE_KEY, JSON.stringify({
       date: cache.date || shared.getTodayKey(),
@@ -990,6 +1035,7 @@
     }));
   }
 
+  // Called from optionsEl click in initDailyQuiz (line 304). Next: readQuizCacheObject then writeQuizCacheObject; then saveRound runs after in the click handler.
   function markQuestionAnswered(questionId) {
     if (!questionId) {
       return;
@@ -1008,10 +1054,12 @@
     }
   }
 
+  // Called from initDailyQuiz (line 158) when shared.isDebugReset(). Next: removes QUIZ_CACHE_KEY; initDailyQuiz continues to loadTodaysQuiz.
   function clearQuizCache() {
     localStorage.removeItem(QUIZ_CACHE_KEY);
   }
 
+  // Called from startSession (230), nextBtn click (345). Next: updateProgress, renderMotif; option buttons wait for optionsEl click.
   function renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state) {
     var question = state.currentQuestion;
     if (!question) {
@@ -1046,6 +1094,7 @@
     }
   }
 
+  // Called from renderRound (1073), optionsEl click (307). Next: updates #dq-progress-fill width; no further function.
   function updateProgress(progressEl, state) {
     if (!progressEl) {
       return;
@@ -1059,6 +1108,7 @@
     progressEl.setAttribute('aria-hidden', 'true');
   }
 
+  // Called from renderRound (line 1074). Next: motifSvg; HTML is written into motifEl.
   function renderMotif(motifEl, type) {
     if (!motifEl) {
       return;
@@ -1068,6 +1118,7 @@
     motifEl.innerHTML = motifSvg(kind);
   }
 
+  // Called from renderMotif (line 1118). Next: SVG string is set as motifEl.innerHTML.
   function motifSvg(kind) {
     if (kind === 'orientation') {
       return (
@@ -1094,6 +1145,7 @@
     );
   }
 
+  // Called from optionsEl click in initDailyQuiz (line 295). Next: markQuestionAnswered, saveRound, then setTimeout → openFeedbackModal.
   function applyCorrectFeedback(optionsEl, selected) {
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
     Array.prototype.forEach.call(buttons, function (button) {
@@ -1107,6 +1159,7 @@
     });
   }
 
+  // Called from optionsEl click in initDailyQuiz (line 299). Next: markQuestionAnswered, saveRound, then setTimeout → openFeedbackModal.
   function applyMissFeedback(optionsEl, selected, correctText) {
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
     Array.prototype.forEach.call(buttons, function (button) {
@@ -1123,6 +1176,7 @@
     });
   }
 
+  // Called from optionsEl click in initDailyQuiz (line 305). Next: shared.writeLog (shared.js, no score stored); then setTimeout → openFeedbackModal.
   function saveRound(question, selected) {
     var log = shared.readLog(STORAGE_KEY);
     log.push({
@@ -1135,10 +1189,12 @@
     shared.writeLog(STORAGE_KEY, log);
   }
 
+  // Called from openFeedbackModal (line 1229) when heading is empty. Next: string is set on modalHeadingEl.
   function pickModalHeading() {
     return MODAL_HEADINGS[Math.floor(Math.random() * MODAL_HEADINGS.length)];
   }
 
+  // Called from speakQuestionBtn click in initDailyQuiz (line 258). Next: shared.formatOptionsQuestion, then shared.speakSegments (shared.js).
   function buildQuestionSpeech(question, optionsEl) {
     var segments = [];
     var optionTexts = [];
@@ -1165,6 +1221,7 @@
     return segments;
   }
 
+  // Called from optionsEl click setTimeout in initDailyQuiz (line 317). Next: pickModalHeading if needed; modal opens, user clicks nextBtn.
   function openFeedbackModal(config) {
     if (config.modalBodyEl) {
       config.modalBodyEl.hidden = false;
@@ -1185,6 +1242,7 @@
     document.getElementById('dq-next-question').focus();
   }
 
+  // Called from speakQuestionBtn click (257), speakWarmBtn click (271). Next: shared.cancelSpeech or the speakCallback (shared.speakSegments in shared.js).
   function toggleSpeech(speakCallback) {
     if (!speechSupported) {
       return;

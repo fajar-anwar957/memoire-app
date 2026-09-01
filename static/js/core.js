@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  // Called from getActiveProfile:22, migrateContactRelationshipsOnce:137, migrateContactEmergencyFlagsOnce:179, profile.js, memory-log.js:130.
+  // Next: returns the profiles array; getActiveProfile:21 picks the current user from it.
   function getProfiles() {
     try {
       var stored = localStorage.getItem('patientProfiles');
@@ -14,6 +16,8 @@
     }
   }
 
+  // Called from splash.html enterApp:214 (Flow H), dashboard.js initDashboardHeader:40, companion.js, profile.js, shared.js:214, and others.
+  // Next: returns the current profile or null; splash redirects to /profile (new) or /dashboard (returning).
   function getActiveProfile() {
     var profiles = getProfiles();
     if (!profiles.length) {
@@ -40,6 +44,8 @@
     return profiles[0];
   }
 
+  // Called from dashboard.js renderRemindersList:147, profile.js renderSummary, memory-log.js, quick-call.js.
+  // Next: returns a safe string; callers put it into innerHTML.
   function escapeHtml(text) {
     return String(text)
       .replace(/&/g, '&amp;')
@@ -48,6 +54,8 @@
       .replace(/"/g, '&quot;');
   }
 
+  // Called from profile.js renderSummary:309, memory-log.js, quick-call.js.
+  // Next: returns the text or '—'; callers write it into summary fields.
   function displayValue(value) {
     var text = (value === null || value === undefined) ? '' : String(value).trim();
     return text || '—';
@@ -57,6 +65,8 @@
    * Capitalise each word for on-screen person names.
    * Does not alter stored values or FAMILY_n tokens.
    */
+  // Called from dashboard.js initDashboardHeader:41, companion.js, profile.js, photo-recall.js, memory-log.js, shared.js:336.
+  // Next: returns Title Case name; callers show it on screen. Does not change stored values.
   function formatDisplayName(name) {
     var text = String(name == null ? '' : name).trim();
     if (!text) {
@@ -71,6 +81,8 @@
    * Extract a core relationship noun from free-text input.
    * "She is my sister" → "Sister", "my neighbour" → "Neighbour".
    */
+  // Called from migrateContactRelationshipsOnce:152, profile.js saveBtn:893, memory-log.js, photo-recall.js:498, shared.js:241.
+  // Next: returns a cleaned noun like "Sister"; callers save it or show it.
   function normalizeRelationship(raw) {
     var text = String(raw == null ? '' : raw).trim();
     if (!text) {
@@ -113,8 +125,10 @@
     return result.charAt(0).toUpperCase() + result.slice(1);
   }
 
-  var RELATIONSHIP_MIGRATION_KEY = 'patientProfilesRelationshipNormV1';
+  var RELATIONSHIP_MIGRATION_KEY = 'patientProfilesRelationshipNormV1'; // used in migrateContactRelationshipsOnce:134,162
 
+  // Called immediately on load (this file:168) when splash.html loads core.js (Flow H).
+  // Next: writes cleaned relationships to localStorage; then migrateContactEmergencyFlagsOnce:174 runs.
   function migrateContactRelationshipsOnce() {
     try {
       if (localStorage.getItem(RELATIONSHIP_MIGRATION_KEY) === '1') {
@@ -153,8 +167,10 @@
 
   migrateContactRelationshipsOnce();
 
-  var EMERGENCY_FLAG_MIGRATION_KEY = 'patientProfilesEmergencyFlagV1';
+  var EMERGENCY_FLAG_MIGRATION_KEY = 'patientProfilesEmergencyFlagV1'; // used in migrateContactEmergencyFlagsOnce:176,205
 
+  // Called immediately on load (this file:211) after migrateContactRelationshipsOnce:168 (Flow H).
+  // Next: sets missing isEmergency flags; then the rest of core.js continues.
   function migrateContactEmergencyFlagsOnce() {
     try {
       if (localStorage.getItem(EMERGENCY_FLAG_MIGRATION_KEY) === '1') {
@@ -194,6 +210,8 @@
 
   migrateContactEmergencyFlagsOnce();
 
+  // Called from profile.js renderSummary:325, companion.js:1006, quick-call.js getEmergencyContactsWithIndexes:36.
+  // Next: returns true/false; callers filter which contacts are emergency.
   function contactIsEmergency(contact) {
     if (!contact) {
       return false;
@@ -204,6 +222,8 @@
     return contact.isEmergency === true;
   }
 
+  // Called from profile.js saveBtn click:961 (Flow F), setupContactPhoto:222, memory-log.js:736, add-memory.js:383.
+  // Next: Promise resolves to a JPEG data URL; saveBtn stores it on the profile/contact.
   function compressImageToDataURL(fileInput, maxDim, quality) {
     maxDim = maxDim || 800;
     quality = quality === undefined ? 0.7 : quality;
@@ -255,12 +275,16 @@
     });
   }
 
-  var REMINDERS_STORAGE_KEY = 'dashboardReminders';
+  var REMINDERS_STORAGE_KEY = 'dashboardReminders'; // used by getReminders:443, saveReminders:467; exported on MemoireCore:1008
 
+  // Called from formatReminderDisplayTime:389 and normalizeReminder:414.
+  // Next: returns "09"-style text; callers build the stored or displayed time.
   function padTimePart(value) {
     return value < 10 ? '0' + value : String(value);
   }
 
+  // Called from getFiredReminderIds:514, checkDueReminders:877, getNextUpcomingReminder:916, remindersToCompanionFact:482, dashboard.js:283.
+  // Next: returns YYYY-MM-DD; callers compare reminder dates to today.
   function todayKey() {
     var now = new Date();
     var month = now.getMonth() + 1;
@@ -274,6 +298,8 @@
     );
   }
 
+  // Called from normalizeReminder:407, formatReminderDateLabel:329, dashboard.js setDateFieldsFromIso:283 + readDateFields:305.
+  // Next: returns a valid YYYY-MM-DD or null; invalid dates are dropped.
   function normalizeReminderDate(value) {
     var raw = String(value == null ? '' : value).trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
@@ -297,6 +323,8 @@
     return raw;
   }
 
+  // Called from showInAppReminderAlert:812, remindersToCompanionFact:497, dashboard.js updateNextUpBanner:111 + renderRemindersList:142.
+  // Next: returns "Mon 14 August"; callers put it on the banner, list, or alert.
   function formatReminderDateLabel(isoDate) {
     var normalized = normalizeReminderDate(isoDate);
     if (!normalized) {
@@ -315,6 +343,8 @@
     });
   }
 
+  // Called from normalizeReminder:400, formatReminderDisplayTime:378, checkDueReminders:892, getNextUpcomingReminder:928, dashboard.js parseStoredTimeParts:212.
+  // Next: returns minutes from midnight or null; callers compare or format the time.
   function parseReminderTimeToMinutes(time) {
     if (typeof time !== 'string') {
       return null;
@@ -342,6 +372,8 @@
     return null;
   }
 
+  // Called from showInAppReminderAlert:812, showBrowserNotification:840, remindersToCompanionFact:498, dashboard.js updateNextUpBanner:111 + renderRemindersList:139.
+  // Next: returns "8:30 AM"; callers show it to the user.
   function formatReminderDisplayTime(time) {
     var minutesTotal = parseReminderTimeToMinutes(time);
     if (minutesTotal === null) {
@@ -357,6 +389,8 @@
     return hour12 + ':' + padTimePart(minute) + ' ' + period;
   }
 
+  // Called from getReminders:452 and saveReminders:464 after dashboard.js form submit:517 (Flow E).
+  // Next: returns a clean reminder object or null; saveReminders:462 writes it and fires memoire:reminders-changed.
   function normalizeReminder(item) {
     if (!item || typeof item !== 'object') {
       return null;
@@ -384,6 +418,8 @@
     };
   }
 
+  // Called from getReminders:454 and saveReminders:466 .sort().
+  // Next: orders incomplete first, then once-dates, then time; sorted list is stored or returned.
   function compareReminders(a, b) {
     if (!!a.completed !== !!b.completed) {
       return a.completed ? 1 : -1;
@@ -400,6 +436,8 @@
     return parseReminderTimeToMinutes(a.time) - parseReminderTimeToMinutes(b.time);
   }
 
+  // Called from checkDueReminders:870, completeActiveReminder:713, acknowledgeActiveReminder:745, dashboard.js:95,125,542.
+  // Next: returns sorted reminders (via normalizeReminder:452); checkDueReminders uses them every 30s (Flow E).
   function getReminders() {
     try {
       var stored = localStorage.getItem(REMINDERS_STORAGE_KEY);
@@ -419,6 +457,8 @@
     }
   }
 
+  // Called from dashboard.js form submit:564,577, delete:598, completeActiveReminder:729, acknowledgeActiveReminder:751 (Flow E).
+  // Next: writes localStorage, dispatches memoire:reminders-changed; dashboard.js:612 re-renders and checkDueReminders may fire.
   function saveReminders(reminders) {
     var cleaned = (Array.isArray(reminders) ? reminders : [])
       .map(normalizeReminder)
@@ -435,6 +475,8 @@
     return cleaned;
   }
 
+  // Called from companion.js buildApiPayload:1478.
+  // Next: returns a sentence of upcoming reminders; companion sends it as profileFacts.remindersForToday.
   function remindersToCompanionFact(reminders) {
     var list = Array.isArray(reminders) ? reminders : getReminders();
     var today = todayKey();
@@ -460,9 +502,11 @@
   }
 
   /* ── Global gentle-reminder scheduler (every page) ── */
-  var FIRED_REMINDERS_KEY = 'dashboardRemindersFired';
-  var REMINDER_CHECK_MS = 30000;
+  var FIRED_REMINDERS_KEY = 'dashboardRemindersFired'; // used by getFiredReminderIds:512, markReminderFired:533, clearReminderFired:546
+  var REMINDER_CHECK_MS = 30000; // used by initGlobalReminderScheduler:996 setInterval → checkDueReminders (Flow E)
 
+  // Called from checkDueReminders:878 (Flow E), markReminderFired:529, clearReminderFired:542.
+  // Next: returns {date, ids} for today; checkDueReminders skips ids already in the list.
   function getFiredReminderIds() {
     try {
       var stored = localStorage.getItem(FIRED_REMINDERS_KEY);
@@ -479,6 +523,8 @@
     }
   }
 
+  // Called from fireReminder:854 during checkDueReminders:898 (Flow E).
+  // Next: writes the id to FIRED_REMINDERS_KEY so the same reminder does not fire again today.
   function markReminderFired(id) {
     var state = getFiredReminderIds();
     if (state.ids.indexOf(id) === -1) {
@@ -490,6 +536,8 @@
     }));
   }
 
+  // Called from dashboard.js initRemindersCard form submit:566 after reschedule.
+  // Next: removes the id from today's fired list so checkDueReminders can fire it again.
   function clearReminderFired(id) {
     var state = getFiredReminderIds();
     var nextIds = state.ids.filter(function (firedId) {
@@ -501,10 +549,12 @@
     }));
   }
 
-  var sharedAudioCtx = null;
-  var activeReminderAlert = null;
-  var RESCHEDULE_STORAGE_KEY = 'memoireRescheduleReminder';
+  var sharedAudioCtx = null; // used by unlockAudio:591 and playGentleReminderChime:610
+  var activeReminderAlert = null; // set in showInAppReminderAlert:802; read by complete/acknowledge/reschedule; cleared in closeInAppReminderAlert:705
+  var RESCHEDULE_STORAGE_KEY = 'memoireRescheduleReminder'; // written in requestRescheduleReminder:778; read by dashboard.js consumePendingReschedule:478
 
+  // Called from ensureReminderAlertActions:579 and ensureReminderAlertDom:689.
+  // Next: returns the Okay/Done/Reschedule button HTML; it is inserted into the alert footer.
   function reminderAlertActionsHtml() {
     return (
       '<div class="modal-actions reminder-alert__actions">' +
@@ -515,6 +565,8 @@
     );
   }
 
+  // Called from ensureReminderAlertDom:667 when the alert already exists.
+  // Next: fills the footer if buttons are missing; then bindReminderAlertUi:938 can attach clicks.
   function ensureReminderAlertActions(alertEl) {
     if (!alertEl) {
       return;
@@ -528,6 +580,8 @@
     }
   }
 
+  // Called from splash.html enterApp:218 (Flow H); exported on MemoireCore.
+  // Next: resumes sharedAudioCtx so playGentleReminderChime can make sound later.
   function unlockAudio() {
     try {
       var AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -545,6 +599,8 @@
     }
   }
 
+  // Called from fireReminder:855 after markReminderFired:854 (Flow E).
+  // Next: nested play:643 runs tone:617 three times; then showBrowserNotification:835 and showInAppReminderAlert:793 run.
   function playGentleReminderChime() {
     try {
       var AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -556,6 +612,8 @@
       }
       var ctx = sharedAudioCtx;
 
+      // Called from nested play:647-649 inside playGentleReminderChime:604.
+      // Next: starts oscillators; sound goes to the speakers; no return value.
       function tone(freq, start, duration, peak) {
         var osc = ctx.createOscillator();
         var partial = ctx.createOscillator();
@@ -580,6 +638,8 @@
         partial.stop(start + duration + 0.02);
       }
 
+      // Called from playGentleReminderChime:653 after ctx.resume(), or directly at :655 if the context is running.
+      // Next: calls tone:647-649 for the chime; then fireReminder:853 continues to the alert.
       function play() {
         var now = ctx.currentTime;
         /* Warm three-note chime (~1.4s), clearly audible but non-alarming.
@@ -599,6 +659,8 @@
     }
   }
 
+  // Called from showInAppReminderAlert:794 and bindReminderAlertUi:939.
+  // Next: returns the #reminder-alert element; showInAppReminderAlert then fills text and opens it.
   function ensureReminderAlertDom() {
     var existing = document.getElementById('reminder-alert');
     if (existing) {
@@ -631,6 +693,8 @@
     return alertEl;
   }
 
+  // Called from completeActiveReminder:737, acknowledgeActiveReminder:753, requestRescheduleReminder:760,764.
+  // Next: hides the overlay and clears activeReminderAlert; user is back on the page.
   function closeInAppReminderAlert() {
     var alertEl = document.getElementById('reminder-alert');
     if (!alertEl) {
@@ -641,6 +705,8 @@
     activeReminderAlert = null;
   }
 
+  // Called from bindReminderAlertUi dismissBtn "I'm Done" click:947.
+  // Next: marks once-reminders complete or deletes daily ones via saveReminders:729, then closeInAppReminderAlert:737.
   function completeActiveReminder() {
     if (activeReminderAlert && activeReminderAlert.id) {
       var id = activeReminderAlert.id;
@@ -671,6 +737,8 @@
     closeInAppReminderAlert();
   }
 
+  // Called from bindReminderAlertUi Okay click:952, overlay click:966, and Escape:979.
+  // Next: marks a once-reminder complete via saveReminders:751, then closeInAppReminderAlert:753.
   function acknowledgeActiveReminder() {
     if (activeReminderAlert && activeReminderAlert.id) {
       var id = activeReminderAlert.id;
@@ -685,6 +753,8 @@
     closeInAppReminderAlert();
   }
 
+  // Called from bindReminderAlertUi Reschedule button click:958.
+  // Next: if on dashboard, dispatches memoire:reschedule-reminder; else writes RESCHEDULE_STORAGE_KEY:778 and goes to /dashboard.
   function requestRescheduleReminder(reminder) {
     if (!reminder || !reminder.id) {
       closeInAppReminderAlert();
@@ -718,6 +788,8 @@
     window.location.href = '/dashboard';
   }
 
+  // Called from fireReminder:857 (Flow E).
+  // Next: opens the overlay with Okay/Done/Reschedule; bindReminderAlertUi:938 handles those clicks.
   function showInAppReminderAlert(reminder) {
     var alertEl = ensureReminderAlertDom();
     var textEl = document.getElementById('reminder-alert-text');
@@ -746,6 +818,8 @@
     dismissBtn.focus();
   }
 
+  // Called from dashboard.js initRemindersCard form submit:584 after saveReminders.
+  // Next: Promise of permission; then checkDueReminders:585 runs.
   function requestNotificationPermission() {
     if (!('Notification' in window)) {
       return Promise.resolve('unsupported');
@@ -756,6 +830,8 @@
     return Notification.requestPermission();
   }
 
+  // Called from fireReminder:856 after playGentleReminderChime:855.
+  // Next: shows a browser notification if allowed; then showInAppReminderAlert:857 runs.
   function showBrowserNotification(reminder) {
     if (!('Notification' in window) || Notification.permission !== 'granted') {
       return;
@@ -772,6 +848,8 @@
     }
   }
 
+  // Called from checkDueReminders:898 when the clock matches (Flow E).
+  // Next: markReminderFired:854 → playGentleReminderChime:855 → showBrowserNotification:856 → showInAppReminderAlert:857.
   function fireReminder(reminder) {
     markReminderFired(reminder.id);
     playGentleReminderChime();
@@ -786,6 +864,8 @@
     }
   }
 
+  // Called from initGlobalReminderScheduler:995 now + :996 every 30s, and dashboard.js:585 after save (Flow E).
+  // Next: for a due item, calls fireReminder:898; skipped ids come from getFiredReminderIds:878.
   function checkDueReminders() {
     var reminders = getReminders();
     if (!reminders.length) {
@@ -824,6 +904,8 @@
    * Nearest future reminder for today (strictly after current minute).
    * Returns null when none remain.
    */
+  // Called from dashboard.js updateNextUpBanner:102.
+  // Next: returns the next reminder today or null; banner text is set from it.
   function getNextUpcomingReminder() {
     var reminders = getReminders();
     if (!reminders.length) {
@@ -851,6 +933,8 @@
     return null;
   }
 
+  // Called from initGlobalReminderScheduler:994.
+  // Next: wires Done → completeActiveReminder:947, Okay/Esc → acknowledgeActiveReminder:952, Reschedule → requestRescheduleReminder:958.
   function bindReminderAlertUi() {
     ensureReminderAlertDom();
     var alertEl = document.getElementById('reminder-alert');
@@ -898,6 +982,8 @@
     }
   }
 
+  // Called on DOMContentLoaded:1026 (this file) on every page except splash/onboarding; also :1028 if already loaded.
+  // Next: bindReminderAlertUi:994, then checkDueReminders:995 and every REMINDER_CHECK_MS:996 (Flow E).
   function initGlobalReminderScheduler() {
     /* Skip splash / onboarding — no main app chrome yet */
     var path = (window.location && window.location.pathname) || '';
@@ -957,6 +1043,8 @@
   });
 
   if (window.visualViewport) {
+    // Called from visualViewport resize:1053 / scroll:1054 and once on load:1055.
+    // Next: toggles body.keyboard-open so the layout can make room for the keyboard.
     function syncKeyboardOpenClass() {
       var keyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
       document.body.classList.toggle('keyboard-open', keyboardOpen);

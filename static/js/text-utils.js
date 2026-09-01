@@ -10,8 +10,9 @@
 // synthesiser announces them aloud as words.
 // Known limitation: this misses \u{00A9}, \u{00AE}, \u{203C}, \u{2049} and
 // keycap sequences. \p{Extended_Pictographic} is the modern approach.
-var EMOJI_REGEX = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}\u{2764}\u{2122}\u{2139}\u{2194}-\u{21AA}\u{231A}\u{231B}\u{24C2}\u{25AA}-\u{25FE}\u{2934}\u{2935}\u{3030}\u{303D}\u{3297}\u{3299}]/gu;
+var EMOJI_REGEX = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}\u{FE00}-\u{FE0F}\u{200D}\u{2640}\u{2642}\u{2764}\u{2122}\u{2139}\u{2194}-\u{21AA}\u{231A}\u{231B}\u{24C2}\u{25AA}-\u{25FE}\u{2934}\u{2935}\u{3030}\u{303D}\u{3297}\u{3299}]/gu; // used in cleanResponseText below
 
+// Called from companion.js sendMessage (line 2357) after unmaskReply (line 1187). Result goes into stripCompanionSelfNaming (line 74) then stripHallucinatedPhoneNumbers (line 27).
 function cleanResponseText(text) {
   if (!text) {
     return '';

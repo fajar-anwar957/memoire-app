@@ -227,7 +227,6 @@ body.page-dashboard {
   width: 100%;
   padding: 1rem 1.2rem;
   border-radius: 16px;
-  color: var(--navy);
   background: var(--nextup-active-bg);
   box-shadow:
     0 4px 14px rgba(212, 119, 46, 0.12),

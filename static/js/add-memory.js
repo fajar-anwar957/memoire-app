@@ -1,13 +1,13 @@
 (function (window) {
   var compressImageToDataURL = window.MemoireCore.compressImageToDataURL;
 
-  var STORAGE_KEY = 'dashboardMemories';
-  var MIGRATION_KEY = 'memoireThinkingAboutMigrated';
-  var DEFAULT_TEXT_PLACEHOLDER = 'A short note about your day…';
-  var SAVE_ERROR_MESSAGE =
+  var STORAGE_KEY = 'dashboardMemories'; // getMemories (20), writeMemories (33); also daily-quiz.js:11, memory-log.js:10
+  var MIGRATION_KEY = 'memoireThinkingAboutMigrated'; // read/written by migrateThinkingAboutPrefixes
+  var DEFAULT_TEXT_PLACEHOLDER = 'A short note about your day…'; // setTextPlaceholder, normalizeOpenArgs, openEdit/close
+  var SAVE_ERROR_MESSAGE = // shown by showSaveError (add-memory.js:196)
     "We couldn't save this photo — storage is full. Try removing an older memory first.";
 
-  var PHOTO_PREVIEW_DEFAULT =
+  var PHOTO_PREVIEW_DEFAULT = // used by resetMemoryForm (add-memory.js:164)
     '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
       '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
       '<circle cx="8.5" cy="8.5" r="1.75"/>' +
@@ -15,6 +15,8 @@
     '</svg>' +
     '<span class="photo-preview__text">Tap to add<br>a photo</span>';
 
+  // Called from saveMemory, updateMemory, deleteMemory, migrateThinkingAboutPrefixes; also memory-log.js:114 and companion.js:1458.
+  // Next: returns the dashboardMemories array from localStorage (STORAGE_KEY).
   function getMemories() {
     try {
       var stored = localStorage.getItem(STORAGE_KEY);
@@ -26,6 +28,8 @@
     }
   }
 
+  // Called from saveMemory (add-memory.js:68), updateMemory, deleteMemory, and migrateThinkingAboutPrefixes.
+  // Next: writes STORAGE_KEY; {ok,count} or {ok:false,error} goes back to the caller.
   function writeMemories(memories) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
@@ -35,10 +39,14 @@
     }
   }
 
+  // Called from saveMemory (add-memory.js:68) when the entry has no id.
+  // Next: id is stored on the memory then writeMemories.
   function createMemoryId() {
     return 'mem_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
   }
 
+  // Called from findMemoryIndex (add-memory.js:59) and deleteMemory (add-memory.js:98).
+  // Next: true/false used to find or drop that memory.
   function memoryMatchesId(memory, id) {
     if (!memory || id == null || id === '') return false;
     if (memory.id != null && String(memory.id) === String(id)) return true;
@@ -46,6 +54,8 @@
     return false;
   }
 
+  // Called from updateMemory (add-memory.js:84).
+  // Next: index used to merge updates, then writeMemories.
   function findMemoryIndex(memories, id) {
     for (var i = 0; i < memories.length; i++) {
       if (memoryMatchesId(memories[i], id)) return i;
@@ -53,6 +63,8 @@
     return -1;
   }
 
+  // Called from handleMemorySave (add-memory.js:373) for new entries. Exported as MemoireAddMemory.saveMemory.
+  // Next: writeMemories → localStorage dashboardMemories; feeds daily-quiz.js getMaskedMemories:537 (Flow G).
   function saveMemory(entry) {
     var memories = getMemories();
     var toSave = Object.assign({}, entry);
@@ -67,6 +79,8 @@
     return writeMemories(memories);
   }
 
+  // Called from handleMemorySave (add-memory.js:373) when editingId is set.
+  // Next: findMemoryIndex then writeMemories; result {ok} back to handleMemorySave.
   function updateMemory(id, updates) {
     var memories = getMemories();
     var index = findMemoryIndex(memories, id);
@@ -79,6 +93,8 @@
     return writeMemories(memories);
   }
 
+  // Called from memory-log.js bindListActions confirm (memory-log.js:881). Exported as MemoireAddMemory.deleteMemory.
+  // Next: writeMemories; memory-log.js then setMemoriesEditMode(false).
   function deleteMemory(id) {
     var memories = getMemories();
     var next = memories.filter(function (memory) {
@@ -91,6 +107,8 @@
   }
 
   /* One-time: move "Thinking about X: " text prefixes into context metadata. */
+  // Called on script load (add-memory.js:483). Exported as MemoireAddMemory.migrateThinkingAboutPrefixes.
+  // Next: rewrites old 'Thinking about X:' text into context, writeMemories, sets MIGRATION_KEY.
   function migrateThinkingAboutPrefixes() {
     try {
       if (localStorage.getItem(MIGRATION_KEY) === '1') {
@@ -141,6 +159,8 @@
     return { ok: true, migrated: changed };
   }
 
+  // Called from openMemoryModal, openEditMemoryModal, and closeMemoryModal.
+  // Next: restores PHOTO_PREVIEW_DEFAULT and hideSaveError.
   function resetMemoryForm(form, photoPreview, photoInput) {
     if (form) form.reset();
     if (photoPreview) {
@@ -150,6 +170,8 @@
     hideSaveError();
   }
 
+  // Called from showSaveError (add-memory.js:196).
+  // Next: returns or creates #memory-save-error in the modal.
   function getSaveErrorEl(form) {
     var el = document.getElementById('memory-save-error');
     if (!el && form) {
@@ -169,6 +191,8 @@
     return el;
   }
 
+  // Called from handleMemorySave (add-memory.js:373) when writeMemories fails.
+  // Next: getSaveErrorEl then shows SAVE_ERROR_MESSAGE.
   function showSaveError(form) {
     var el = getSaveErrorEl(form);
     if (!el) return;
@@ -176,17 +200,23 @@
     el.hidden = false;
   }
 
+  // Called from resetMemoryForm, openMemoryModal, openEditMemoryModal, and handleMemorySave start.
+  // Next: hides #memory-save-error.
   function hideSaveError() {
     var el = document.getElementById('memory-save-error');
     if (el) el.hidden = true;
   }
 
+  // Called from init (add-memory.js:220) when wiring options.triggers / options.trigger.
+  // Next: that element gets a click listener → openMemoryModal.
   function resolveTrigger(trigger) {
     if (!trigger) return null;
     if (typeof trigger === 'string') return document.querySelector(trigger);
     return trigger;
   }
 
+  // Called from word-association.js:311 and memory-log.js:934 as MemoireAddMemory.init.
+  // Next: wires the modal; returns {open: openMemoryModal, openEdit, close}. Flow G starts here from word-association.
   function init(options) {
     options = options || {};
 
@@ -211,16 +241,22 @@
     var pendingContext = '';
     var activePlaceholder = DEFAULT_TEXT_PLACEHOLDER;
 
+    // Called from openMemoryModal, openEditMemoryModal, and closeMemoryModal.
+    // Next: sets #memory-modal-title text.
     function setModalTitle(isEdit) {
       if (!memoryTitle) return;
       memoryTitle.textContent = isEdit ? 'Edit memory' : 'Add a Memory';
     }
 
+    // Called from openMemoryModal, openEditMemoryModal, and closeMemoryModal.
+    // Next: sets the primary button to Save Memory or Save changes.
     function setSaveLabel(isEdit) {
       if (!memorySaveBtn) return;
       memorySaveBtn.textContent = isEdit ? 'Save changes' : 'Save Memory';
     }
 
+    // Called from openMemoryModal, openEditMemoryModal, and closeMemoryModal.
+    // Next: sets #memory-text placeholder (DEFAULT_TEXT_PLACEHOLDER unless overridden).
     function setTextPlaceholder(placeholder) {
       var textInput = document.getElementById('memory-text');
       activePlaceholder = placeholder || DEFAULT_TEXT_PLACEHOLDER;
@@ -229,6 +265,8 @@
       }
     }
 
+    // Called from openMemoryModal (add-memory.js:292).
+    // Next: returns trigger/placeholder/context used to open the modal.
     function normalizeOpenArgs(triggerOrOptions) {
       if (
         triggerOrOptions &&
@@ -249,6 +287,8 @@
       };
     }
 
+    // Called from trigger clicks in init, and memoryModalApi.open (word-association.js:454; memory-log add buttons).
+    // Next: normalizeOpenArgs, resetMemoryForm, setTextPlaceholder; user then handleMemorySave (Flow G).
     function openMemoryModal(triggerOrOptions) {
       var args = normalizeOpenArgs(triggerOrOptions);
       editingId = null;
@@ -269,6 +309,8 @@
       }
     }
 
+    // Called as memoryModalApi.openEdit from memory-log.js:869 (edit action).
+    // Next: fills text/photo, shows modal; save goes to handleMemorySave → updateMemory.
     function openEditMemoryModal(memory, triggerEl) {
       if (!memory) return;
       editingId = memory.id || memory.date || null;
@@ -295,6 +337,8 @@
       if (textInput) textInput.focus();
     }
 
+    // Called from handleMemorySave, cancel click, overlay click, and Escape keydown.
+    // Next: resetMemoryForm, restores title/label, focuses lastTrigger.
     function closeMemoryModal() {
       memoryModal.classList.remove('is-open');
       memoryModal.hidden = true;
@@ -310,6 +354,8 @@
       }
     }
 
+    // Called from handleMemorySave (add-memory.js:373) after a successful save.
+    // Next: shows the toast for 2.8s then hides it.
     function showToast(message) {
       if (!memoryToast) return;
       memoryToast.textContent = message;
@@ -322,6 +368,8 @@
       }, 2800);
     }
 
+    // Called from memorySaveBtn click (add-memory.js:466). Flow G: compressImageToDataURL (core.js:227) then saveMemory or updateMemory.
+    // Next: on success closeMemoryModal, options.onSaved (memory-log.js:912), showToast; storage feeds daily-quiz.js:537.
     function handleMemorySave() {
       hideSaveError();
 

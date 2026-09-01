@@ -7,12 +7,12 @@
   var normalizeRelationship = window.MemoireCore.normalizeRelationship;
   var compressImageToDataURL = window.MemoireCore.compressImageToDataURL;
 
-  var STORAGE_KEY = 'dashboardMemories';
-  var PROFILE_FALLBACK_URL = '/profile#important-people';
-  var SAVE_ERROR_MESSAGE =
+  var STORAGE_KEY = 'dashboardMemories'; // fallback in getMemories (line 112) if add-memory.js is missing
+  var PROFILE_FALLBACK_URL = '/profile#important-people'; // redirect in handleAddPersonClick (line 574) when no profile is active
+  var SAVE_ERROR_MESSAGE = // shown by showPersonSaveError (line 465) when a save fails
     "We couldn't save this photo — storage is full. Try removing an older memory first.";
 
-  var PERSON_PHOTO_PREVIEW_DEFAULT =
+  var PERSON_PHOTO_PREVIEW_DEFAULT = // used by resetPersonForm (line 494) and fillPersonForm (line 509) when there is no photo
     '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
       '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
       '<circle cx="8.5" cy="8.5" r="1.75"/>' +
@@ -20,7 +20,7 @@
     '</svg>' +
     '<span class="photo-preview__text">Add photo</span>';
 
-  var MEMORY_THUMB_PLACEHOLDER =
+  var MEMORY_THUMB_PLACEHOLDER = // used by buildMemoryCard (line 277) when the memory has no photo
     '<span class="memory-log__card-thumb-placeholder" aria-hidden="true">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">' +
         '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
@@ -29,13 +29,13 @@
       '</svg>' +
     '</span>';
 
-  var ICON_EDIT =
+  var ICON_EDIT = // used by buildCardActions (line 229) for the Edit button
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
       '<path d="M12 20h9"/>' +
       '<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>' +
     '</svg>';
 
-  var ICON_DELETE =
+  var ICON_DELETE = // used by buildCardActions (line 229) for the Remove button
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
       '<polyline points="3 6 5 6 21 6"/>' +
       '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>' +
@@ -44,13 +44,15 @@
       '<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>' +
     '</svg>';
 
-  var memoryModalApi = null;
+  var memoryModalApi = null; // set from add-memory.js init; used by bindListActions (line 819) to open edit
 
-  var sectionEditMode = {
+  var sectionEditMode = { // set by setPeopleEditMode / setMemoriesEditMode; read by renderPeople and renderMemories
     people: false,
     memories: false
   };
 
+  // Called from setPeopleEditMode (line 71), setMemoriesEditMode (line 86), renderPeople (lines 348, 361), renderMemories (lines 390, 400).
+  // Next: Edit/Done label updates; the caller then redraws that section.
   function syncEditButton(btn, isEditing) {
     if (!btn) return;
     btn.textContent = isEditing ? 'Done' : 'Edit';
@@ -58,6 +60,8 @@
     btn.classList.toggle('memory-log__edit-btn--done', isEditing);
   }
 
+  // Called from bindEditModeToggles Edit click (line 899), handlePersonSave after edit (line 780), people-delete confirm in bindListActions (line 846).
+  // Next: syncEditButton then renderPeople; the people strip redraws.
   function setPeopleEditMode(enabled) {
     sectionEditMode.people = !!enabled;
     var panel = document.querySelector('.memory-log__people-panel');
@@ -71,6 +75,8 @@
     renderPeople();
   }
 
+  // Called from bindEditModeToggles (line 905), handleMemorySaved (line 914), memory-delete confirm in bindListActions (line 883).
+  // Next: syncEditButton then renderMemories; the memory feed redraws.
   function setMemoriesEditMode(enabled) {
     sectionEditMode.memories = !!enabled;
     var panel = document.querySelector('.memory-log__memories-panel');
@@ -84,6 +90,8 @@
     renderMemories();
   }
 
+  // Called from renderPeople (line 341). Reads the active profile via MemoireCore.getActiveProfile (core.js line 17).
+  // Next: the array is mapped through buildPersonCard and written into the people list.
   function getContactsWithIndexes() {
     var profile = getActiveProfile();
     if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
@@ -99,6 +107,8 @@
     return result;
   }
 
+  // Called from renderMemories (line 376) and findMemoryByKey (line 808).
+  // Next: prefers add-memory.js getMemories (line 18); else reads STORAGE_KEY. Result goes back to the caller.
   function getMemories() {
     if (window.MemoireAddMemory && window.MemoireAddMemory.getMemories) {
       return window.MemoireAddMemory.getMemories();
@@ -114,6 +124,8 @@
     }
   }
 
+  // Called from updateActiveProfileContacts (line 165). Writes patientProfiles (same key as core.js getProfiles, line 4).
+  // Next: true/false returns to updateActiveProfileContacts, then to the append/update/delete helpers.
   function saveProfiles(profiles) {
     try {
       localStorage.setItem('patientProfiles', JSON.stringify(profiles));
@@ -123,6 +135,8 @@
     }
   }
 
+  // Called from appendContactToActiveProfile (line 171), updateContactInActiveProfile (line 180), deleteContactFromActiveProfile (line 191).
+  // Next: runs the mutator, then saveProfiles; true/false goes to handlePersonSave or the delete confirm.
   function updateActiveProfileContacts(mutator) {
     var profile = getActiveProfile();
     if (!profile) return false;
@@ -151,6 +165,8 @@
     return saveProfiles(profiles);
   }
 
+  // Called from handlePersonSave (line 757) when adding a new person.
+  // Next: updateActiveProfileContacts then saveProfiles. handlePersonSave then closePersonModal and renderPeople.
   function appendContactToActiveProfile(contact) {
     return updateActiveProfileContacts(function (contacts) {
       contacts.push(contact);
@@ -158,6 +174,8 @@
     });
   }
 
+  // Called from handlePersonSave (line 744) when editing a person.
+  // Next: updateActiveProfileContacts then saveProfiles. handlePersonSave then closePersonModal and setPeopleEditMode(false).
   function updateContactInActiveProfile(index, contact) {
     return updateActiveProfileContacts(function (contacts) {
       if (index < 0 || index >= contacts.length) return null;
@@ -167,6 +185,8 @@
     });
   }
 
+  // Called from bindListActions delete confirm (line 845).
+  // Next: updateActiveProfileContacts then saveProfiles, then setPeopleEditMode(false) redraws the list.
   function deleteContactFromActiveProfile(index) {
     return updateActiveProfileContacts(function (contacts) {
       if (index < 0 || index >= contacts.length) return null;
@@ -175,6 +195,8 @@
     });
   }
 
+  // Called from buildPersonCard (line 253) when the contact has no photo.
+  // Next: the letter is inserted into the person-card HTML.
   function getContactInitial(contact) {
     var name = String(contact.name || '').trim();
     if (name) return name.charAt(0).toUpperCase();
@@ -183,6 +205,8 @@
     return '?';
   }
 
+  // Called from buildMemoryCard (line 280).
+  // Next: the date string is inserted into the memory-card HTML.
   function formatMemoryDate(isoDate) {
     if (!isoDate) return '';
     var d = new Date(isoDate);
@@ -194,10 +218,14 @@
     });
   }
 
+  // Called from buildMemoryCard (line 281) and findMemoryByKey (line 810).
+  // Next: used as data-memory-id on cards, and to match a memory for edit/delete.
   function getMemoryKey(memory) {
     return memory.id || memory.date || '';
   }
 
+  // Called from buildPersonCard (line 260) and buildMemoryCard (line 303) while edit mode is on.
+  // Next: Edit/Remove buttons are included in the card HTML that renderPeople/renderMemories put on the page.
   function buildCardActions(editLabel, deleteLabel) {
     return (
       '<div class="memory-log__card-actions">' +
@@ -211,6 +239,8 @@
     );
   }
 
+  // Called from renderPeople via contacts.map (line 351).
+  // Next: HTML strings are joined into #memory-log-people-list.
   function buildPersonCard(entry) {
     var contact = entry.contact;
     var name = formatDisplayName(contact.name) || displayValue(contact.name);
@@ -242,6 +272,8 @@
     );
   }
 
+  // Called from renderMemories via memories.map (line 394).
+  // Next: HTML strings are joined into #memory-log-feed.
   function buildMemoryCard(memory) {
     var hasPhoto = !!(memory.photo && String(memory.photo).trim());
     var text = String(memory.text || '').trim();
@@ -285,6 +317,8 @@
     );
   }
 
+  // Called from renderPeople (line 364), window resize (line 927), and people-list scroll (line 930).
+  // Next: toggles has-overflow on #memory-log-people-scroll. Nothing else runs.
   function updatePeopleScrollHint() {
     var scrollWrap = document.getElementById('memory-log-people-scroll');
     var peopleList = document.getElementById('memory-log-people-list');
@@ -295,6 +329,8 @@
     scrollWrap.classList.toggle('has-overflow', hasOverflow && !atEnd);
   }
 
+  // Called from setPeopleEditMode (line 75), render (line 414), handlePersonSave (line 782).
+  // Next: getContactsWithIndexes then buildPersonCard, then updatePeopleScrollHint. The people strip updates.
   function renderPeople() {
     var peopleEmpty = document.getElementById('memory-log-people-empty');
     var peopleList = document.getElementById('memory-log-people-list');
@@ -328,6 +364,8 @@
     window.requestAnimationFrame(updatePeopleScrollHint);
   }
 
+  // Called from setMemoriesEditMode (line 90), render (line 415), handleMemorySaved (line 916).
+  // Next: getMemories (add-memory.js) then buildMemoryCard. The memory feed updates.
   function renderMemories() {
     var feedEl = document.getElementById('memory-log-feed');
     var emptyEl = document.getElementById('memory-log-memories-empty');
@@ -370,12 +408,14 @@
     }
   }
 
+  // Called from DOMContentLoaded (line 920) after the lists and edit buttons are bound.
+  // Next: renderPeople then renderMemories.
   function render() {
     renderPeople();
     renderMemories();
   }
 
-  var personModalState = {
+  var personModalState = { // filled by initPersonModal; read by open/save/close person-modal helpers
     modal: null,
     form: null,
     titleEl: null,
@@ -394,7 +434,7 @@
     existingPhoto: ''
   };
 
-  var confirmModalState = {
+  var confirmModalState = { // filled by initConfirmModal; pending.onConfirm runs after the user confirms remove
     modal: null,
     titleEl: null,
     bodyEl: null,
@@ -403,6 +443,8 @@
     pending: null
   };
 
+  // Called from showPersonSaveError (line 466).
+  // Next: returns (or creates) the error paragraph; showPersonSaveError then sets SAVE_ERROR_MESSAGE.
   function getPersonSaveErrorEl() {
     var state = personModalState;
     if (!state.saveError && state.form) {
@@ -418,6 +460,8 @@
     return state.saveError;
   }
 
+  // Called from handlePersonSave (line 774) when saveProfiles fails.
+  // Next: getPersonSaveErrorEl; the modal stays open so the user can retry.
   function showPersonSaveError() {
     var el = getPersonSaveErrorEl();
     if (!el) return;
@@ -425,12 +469,16 @@
     el.hidden = false;
   }
 
+  // Called from resetPersonForm (line 503) and handlePersonSave (line 721) at the start of a save.
+  // Next: the error line is hidden; form reset or save continues.
   function hidePersonSaveError() {
     if (personModalState.saveError) {
       personModalState.saveError.hidden = true;
     }
   }
 
+  // Called from resetPersonForm (line 504) and openEditPersonModal (line 551).
+  // Next: title and Save button text update; the caller then shows the modal.
   function setPersonModalMode(isEdit) {
     var state = personModalState;
     if (state.titleEl) {
@@ -441,6 +489,8 @@
     }
   }
 
+  // Called from openPersonModal (line 532), openEditPersonModal (line 549), closePersonModal (line 566).
+  // Next: hidePersonSaveError and setPersonModalMode(false); the caller then opens or closes the modal.
   function resetPersonForm() {
     var state = personModalState;
     if (state.form) state.form.reset();
@@ -454,6 +504,8 @@
     setPersonModalMode(false);
   }
 
+  // Called from openEditPersonModal (line 552).
+  // Next: fields are filled; the modal is then shown and the name box is focused.
   function fillPersonForm(contact) {
     var state = personModalState;
     if (state.nameInput) state.nameInput.value = contact.name || '';
@@ -470,6 +522,8 @@
     }
   }
 
+  // Called from handleAddPersonClick (line 581) after + Add a person / empty-state click (memory-log.html).
+  // Next: resetPersonForm; modal opens. Save click later runs handlePersonSave.
   function openPersonModal(triggerEl) {
     var state = personModalState;
     if (!state.modal) return;
@@ -481,6 +535,8 @@
     if (state.nameInput) state.nameInput.focus();
   }
 
+  // Called from bindListActions Edit click (line 835).
+  // Next: resetPersonForm, setPersonModalMode(true), fillPersonForm. Save click later runs handlePersonSave.
   function openEditPersonModal(index, triggerEl) {
     var state = personModalState;
     if (!state.modal) return;
@@ -499,6 +555,8 @@
     if (state.nameInput) state.nameInput.focus();
   }
 
+  // Called from Cancel/overlay/Escape in initPersonModal (lines 686, 690, 800) and handlePersonSave after a successful save (line 778).
+  // Next: resetPersonForm; focus goes back to the button that opened the modal.
   function closePersonModal() {
     var state = personModalState;
     if (!state.modal) return;
@@ -511,6 +569,8 @@
     }
   }
 
+  // Called from bindAddPersonTriggers click (line 590) on #memory-log-add-person-btn / #memory-log-empty-person-btn (memory-log.html).
+  // Next: if no profile, goes to PROFILE_FALLBACK_URL; else openPersonModal.
   function handleAddPersonClick(event, triggerEl) {
     if (!getActiveProfile()) {
       window.location.href = PROFILE_FALLBACK_URL;
@@ -521,6 +581,8 @@
     openPersonModal(triggerEl);
   }
 
+  // Called from initPersonModal (lines 682, 683) for the add-person and empty-state buttons.
+  // Next: click runs handleAddPersonClick, which opens the person modal.
   function bindAddPersonTriggers(triggerEl) {
     if (!triggerEl || triggerEl.dataset.personBound === 'true') return;
     triggerEl.dataset.personBound = 'true';
@@ -529,6 +591,8 @@
     });
   }
 
+  // Called from bindListActions people-delete and memory-delete (lines 840, 875).
+  // Next: confirm modal opens. Confirm click in initConfirmModal runs pending.onConfirm (delete, then re-render).
   function openConfirmModal(config) {
     var state = confirmModalState;
     if (!state.modal) return;
@@ -546,6 +610,8 @@
     if (state.cancelBtn) state.cancelBtn.focus();
   }
 
+  // Called from Cancel, Confirm, overlay, and Escape in initConfirmModal (lines 636, 642, 650, 655).
+  // Next: modal hides. After Confirm, pending.onConfirm runs (deleteContactFromActiveProfile or add-memory.js deleteMemory).
   function closeConfirmModal() {
     var state = confirmModalState;
     if (!state.modal) return;
@@ -554,6 +620,8 @@
     state.pending = null;
   }
 
+  // Called from DOMContentLoaded (line 920) in this file.
+  // Next: binds confirm UI; then initPersonModal runs.
   function initConfirmModal() {
     var modal = document.getElementById('memory-confirm-modal');
     if (!modal) return;
@@ -589,6 +657,8 @@
     });
   }
 
+  // Called from DOMContentLoaded (line 920) in this file, after initConfirmModal.
+  // Next: binds the add-person form and nested handlePersonSave; then bindListActions runs.
   function initPersonModal() {
     var modal = document.getElementById('add-person-modal');
     if (!modal) return;
@@ -645,6 +715,8 @@
       });
     }
 
+    // Called from Save button click bound in initPersonModal (line 795).
+    // Next: compressImageToDataURL, then appendContactToActiveProfile or updateContactInActiveProfile, then saveProfiles, closePersonModal, renderPeople or setPeopleEditMode(false).
     function handlePersonSave() {
       hidePersonSaveError();
 
@@ -730,6 +802,8 @@
     });
   }
 
+  // Called from bindListActions Edit click (line 867). Uses getMemories from add-memory.js.
+  // Next: the memory is passed to memoryModalApi.openEdit (add-memory.js openEditMemoryModal, line 272).
   function findMemoryByKey(key) {
     var memories = getMemories();
     for (var i = 0; i < memories.length; i++) {
@@ -740,6 +814,8 @@
     return null;
   }
 
+  // Called from DOMContentLoaded (line 920) in this file.
+  // Next: Edit opens openEditPersonModal or add-memory.js openEdit; Remove opens openConfirmModal then delete.
   function bindListActions() {
     var peopleList = document.getElementById('memory-log-people-list');
     var feedEl = document.getElementById('memory-log-feed');
@@ -765,6 +841,7 @@
               title: 'Remove this person?',
               body: 'Remove this person? This cannot be undone.',
               confirmLabel: 'Remove',
+              // Called from confirm-modal Confirm after delete on a person card. Next: deleteContactFromActiveProfile then setPeopleEditMode(false).
               onConfirm: function () {
                 deleteContactFromActiveProfile(actionIndex);
                 setPeopleEditMode(false);
@@ -800,6 +877,7 @@
             title: 'Remove this memory?',
             body: 'Remove this memory? This cannot be undone.',
             confirmLabel: 'Remove',
+            // Called from confirm-modal Confirm after delete on a memory card. Next: add-memory.js deleteMemory then setMemoriesEditMode(false).
             onConfirm: function () {
               if (window.MemoireAddMemory && window.MemoireAddMemory.deleteMemory) {
                 window.MemoireAddMemory.deleteMemory(memoryId);
@@ -812,6 +890,8 @@
     }
   }
 
+  // Called from DOMContentLoaded (line 920) in this file.
+  // Next: Edit click runs setPeopleEditMode or setMemoriesEditMode; then render() runs.
   function bindEditModeToggles() {
     var editPeopleBtn = document.getElementById('memory-log-edit-people-btn');
     var editMemoriesBtn = document.getElementById('memory-log-edit-memories-btn');
@@ -829,6 +909,8 @@
     }
   }
 
+  // Called from add-memory.js init onSaved (add-memory.js line 364) after MemoireAddMemory.init in DOMContentLoaded (line 920).
+  // Next: setMemoriesEditMode(false) on edit, or renderMemories on add.
   function handleMemorySaved(wasEdit) {
     if (wasEdit) {
       setMemoriesEditMode(false);

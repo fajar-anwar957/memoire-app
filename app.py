@@ -3,13 +3,12 @@ import re
 
 from dotenv import load_dotenv
 load_dotenv()
-
 import anthropic
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 
 app = Flask(__name__)
 
-SYSTEM_PROMPT = (
+SYSTEM_PROMPT = (  # used in api_chat as the base system prompt sent to Claude
     "You are Mémoire, a warm and friendly AI companion for someone with "
     "early-stage dementia. Speak gently, use simple sentences, and be "
     "patient and encouraging.\n\n"
@@ -118,47 +117,57 @@ SYSTEM_PROMPT = (
     "praise. Lead with substance."
 )
 
+# Called from the browser on GET /. Renders splash.html; splash JS then runs core.js migrations and enterApp.
 @app.route('/')
 def splash():
     return render_template('splash.html')
 
+# Called from the browser on GET /favicon.ico. Redirects to the app icon; nothing else runs.
 @app.route('/favicon.ico')
 def favicon():
     return redirect(url_for('static', filename='assets/memoire-icon.png'))
 
+# Called from splash enterApp when there is no profile, or from the Profile nav. Renders profile.html → initProfilePage.
 @app.route('/profile')
 def profile():
     return render_template('profile.html')
 
+# Called from splash enterApp for a returning user, or after profile save. Renders dashboard.html → dashboard.js + core.js reminders.
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
 
+# Called from the Memory Log nav. Renders memory-log.html → memory-log.js render().
 @app.route('/memory-log')
 def memory_log():
     return render_template('memory-log.html')
 
+# Called from the Companion nav. Renders companion.html → companion.js bootstrapCompanionUi.
 @app.route('/companion')
 def companion():
     return render_template('companion.html')
 
+# Called from the Activities nav. Renders activities.html.
 @app.route('/activities')
 def activities():
     return render_template('activities.html')
 
+# Called from the Word Association activity link. Renders word-association.html → initWordAssociation.
 @app.route('/activities/word-association')
 def word_association():
     return render_template('word-association.html')
 
+# Called from the Photo Recall activity link. Renders photo-recall.html → initPhotoRecall.
 @app.route('/activities/photo-recall')
 def photo_recall():
     return render_template('photo-recall.html')
 
+# Called from the Daily Quiz activity link. Renders daily-quiz.html → initDailyQuiz → loadTodaysQuiz.
 @app.route('/activities/daily-quiz')
 def daily_quiz():
     return render_template('daily-quiz.html')
 
-DAILY_QUIZ_SYSTEM_PROMPT = (
+DAILY_QUIZ_SYSTEM_PROMPT = (  # used in api_daily_quiz as the Haiku system prompt
     "You generate a gentle Cognitive Stimulation Therapy quiz for someone with "
     "early-stage dementia. Write warm, simple, short questions suitable for older adults.\n\n"
     "Name tokens in the data: The person taking the quiz may appear as [PATIENT]. "
@@ -202,6 +211,8 @@ DAILY_QUIZ_SYSTEM_PROMPT = (
     "- Keep language plain and dementia-friendly."
 )
 
+# Called from daily-quiz.js fetchApiQuestions (line 472) POST /api/daily-quiz. Sends memories/people to Haiku.
+# JSON {raw} goes back to parseQuizJson (line 584) then dePseudonymiseQuestions (line 617).
 @app.route('/api/daily-quiz', methods=['POST'])
 def api_daily_quiz():
     try:
@@ -313,6 +324,8 @@ def api_daily_quiz():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Called from companion.js sendMessage (line 2357) fetch POST /api/chat after buildApiPayload (line 1499).
+# JSON {reply} goes back to extractSafetyVerdict (line 2038) then unmaskReply (line 1187).
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     try:
@@ -351,10 +364,12 @@ def api_chat():
         if not isinstance(profile_facts, dict):
             profile_facts = {}
 
+        # Called from api_chat (line 330) when looping profileFacts. Result goes into fact_lines on the system prompt.
         def _format_field_label(key):
             label = re.sub(r'([A-Z])', r' \1', key)
             return label.replace('_', ' ').strip().title()
 
+        # Called from api_chat (line 330) for each profileFacts value (and topics). Result is appended to fact_lines or topics_to_avoid.
         def _format_fact_value(value):
             if value is None:
                 return ''
@@ -366,6 +381,7 @@ def api_chat():
                 return str(value)
             return str(value)
 
+        # Called from api_chat (line 330) for recentMemoriesWithDates and top-level memories. Result goes into memory_lines.
         def _format_memory_entry(entry):
             if isinstance(entry, str):
                 return entry.strip()

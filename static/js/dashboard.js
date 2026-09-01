@@ -12,6 +12,8 @@
   var checkDueReminders = window.MemoireCore.checkDueReminders;
   var requestNotificationPermission = window.MemoireCore.requestNotificationPermission;
 
+  // Called from initDashboardHeader:41.
+  // Next: returns preferredName or 'Friend'; formatDisplayName then puts it in the greeting.
   function getPreferredName(profile) {
     if (profile && profile.preferredName && String(profile.preferredName).trim()) {
       return String(profile.preferredName).trim();
@@ -19,6 +21,8 @@
     return 'Friend';
   }
 
+  // Called from DOMContentLoaded:629.
+  // Next: writes greeting, avatar, and date; then initFeelingButton:630 and initRemindersCard:631 run.
   function initDashboardHeader() {
     var hour = new Date().getHours();
     var greeting;
@@ -59,9 +63,11 @@
     }
   }
 
-  var FEELING_SEED_KEY = 'memoireCompanionPrefill';
-  var FEELING_SEED_TEXT = "Today I'm feeling ";
+  var FEELING_SEED_KEY = 'memoireCompanionPrefill'; // set in initFeelingButton click:79; read by companion.js applyFeelingPrefill:2510
+  var FEELING_SEED_TEXT = "Today I'm feeling "; // written with FEELING_SEED_KEY in initFeelingButton:79
 
+  // Called from DOMContentLoaded:630.
+  // Next: click:79 stores FEELING_SEED_KEY; companion.js applyFeelingPrefill:2505 reads it on the companion page.
   function initFeelingButton() {
     var feelingBtn = document.getElementById('dashboard-feeling-btn');
     if (!feelingBtn) {
@@ -77,6 +83,8 @@
     });
   }
 
+  // Called from DOMContentLoaded:632, initRemindersCard save/delete/load:581,600,623, memoire:reminder-fired:616, setInterval:624.
+  // Next: uses getNextUpcomingReminder:102; writes #dashboard-next-up-text.
   function updateNextUpBanner() {
     var banner = document.getElementById('dashboard-next-up');
     var textEl = document.getElementById('dashboard-next-up-text');
@@ -105,6 +113,8 @@
     textEl.textContent = 'Next up · ' + scheduleBit + ': ' + next.text;
   }
 
+  // Called from initRemindersCard on load:622, after save:580 / delete:599, and memoire:reminders-changed:613.
+  // Next: fills #dashboard-reminders-list HTML; delete clicks go back to saveReminders:598.
   function renderRemindersList() {
     var listEl = document.getElementById('dashboard-reminders-list');
     var emptyEl = document.getElementById('dashboard-reminders-empty');
@@ -154,6 +164,8 @@
     }).join('');
   }
 
+  // Called from setTimeFields:319 and bindTimeInputGuards blur:361,364 (inside initRemindersCard).
+  // Next: returns "05"-style minutes; the input value is updated.
   function padMinuteDisplay(value) {
     var n = parseInt(value, 10);
     if (isNaN(n)) {
@@ -162,6 +174,8 @@
     return n < 10 ? '0' + n : String(n);
   }
 
+  // Called from readDateFields:293-295, readTimeFields:326-327, bindTimeInputGuards blur:359 (inside initRemindersCard).
+  // Next: returns a number in range or null; callers build the date/time.
   function clampInt(value, min, max) {
     var n = parseInt(value, 10);
     if (isNaN(n)) {
@@ -176,6 +190,8 @@
     return n;
   }
 
+  // Called from initRemindersCard form submit:531.
+  // Next: returns "HH:MM"; that string is saved via saveReminders:564 (Flow E).
   function to24Hour(hour12, minute, isPm) {
     var hour = hour12;
     if (isPm) {
@@ -190,6 +206,8 @@
     );
   }
 
+  // Called from openReminderModal:408 when rescheduling (opts.time).
+  // Next: returns {hour12, minute, isPm}; setTimeFields:428 fills the inputs.
   function parseStoredTimeParts(time24) {
     var minutesTotal = window.MemoireCore.parseReminderTimeToMinutes(time24);
     if (minutesTotal === null) {
@@ -205,6 +223,8 @@
     return { hour12: hour12, minute: minute, isPm: isPm };
   }
 
+  // Called from DOMContentLoaded:631.
+  // Next: wires add/save/delete; form submit:517 → saveReminders:564 → memoire:reminders-changed:612 → checkDueReminders:585 (Flow E).
   function initRemindersCard() {
     var listEl = document.getElementById('dashboard-reminders-list');
     var addBtn = document.getElementById('dashboard-reminders-add');
@@ -230,8 +250,10 @@
     }
 
     var editingReminderId = null;
-    var RESCHEDULE_KEY = 'memoireRescheduleReminder';
+    var RESCHEDULE_KEY = 'memoireRescheduleReminder'; // same as core.js RESCHEDULE_STORAGE_KEY:554; read in consumePendingReschedule:478
 
+    // Called from setTimeFields:320, and AM/PM button clicks:511,514 in initRemindersCard.
+    // Next: toggles AM/PM button state; readTimeFields:325 later reads isPm from the PM button.
     function setAmPm(isPm) {
       amBtn.classList.toggle('is-active', !isPm);
       pmBtn.classList.toggle('is-active', isPm);
@@ -239,6 +261,8 @@
       pmBtn.setAttribute('aria-pressed', isPm ? 'true' : 'false');
     }
 
+    // Called from openReminderModal:431, closeReminderModal:453, Daily:375 / Once:378 button clicks.
+    // Next: shows or hides the date field; isOnceMode:276 reads the Once button.
     function setRepeatMode(isOnce) {
       dailyBtn.classList.toggle('is-active', !isOnce);
       onceBtn.classList.toggle('is-active', isOnce);
@@ -247,10 +271,14 @@
       dateField.hidden = !isOnce;
     }
 
+    // Called from form submit:532 in initRemindersCard.
+    // Next: returns true if Once is active; submit then calls readDateFields:535 and saveReminders.
     function isOnceMode() {
       return onceBtn.classList.contains('is-active');
     }
 
+    // Called from openReminderModal:432, Once click:380, consume/open reschedule path.
+    // Next: fills day/month/year inputs; readDateFields:292 reads them on submit.
     function setDateFieldsFromIso(isoDate) {
       var normalized = normalizeReminderDate(isoDate) || todayKey();
       var parts = normalized.split('-');
@@ -259,6 +287,8 @@
       dayInput.value = String(parseInt(parts[2], 10));
     }
 
+    // Called from form submit:535 when isOnceMode() is true.
+    // Next: returns YYYY-MM-DD or null; saveReminders:564 stores it on the reminder.
     function readDateFields() {
       var day = clampInt(dayInput.value, 1, 31);
       var month = clampInt(monthInput.value, 1, 12);
@@ -282,12 +312,16 @@
       return normalized;
     }
 
+    // Called from openReminderModal:428 after parseStoredTimeParts:408 (or now).
+    // Next: fills hour/minute and setAmPm:320; user can then edit and submit.
     function setTimeFields(hour12, minute, isPm) {
       hourInput.value = String(hour12);
       minuteInput.value = padMinuteDisplay(minute);
       setAmPm(isPm);
     }
 
+    // Called from form submit:525 in initRemindersCard.
+    // Next: returns {hour12, minute, isPm}; to24Hour:531 then saveReminders:564 (Flow E).
     function readTimeFields() {
       var hour12 = clampInt(hourInput.value, 1, 12);
       var minute = clampInt(minuteInput.value, 0, 59);
@@ -301,6 +335,8 @@
       };
     }
 
+    // Called from initRemindersCard:368-372 for hour, minute, day, month, year inputs.
+    // Next: input/blur keep values in range via clampInt:359 and padMinuteDisplay:361.
     function bindTimeInputGuards(inputEl, min, max, padOnBlur) {
       inputEl.addEventListener('input', function () {
         var raw = String(inputEl.value || '').replace(/\D/g, '');
@@ -345,6 +381,8 @@
       }
     });
 
+    // Called from openReminderModal:402 and closeReminderModal:454.
+    // Next: sets the modal title/hint; then the form is shown or reset.
     function setModalCopy(isReschedule) {
       if (titleEl) {
         titleEl.textContent = isReschedule ? 'Choose a new time' : 'Add a reminder';
@@ -356,6 +394,8 @@
       }
     }
 
+    // Called from addBtn click:497, openRescheduleForReminder:464.
+    // Next: setModalCopy:402, setTimeFields:428, setRepeatMode:431; user submits or cancel → closeReminderModal:448.
     function openReminderModal(options) {
       var opts = options || {};
       editingReminderId = opts.reminderId || null;
@@ -403,6 +443,8 @@
       }, 50);
     }
 
+    // Called from cancel:501, overlay:506, Escape:608, and after successful form submit:582.
+    // Next: hides the modal and focuses the add button.
     function closeReminderModal() {
       modal.classList.remove('is-open');
       modal.hidden = true;
@@ -413,6 +455,8 @@
       addBtn.focus();
     }
 
+    // Called from consumePendingReschedule:490 and memoire:reschedule-reminder listener:619.
+    // Next: openReminderModal:464 with the existing reminder; submit then saveReminders:564 (Flow E).
     function openRescheduleForReminder(reminder) {
       if (!reminder || !reminder.id) {
         return;
@@ -426,6 +470,8 @@
       });
     }
 
+    // Called at the end of initRemindersCard:625 (after redirect from requestRescheduleReminder in core.js:758).
+    // Next: reads RESCHEDULE_KEY:478 and calls openRescheduleForReminder:490.
     function consumePendingReschedule() {
       var raw = null;
       try {

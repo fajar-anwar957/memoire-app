@@ -19,7 +19,6 @@
   --icon-tile-peach: #f6e3d2;
 
   /*
-   * Input form colours — change here to update all modals/forms app-wide.
    * Modal shell (header/body/footer scroll pattern) lives in:
    *   static/css/components/modals.css
    * Applied via: .modal-card (modals.css), profile .card / .field inputs (profile.css),
@@ -34,6 +33,7 @@
   --nextup-active-bg: #ffe0b3;
   --nextup-empty-bg: #dce8d5;
   --feeling-btn-bg: #b0570f;
+  --purple-btn-bg: #2a0ee3;
 
   /* Soft warm wash for activity + dashboard cards */
   --activity-card-tint: #fffcfa;

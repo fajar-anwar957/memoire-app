@@ -1,4 +1,6 @@
 (function () {
+  // Called from DOMContentLoaded (profile.js:1085) or immediately (profile.js:1087) if already loaded. Script: templates/profile.html:448.
+  // Next: wires wizard events; then showSummaryView, showWizardView, or openImportantPeopleWizard based on mode/hash.
   function initProfilePage() {
   var getProfiles = window.MemoireCore.getProfiles;
   var getActiveProfile = window.MemoireCore.getActiveProfile;
@@ -25,6 +27,8 @@
   var pageSubheading = document.getElementById('page-subheading');
 
   if (profileMode === 'caregiver') {
+    // Called from the caregiver branch in initProfilePage (profile.js:4), just below.
+    // Next: sets page heading, subheading, preferred-name hint, and photo prompt text.
     var byId = function (id) { return document.getElementById(id); };
     if (byId('page-heading'))    byId('page-heading').textContent    = 'Their Profile';
     if (byId('page-subheading')) byId('page-subheading').textContent = "Let's get to know them.";
@@ -32,6 +36,8 @@
     if (byId('photo-prompt'))    byId('photo-prompt').innerHTML      = 'Tap to add<br>their photo';
   }
 
+  // Called from proceedWithSave (profile.js:1013) and delete-modal-confirm click (profile.js:805).
+  // Next: writes patientProfiles to localStorage. Then proceedWithSave sets activeProfileId and redirects or showSummaryView.
   function saveProfiles(profiles) {
     localStorage.setItem('patientProfiles', JSON.stringify(profiles));
   }
@@ -39,6 +45,8 @@
   // Topics to Avoid — stored as topicsToAvoid: string[]. Migrates legacy topicsAvoid string.
   var topicsToAvoidList = [];
 
+  // Called from getTopicsToAvoidFromProfile (profile.js:64) and setTopicsToAvoid (profile.js:128).
+  // Next: returns a trimmed string array used as topicsToAvoidList / chips.
   function normalizeTopicsToAvoid(raw) {
     if (Array.isArray(raw)) {
       return raw
@@ -51,6 +59,8 @@
     return [];
   }
 
+  // Called from populateWizardFromProfile (profile.js:550).
+  // Next: result goes to setTopicsToAvoid, then renderTopicsToAvoidChips.
   function getTopicsToAvoidFromProfile(profile) {
     if (!profile) return [];
     if (profile.topicsToAvoid != null) {
@@ -59,6 +69,8 @@
     return normalizeTopicsToAvoid(profile.topicsAvoid);
   }
 
+  // Called from addTopicToAvoid (profile.js:105), clearTopicsToAvoid, setTopicsToAvoid, and chip remove click.
+  // Next: redraws #topics-avoid-list chips on the wizard.
   function renderTopicsToAvoidChips() {
     var listEl = document.getElementById('topics-avoid-list');
     if (!listEl) return;
@@ -88,6 +100,8 @@
     });
   }
 
+  // Called from commitTopicFromInput (profile.js:843).
+  // Next: pushes onto topicsToAvoidList then renderTopicsToAvoidChips.
   function addTopicToAvoid(rawValue) {
     var topic = (rawValue || '').trim();
     if (!topic) return;
@@ -100,6 +114,8 @@
     renderTopicsToAvoidChips();
   }
 
+  // Called from resetWizardForm (profile.js:499).
+  // Next: empties topicsToAvoidList, renderTopicsToAvoidChips, clears the input.
   function clearTopicsToAvoid() {
     topicsToAvoidList = [];
     renderTopicsToAvoidChips();
@@ -107,11 +123,15 @@
     if (input) input.value = '';
   }
 
+  // Called from populateWizardFromProfile (profile.js:550).
+  // Next: normalizeTopicsToAvoid then renderTopicsToAvoidChips.
   function setTopicsToAvoid(topics) {
     topicsToAvoidList = normalizeTopicsToAvoid(topics);
     renderTopicsToAvoidChips();
   }
 
+  // Called from isProfileSourcedContact (profile.js:144) and getMemoryLogContacts (profile.js:150).
+  // Next: returns 'memory-log' or 'profile' for contact filters.
   function contactSource(contact) {
     if (contact && contact.source === 'memory-log') {
       return 'memory-log';
@@ -119,10 +139,14 @@
     return 'profile';
   }
 
+  // Called from getProfileSourcedContacts (profile.js:161).
+  // Next: used to filter wizard/summary contacts (not memory-log people).
   function isProfileSourcedContact(contact) {
     return contactSource(contact) === 'profile';
   }
 
+  // Called from proceedWithSave (profile.js:1013) when editing.
+  // Next: merged into profile.contacts so memory-log people are kept on save.
   function getMemoryLogContacts(contacts) {
     if (!contacts || !Array.isArray(contacts)) {
       return [];
@@ -132,6 +156,8 @@
     });
   }
 
+  // Called from renderSummary (profile.js:342) and populateWizardFromProfile (profile.js:550).
+  // Next: shown on the summary or filled into person cards.
   function getProfileSourcedContacts(contacts) {
     if (!contacts || !Array.isArray(contacts)) {
       return [];
@@ -141,21 +167,27 @@
     });
   }
 
-  var CONTACT_PHOTO_PREVIEW_DEFAULT =
+  var CONTACT_PHOTO_PREVIEW_DEFAULT = // used by clearPersonCardFields (profile.js:239) and createPersonCard (profile.js:257)
     '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.75"/><path d="M21 15l-5-5L5 21"/></svg>' +
     '<span class="photo-preview__text">Add photo</span>';
 
+  // Called from getPersonCards (profile.js:183), createPersonCard (profile.js:257), and resetPersonCards (profile.js:307).
+  // Next: returns the #person-cards element those functions use.
   function getPersonCardsContainer() {
     return document.getElementById('person-cards');
   }
 
+  // Called from getNextContactIndex, ensurePersonCardCount, resetPersonCards, populateWizardFromProfile, hasEmergencyContactInWizard, saveBtn click.
+  // Next: returns .person-card elements for indexing, fill, and save.
   function getPersonCards() {
     var container = getPersonCardsContainer();
     if (!container) return [];
     return Array.prototype.slice.call(container.querySelectorAll('.person-card'));
   }
 
+  // Called from ensurePersonCardCount (profile.js:297) and btn-add-person click (profile.js:824).
+  // Next: the number is passed to createPersonCard.
   function getNextContactIndex() {
     var max = 0;
     getPersonCards().forEach(function (card) {
@@ -165,6 +197,8 @@
     return max + 1;
   }
 
+  // Called from wirePersonCard (profile.js:232) and populateWizardFromProfile (profile.js:550).
+  // Next: shows the phone helper text on that contact card.
   function updatePhoneHintForContact(index) {
     var phoneHint = document.getElementById('contact-' + index + '-phone-hint');
     if (!phoneHint) {
@@ -173,6 +207,8 @@
     phoneHint.hidden = false;
   }
 
+  // Called from wirePersonCard (profile.js:232) and initProfilePage (profile.js:862).
+  // Next: on file change, compressImageToDataURL (core.js:227) then updates the preview img.
   function setupContactPhoto(inputId, previewId) {
     var input = document.getElementById(inputId);
     var preview = document.getElementById(previewId);
@@ -191,11 +227,15 @@
     });
   }
 
+  // Called from createPersonCard (profile.js:257) and initProfilePage (profile.js:864).
+  // Next: setupContactPhoto then updatePhoneHintForContact.
   function wirePersonCard(index) {
     setupContactPhoto('contact-' + index + '-photo', 'contact-' + index + '-preview');
     updatePhoneHintForContact(index);
   }
 
+  // Called from resetPersonCards (profile.js:307).
+  // Next: clears name/rel/phone/photo; preview set to CONTACT_PHOTO_PREVIEW_DEFAULT.
   function clearPersonCardFields(index) {
     var nameInput = document.getElementById('contact-' + index + '-name');
     var relInput = document.getElementById('contact-' + index + '-relationship');
@@ -212,6 +252,8 @@
     if (preview) preview.innerHTML = CONTACT_PHOTO_PREVIEW_DEFAULT;
   }
 
+  // Called from ensurePersonCardCount, resetPersonCards (if none), and btn-add-person click (profile.js:824).
+  // Next: appends the card then wirePersonCard.
   function createPersonCard(index) {
     var container = getPersonCardsContainer();
     if (!container) return null;
@@ -250,6 +292,8 @@
     return card;
   }
 
+  // Called from populateWizardFromProfile (profile.js:550).
+  // Next: createPersonCard until there are enough slots for contacts.
   function ensurePersonCardCount(count) {
     var cards = getPersonCards();
     while (cards.length < count) {
@@ -258,6 +302,8 @@
     }
   }
 
+  // Called from resetWizardForm (profile.js:499).
+  // Next: removes extra cards, then clearPersonCardFields(1) or createPersonCard(1).
   function resetPersonCards() {
     var container = getPersonCardsContainer();
     if (!container) return;
@@ -278,6 +324,8 @@
     }
   }
 
+  // Called from renderSummary (profile.js:342) via setText('summary-hobbies').
+  // Next: joined string shown on the profile summary.
   function formatHobbies(profile) {
     var parts = [];
     if (profile.hobbies && profile.hobbies.length) {
@@ -289,6 +337,8 @@
     return parts.length ? parts.join(', ') : '—';
   }
 
+  // Called from showSummaryView (profile.js:462).
+  // Next: fills summary fields via setText; emergency contacts into #summary-contacts.
   function renderSummary(profile) {
     if (!profile) return;
 
@@ -301,6 +351,8 @@
       }
     }
 
+    // Called from renderSummary (profile.js:342) for each summary field.
+    // Next: sets textContent on that summary element.
     function setText(id, value) {
       var el = document.getElementById(id);
       if (el) el.textContent = value;
@@ -351,6 +403,8 @@
     }
   }
 
+  // Called from showSummaryView, showWizardView, after getActiveProfile in initProfilePage, and delete confirm.
+  // Next: shows or hides #profile-dashboard-nav based on active profile.
   function syncBottomNavVisibility() {
     var nav = document.getElementById('profile-dashboard-nav');
     var hasProfile = !!getActiveProfile();
@@ -360,8 +414,10 @@
     nav.hidden = !hasProfile;
   }
 
-  var COMPANION_NAME_KEY = 'memoireCompanionName';
+  var COMPANION_NAME_KEY = 'memoireCompanionName'; // loadCompanionNameIntoForm + save click; also companion.js:105
 
+  // Called from initCompanionNameEditor (profile.js:433) and showSummaryView (profile.js:462).
+  // Next: fills #companion-name-input from COMPANION_NAME_KEY / localStorage.
   function loadCompanionNameIntoForm() {
     var input = document.getElementById('companion-name-input');
     if (!input) return;
@@ -372,6 +428,8 @@
     }
   }
 
+  // Called from initProfilePage (profile.js:865).
+  // Next: loadCompanionNameIntoForm; save click writes COMPANION_NAME_KEY (also read by companion.js:145 getStoredCompanionName).
   function initCompanionNameEditor() {
     var input = document.getElementById('companion-name-input');
     var saveBtn = document.getElementById('btn-save-companion-name');
@@ -399,6 +457,8 @@
     });
   }
 
+  // Called from initProfilePage, switch-profile item click, and proceedWithSave after an edit (Flow F).
+  // Next: setProfileActionsVisible, renderSummary, loadCompanionNameIntoForm, syncBottomNavVisibility.
   function showSummaryView(profile) {
     editingProfileId = null;
     if (profileWizard) profileWizard.classList.add('profile-wizard--hidden');
@@ -414,6 +474,8 @@
     syncBottomNavVisibility();
   }
 
+  // Called from openImportantPeopleWizard, initProfilePage (new/empty), edit-modal-continue, delete confirm.
+  // Next: shows the wizard then syncBottomNavVisibility.
   function showWizardView() {
     if (profileSummary) profileSummary.hidden = true;
     if (profileWizard) profileWizard.classList.remove('profile-wizard--hidden');
@@ -425,11 +487,15 @@
     syncBottomNavVisibility();
   }
 
+  // Called from showSummaryView (profile.js:462).
+  // Next: shows or hides .profile-summary__actions (edit/switch/delete).
   function setProfileActionsVisible(visible) {
     var actions = document.querySelector('.profile-summary__actions');
     if (actions) actions.hidden = !visible;
   }
 
+  // Called from populateWizardFromProfile, initProfilePage (mode=new), and delete confirm (profile.js:805).
+  // Next: clearTopicsToAvoid and resetPersonCards; step 1 selected.
   function resetWizardForm() {
     document.getElementById('full-name').value = '';
     document.getElementById('preferred-name').value = '';
@@ -479,6 +545,8 @@
     if (step1) step1.checked = true;
   }
 
+  // Called from openImportantPeopleWizard (profile.js:648) and edit-modal-continue click (profile.js:724).
+  // Next: resetWizardForm, setTopicsToAvoid, ensurePersonCardCount, fills fields.
   function populateWizardFromProfile(profile) {
     resetWizardForm();
 
@@ -558,11 +626,15 @@
     if (step1) step1.checked = true;
   }
 
+  // Called from btn-edit-profile, btn-switch-profile, and btn-delete-profile clicks.
+  // Next: adds is-open on that modal.
   function openModal(id) {
     var modal = document.getElementById(id);
     if (modal) modal.classList.add('is-open');
   }
 
+  // Called from edit/switch/delete cancel and continue/confirm clicks, and switch-item click.
+  // Next: removes is-open on that modal.
   function closeModal(id) {
     var modal = document.getElementById(id);
     if (modal) modal.classList.remove('is-open');
@@ -571,6 +643,8 @@
   var activeProfile = getActiveProfile();
   syncBottomNavVisibility();
 
+  // Called from initProfilePage when hash is #important-people (profile.js:690). Link: memory-log.js:11 PROFILE_FALLBACK_URL.
+  // Next: populateWizardFromProfile, showWizardView, jumps to wizard step 3.
   function openImportantPeopleWizard() {
     var profile = getActiveProfile();
     if (profile) {
@@ -588,11 +662,15 @@
     }
   }
 
+  // Called from renderSwitchProfileAvatar (profile.js:674) when there is no photo.
+  // Next: letter HTML goes into the switch-profile list.
   function getProfileInitial(profile) {
     var name = (profile.fullName || profile.preferredName || '').trim();
     return name ? name.charAt(0).toUpperCase() : '?';
   }
 
+  // Called from btn-switch-profile click (profile.js:736) when building the switch list.
+  // Next: avatar HTML inserted into #switch-profile-list.
   function renderSwitchProfileAvatar(profile) {
     if (profile.photo && String(profile.photo).trim()) {
       return (
@@ -760,6 +838,8 @@
 
   var topicsAvoidInput = document.getElementById('topics-avoid-input');
   var topicsAvoidAddBtn = document.getElementById('topics-avoid-add');
+  // Called from topics-avoid-add click (profile.js:850) and topics-avoid-input Enter keydown.
+  // Next: addTopicToAvoid then clears and refocuses the input.
   function commitTopicFromInput() {
     if (!topicsAvoidInput) return;
     addTopicToAvoid(topicsAvoidInput.value);
@@ -784,6 +864,8 @@
   wirePersonCard(1);
   initCompanionNameEditor();
 
+  // Called from #btn-save-profile click (profile.js:961) before save.
+  // Next: if false, contact-warning-modal; else proceedWithSave (Flow F).
   function hasEmergencyContactInWizard() {
     var cards = getPersonCards();
     for (var i = 0; i < cards.length; i++) {
@@ -797,6 +879,8 @@
     return false;
   }
 
+  // Called from validateStep1 (profile.js:908) and full-name/age input events.
+  // Next: removes field--error and the error message.
   function clearFieldError(fieldEl) {
     var wrapper = fieldEl.closest('.field');
     if (!wrapper) return;
@@ -805,6 +889,8 @@
     if (msg) msg.remove();
   }
 
+  // Called from validateStep1 (profile.js:908) when full name or age is missing/invalid.
+  // Next: adds field--error and 'This field is required.'
   function setFieldError(fieldEl) {
     var wrapper = fieldEl.closest('.field');
     if (!wrapper) return;
@@ -817,6 +903,8 @@
     }
   }
 
+  // Called from #btn-next-1 click (profile.js:940).
+  // Next: if valid, checks wizard-step-2; else setFieldError stays on the fields.
   function validateStep1() {
     var fullName = document.getElementById('full-name');
     var age = document.getElementById('age');
@@ -859,6 +947,8 @@
     });
   }
 
+  // Called from #btn-save-profile click (profile.js:961) when no new file was chosen (profile + each contact).
+  // Next: that data URL goes into the photo Promise, then proceedWithSave.
   function getExistingPhotoFromPreview(previewId) {
     var preview = document.getElementById(previewId);
     if (!preview) return null;
@@ -918,6 +1008,8 @@
     });
   }
 
+  // Called from #btn-save-profile click (profile.js:961) and #modal-continue (Flow F). Photos via compressImageToDataURL (core.js:227).
+  // Next: Promise.all → assemble profile → saveProfiles → activeProfileId → /dashboard (new) or showSummaryView (edit).
   function proceedWithSave(photoPromise, contactPromises, contactData) {
     Promise.all([photoPromise].concat(contactPromises)).then(function (results) {
         var hobbies = Array.prototype.slice.call(

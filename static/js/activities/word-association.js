@@ -3,17 +3,17 @@
 
   var shared = window.MemoireActivities;
   var speechSupported = shared.speechSupported;
-  var FLOWER_FALLBACK_SVG = shared.FLOWER_FALLBACK_SVG;
+  var FLOWER_FALLBACK_SVG = shared.FLOWER_FALLBACK_SVG; // used in onImageError (636); from shared.js (9)
 
-  var SESSION_LIMIT = 5;
-  var STORAGE_KEY = 'cstWordAssociation';
-  var FEEDBACK_DELAY_MS = 1200;
-  var SPEECH_RATE = 0.9;
+  var SESSION_LIMIT = 5; // used in isSetComplete (788) and optionsEl click isLastRound (416)
+  var STORAGE_KEY = 'cstWordAssociation'; // used by readAssociationLog (767), writeAssociationLog (772), getTodayEntries (777)
+  var FEEDBACK_DELAY_MS = 1200; // used in optionsEl click setTimeout (446) before openFeedbackModal (427)
+  var SPEECH_RATE = 0.95; // used by replayBtn (366) and speakWarmBtn (380) via shared.speakSegments (shared.js, 113)
 
-  var MODAL_HEADINGS = ['Lovely!', 'Wonderful!', "That's a nice one!"];
+  var MODAL_HEADINGS = ['Lovely!', 'Wonderful!', "That's a nice one!"]; // used by pickModalHeading (702)
 
   /* Every option is a valid association; warm lines affirm the link to the prompt. */
-  var WORD_BANK = [
+  var WORD_BANK = [ // used by getValidWordBank (522) → pickWordEntry (545) → renderRound (642)
     {
       id: 'apple',
       word: 'Apple',
@@ -256,7 +256,7 @@
     }
   ];
 
-  var HOBBY_CATEGORY_MAP = {
+  var HOBBY_CATEGORY_MAP = { // used by getPreferredCategories (512) to match profile hobbies to WORD_BANK categories
     Reading: 'Reading',
     Gardening: 'Gardening',
     Music: 'Music',
@@ -273,6 +273,8 @@
     initWordAssociation();
   });
 
+  // Called from DOMContentLoaded (this file, 273). optionsEl click (398) → findOptionByText (406) → applyAffirmingFeedback (412) → saveRound (413).
+  // Then openFeedbackModal (427); "Add a memory" (450) → add-memory.js saveMemory (68) → dashboardMemories → daily-quiz.js (537).
   function initWordAssociation() {
     var promptEl = document.getElementById('wa-prompt-word');
     var imageEl = document.getElementById('wa-prompt-image');
@@ -321,12 +323,14 @@
       pendingIsLastRound: false
     };
 
+    // Called from resumeGame (336), goToSessionComplete (350), startup (390, 393), nextBtn (468). Toggles wa-exit-footer.
     function setExitFooterVisible(visible) {
       if (exitFooterEl) {
         exitFooterEl.hidden = !visible;
       }
     }
 
+    // Called from moreBtns click (357) in initWordAssociation. Next: hideSessionComplete (335) → pickWordEntry (338) → renderRound (339).
     function resumeGame() {
       hideSessionComplete(gameEl, doneEl);
       setExitFooterVisible(true);
@@ -335,6 +339,7 @@
       renderRound(promptEl, imageEl, promptZoneEl, optionsEl, state.currentEntry);
     }
 
+    // Called from doneTodayBtn click (481) in initWordAssociation. Next: closeFeedbackModal (348) → showSessionComplete (351).
     function goToSessionComplete() {
       if (state.feedbackTimer) {
         clearTimeout(state.feedbackTimer);
@@ -478,6 +483,7 @@
     }
   }
 
+  // Called from addMemoryBtn click (452) in initWordAssociation and openFeedbackModal (710). Result is the "Add a memory about …" label.
   function pluralizeWordLabel(promptWord) {
     var word = String(promptWord || '').trim().toLowerCase();
     if (!word) {
@@ -486,6 +492,7 @@
     return /s$/i.test(word) ? word : word + 's';
   }
 
+  // Called from addMemoryBtn click (457) in initWordAssociation. Passed to add-memory.js openMemoryModal (292); saveMemory (68) stores it.
   function memoryContextValue(promptWord) {
     var word = String(promptWord || '').trim().toLowerCase();
     if (!word) {
@@ -494,6 +501,7 @@
     return 'word-association: ' + word;
   }
 
+  // Called from getCategoryFilteredBank (530). Maps hobbies via HOBBY_CATEGORY_MAP (259); result filters WORD_BANK.
   function getPreferredCategories(profile) {
     if (!profile || !profile.hobbies || !profile.hobbies.length) {
       return [];
@@ -509,12 +517,14 @@
     return categories;
   }
 
+  // Called from getCategoryFilteredBank (529). Returns WORD_BANK (16) entries that have an image and 4 options.
   function getValidWordBank() {
     return WORD_BANK.filter(function (entry) {
       return entry.image && entry.options && entry.options.length === 4;
     });
   }
 
+  // Called from pickWordEntry (547). Uses getValidWordBank (529) + getPreferredCategories (530); result is the pick pool.
   function getCategoryFilteredBank(profile) {
     var bank = getValidWordBank();
     var preferred = getPreferredCategories(profile);
@@ -531,6 +541,7 @@
     return matched.length ? matched : bank.slice();
   }
 
+  // Called from initWordAssociation startup (394), resumeGame (338), nextBtn (475). Next: renderRound (339, 395, 476).
   function pickWordEntry(excludeId) {
     var profile = getActiveProfile();
     var bank = getCategoryFilteredBank(profile);
@@ -565,6 +576,8 @@
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
+  // Called from optionsEl click (406) in initWordAssociation. Result's .warm line is shown; no correct/wrong.
+  // Next: applyAffirmingFeedback (412) then saveRound (413) then openFeedbackModal (427) ("Add a memory").
   function findOptionByText(entry, text) {
     if (!entry || !entry.options || !entry.options.length) {
       return null;
@@ -578,6 +591,7 @@
     return null;
   }
 
+  // Called from replayBtn click (366) in initWordAssociation. Result is spoken via shared.speakSegments (shared.js, 113).
   function buildRoundSpeech(entry, optionsEl) {
     var segments = [];
     var optionTexts = [];
@@ -604,6 +618,7 @@
     return segments;
   }
 
+  // Called from renderRound (643). On img error, onImageError (634) fills FLOWER_FALLBACK_SVG from shared.js (9).
   function renderPromptImage(imageEl, imageFile) {
     if (!imageEl) {
       return;
@@ -615,6 +630,7 @@
     img.className = 'cst-wa__photo';
     img.src = '/static/assets/' + imageFile;
     img.alt = '';
+    // Called from img error in renderPromptImage (634). Next: fills FLOWER_FALLBACK_SVG (636) from shared.js (9).
     img.addEventListener('error', function onImageError() {
       img.removeEventListener('error', onImageError);
       imageEl.innerHTML = FLOWER_FALLBACK_SVG;
@@ -622,6 +638,7 @@
     imageEl.appendChild(img);
   }
 
+  // Called from initWordAssociation startup (395), resumeGame (339), nextBtn (476). Next: renderPromptImage (643) then shuffleOptions (652).
   function renderRound(promptEl, imageEl, promptZoneEl, optionsEl, entry) {
     renderPromptImage(imageEl, entry.image);
 
@@ -651,6 +668,8 @@
   }
 
   /* Warm highlight only — never a grey "wrong" state in Word Association. */
+  // Called from optionsEl click (412) in initWordAssociation after findOptionByText (406); no correct/wrong.
+  // Next: saveRound (413); then openFeedbackModal (427) offers "Add a memory" → add-memory.js saveMemory (68).
   function applyAffirmingFeedback(optionsEl, selected) {
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
     Array.prototype.forEach.call(buttons, function (button) {
@@ -664,6 +683,8 @@
     });
   }
 
+  // Called from optionsEl click (413) in initWordAssociation after applyAffirmingFeedback (412). Writes via writeAssociationLog (697).
+  // Then openFeedbackModal (427); "Add a memory" → add-memory.js saveMemory (68) → dashboardMemories → daily-quiz.js (537).
   function saveRound(entry, selected) {
     var log = readAssociationLog();
     log.push({
@@ -676,10 +697,13 @@
     writeAssociationLog(log);
   }
 
+  // Called from optionsEl click (407) in initWordAssociation and openFeedbackModal (731). Result is the modal heading text.
   function pickModalHeading() {
     return MODAL_HEADINGS[Math.floor(Math.random() * MODAL_HEADINGS.length)];
   }
 
+  // Called from optionsEl click setTimeout (427) in initWordAssociation. Shows "Add a memory" (450).
+  // Click → add-memory.js saveMemory (68) → dashboardMemories → daily-quiz.js getMaskedMemories (537).
   function openFeedbackModal(config) {
     var state = config.state;
     var word = config.word || '';
@@ -723,47 +747,58 @@
     }
   }
 
+  // Called from initWordAssociation (305). If true, clearTodayEntries (306) runs next. Wraps shared.isDebugReset (shared.js, 206).
   function isDebugReset() {
     return shared.isDebugReset();
   }
 
+  // Called from initWordAssociation (306) when isDebugReset. Wraps shared.clearTodayEntries (shared.js, 197) with STORAGE_KEY.
   function clearTodayEntries() {
     shared.clearTodayEntries(STORAGE_KEY);
   }
 
+  // Called from saveRound (691). Wraps shared.getTodayKey (shared.js, 157); date is stored on each log entry.
   function getTodayKey() {
     return shared.getTodayKey();
   }
 
+  // Called from saveRound (689). Wraps shared.readLog (shared.js, 165); result is pushed then writeAssociationLog (697).
   function readAssociationLog() {
     return shared.readLog(STORAGE_KEY);
   }
 
+  // Called from saveRound (697). Wraps shared.writeLog (shared.js, 179) with STORAGE_KEY.
   function writeAssociationLog(entries) {
     shared.writeLog(STORAGE_KEY, entries);
   }
 
+  // Called from pickWordEntry (548). Wraps shared.getTodayEntries (shared.js, 184) so today's words are not repeated.
   function getTodayEntries() {
     return shared.getTodayEntries(STORAGE_KEY);
   }
 
+  // Called from optionsEl click (415) in initWordAssociation and isSetComplete (787). Wraps shared.getRoundsCompletedToday (shared.js, 192).
   function getRoundsCompletedToday() {
     return shared.getRoundsCompletedToday(STORAGE_KEY);
   }
 
+  // Called from initWordAssociation startup (389), nextBtn (467). If true, showSessionComplete (391, 469).
   function isSetComplete() {
     var completed = getRoundsCompletedToday();
     return completed >= SESSION_LIMIT && completed % SESSION_LIMIT === 0;
   }
 
+  // Called from pickWordEntry (546). Wraps shared.getActiveProfile (shared.js, 214); hobbies feed getPreferredCategories (505).
   function getActiveProfile() {
     return shared.getActiveProfile();
   }
 
+  // Called from renderRound (652). Wraps shared.shuffleOptions (shared.js, 223); shuffled options become the buttons.
   function shuffleOptions(options) {
     return shared.shuffleOptions(options);
   }
 
+  // Called from replayBtn (365) and speakWarmBtn (379) in initWordAssociation. Next: shared.speakSegments (113) or shared.cancelSpeech (60).
   function toggleSpeech(speakCallback) {
     if (!speechSupported) {
       return;
@@ -775,14 +810,17 @@
     speakCallback();
   }
 
+  // Called from goToSessionComplete (348), moreBtns (356), nextBtn (464). Wraps shared.closeFeedbackModal (shared.js, 255).
   function closeFeedbackModal(modalEl) {
     shared.closeFeedbackModal(modalEl);
   }
 
+  // Called from goToSessionComplete (351), startup (391), nextBtn (469). Wraps shared.showSessionComplete (shared.js, 235).
   function showSessionComplete(gameEl, doneEl) {
     shared.showSessionComplete(gameEl, doneEl);
   }
 
+  // Called from resumeGame (335). Wraps shared.hideSessionComplete (shared.js, 245).
   function hideSessionComplete(gameEl, doneEl) {
     shared.hideSessionComplete(gameEl, doneEl);
   }

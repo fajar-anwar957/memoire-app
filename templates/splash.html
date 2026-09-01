@@ -208,8 +208,9 @@
       var progressEl = document.getElementById('splash-progress');
       var fillEl = document.getElementById('splash-progress-fill');
       var continueEl = document.getElementById('splash-continue');
-      var LOAD_MS = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 400 : 2600;
+      var LOAD_MS = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 400 : 2600; // used by setTimeout(markReady); short if reduced-motion
 
+      // Called from body click and Enter/Space. Next: unlockAudio in core.js, then getActiveProfile → /dashboard or /profile.
       function enterApp() {
         if (!ready || navigating) {
           return;
@@ -221,6 +222,7 @@
         window.location.href = window.MemoireCore.getActiveProfile() ? '/dashboard' : '/profile';
       }
 
+      // Called from setTimeout(LOAD_MS) after splash animation. Next: body is clickable; enterApp can redirect.
       function markReady() {
         ready = true;
         document.body.classList.add('splash-ready');

@@ -3,20 +3,20 @@
 
   var shared = window.MemoireActivities;
   var speechSupported = shared.speechSupported;
-  var FLOWER_FALLBACK_SVG = shared.FLOWER_FALLBACK_SVG;
+  var FLOWER_FALLBACK_SVG = shared.FLOWER_FALLBACK_SVG; // used in onImageError (629); from shared.js (9)
   var formatDisplayName = window.MemoireCore.formatDisplayName;
 
   /* ── Photo Recall ── */
 
-  var PR_SESSION_LIMIT = 5;
-  var PR_STORAGE_KEY = 'cstPhotoRecall';
-  var PR_FEEDBACK_DELAY_MS = 1200;
-  var PR_SPEECH_RATE = 0.9;
-  var PR_NEUTRAL_NAMES = [
+  var PR_SESSION_LIMIT = 5; // used in initPhotoRecall state.sessionLimit (94) and isSessionComplete (99)
+  var PR_STORAGE_KEY = 'cstPhotoRecall'; // used by prReadLog (816), prWriteLog (821), prGetTodayEntries (826)
+  var PR_FEEDBACK_DELAY_MS = 1200; // used in optionsEl click setTimeout (267) before prOpenFeedbackModal (249)
+  var PR_SPEECH_RATE = 0.95; // used by speakQuestionBtn (176) and speakFeedbackBtn (191) via shared.speakSegments (shared.js, 113)
+  var PR_NEUTRAL_NAMES = [ // used in prBuildNameOptions (480, 499) as extra distractor names
     'Margaret', 'Harold', 'Dorothy', 'Arthur', 'Betty',
     'Frank', 'Edith', 'George', 'Rose', 'William'
   ];
-  var PR_DATE_ADJECTIVES = ['lovely', 'sunny', 'warm', 'gentle', 'happy'];
+  var PR_DATE_ADJECTIVES = ['lovely', 'sunny', 'warm', 'gentle', 'happy']; // used in prFormatFriendlyDate (644)
 
   document.addEventListener('DOMContentLoaded', function () {
     if (document.body.getAttribute('data-cst-activity') !== 'photo-recall') {
@@ -25,6 +25,7 @@
     initPhotoRecall();
   });
 
+  // Called from DOMContentLoaded (this file, 25). Next: prGetContactsWithPhotos (63) / prGetMemoriesWithPhotos (64) then resumeGame (206) or empty.
   function initPhotoRecall() {
     var emptyEl = document.getElementById('pr-empty');
     var gameEl = document.getElementById('pr-game');
@@ -65,6 +66,7 @@
       ? 'people'
       : (memoriesWithPhotos.length >= 1 ? 'memory' : 'empty');
 
+    // Called from empty mode (80), resumeGame (113), goToSessionComplete (159), nextBtn (278, 290), memoryNextBtn (313). Toggles pr-exit-footer.
     function setExitFooterVisible(visible) {
       if (exitFooterEl) {
         exitFooterEl.hidden = !visible;
@@ -93,16 +95,19 @@
         : Math.min(PR_SESSION_LIMIT, memoriesWithPhotos.length)
     };
 
+    // Called from initPhotoRecall startup (202), nextBtn (277), memoryNextBtn (312). Uses prGetRoundsCompletedToday (100) vs PR_SESSION_LIMIT.
     function isSessionComplete() {
       var completed = prGetRoundsCompletedToday();
       return completed >= state.sessionLimit && completed % state.sessionLimit === 0;
     }
 
+    // Called from resumeGame (118) and nextBtn (285) in initPhotoRecall. Next: prGetContactsWithPhotos (106) updates state.contactsPool.
     function refreshPeoplePool() {
       state.contactsPool = prGetContactsWithPhotos();
       return state.contactsPool;
     }
 
+    // Called from moreBtns click (168) and startup (206). Next: prPickContactEntry (119) → prRenderPeopleRound (126), or prPickMemoryEntry (130) → prRenderMemoryRound (131).
     function resumeGame() {
       prHideSessionComplete(gameEl, doneEl);
       setExitFooterVisible(true);
@@ -129,6 +134,7 @@
       }
     }
 
+    // Called from goToSessionComplete (157), moreBtns (166), nextBtn (274) in initPhotoRecall. Unhides modal body/actions.
     function resetModalSections() {
       if (modalBodyEl) {
         modalBodyEl.hidden = false;
@@ -141,6 +147,7 @@
       }
     }
 
+    // Called from doneTodayBtn click (299) in initPhotoRecall. Next: prCloseFeedbackModal (156) → prShowSessionComplete (160).
     function goToSessionComplete() {
       if (state.feedbackTimer) {
         clearTimeout(state.feedbackTimer);
@@ -326,6 +333,7 @@
 
 
 
+  // Called from initPhotoRecall (63), refreshPeoplePool (106), prRenderPeopleRound (665). Uses prGetActiveProfile (338); people-mode pool.
   function prGetContactsWithPhotos() {
     var profile = prGetActiveProfile();
     if (!profile || !profile.contacts || !Array.isArray(profile.contacts)) {
@@ -341,6 +349,7 @@
     });
   }
 
+  // Called from initPhotoRecall (64). Reads dashboardMemories in localStorage (from add-memory.js saveMemory, 68).
   function prGetMemoriesWithPhotos() {
     try {
       var stored = localStorage.getItem('dashboardMemories');
@@ -363,14 +372,17 @@
     }
   }
 
+  // Called from nextBtn (284), prPickContactEntry (400, 407), prSaveRound (747). Result is the log key for a contact.
   function prContactRef(contact) {
     return String(contact.name).trim() + '|' + String(contact.relationship || '').trim();
   }
 
+  // Called from memoryNextBtn (319), prPickMemoryEntry (424, 430), prSaveRound (747). Result is the log key for a memory.
   function prMemoryRef(memory) {
     return 'memory:' + String(memory.date || memory.text).trim();
   }
 
+  // Called from resumeGame (119) and nextBtn (286) in initPhotoRecall. Uses prGetTodayEntries (395) + prShuffle (403); next prRenderPeopleRound.
   function prPickContactEntry(pool, excludeRef) {
     if (!pool.length) {
       return null;
@@ -402,6 +414,7 @@
     return candidates[0];
   }
 
+  // Called from resumeGame (130) and memoryNextBtn (320) in initPhotoRecall. Next: prRenderMemoryRound (131, 321).
   function prPickMemoryEntry(pool, excludeRef) {
     var shownRefs = prGetTodayEntries().map(function (entry) {
       return entry.contactRef;
@@ -426,6 +439,7 @@
   }
 
 
+  // Called from prBuildNameOptions (474, 487, 491). Result skips names that are too close to the correct one.
   function prNamesSimilar(a, b) {
     if (!a || !b) {
       return false;
@@ -444,6 +458,7 @@
     return false;
   }
 
+  // Called from prRenderPeopleRound (665). Uses PR_NEUTRAL_NAMES (15) + prShuffle (507); result becomes the name buttons.
   function prBuildNameOptions(contact, allContacts) {
     var correctName = String(contact.name).trim();
     var distractors = [];
@@ -494,6 +509,7 @@
 
 
 
+  // Called from optionsEl click (228) in initPhotoRecall (correct). Result is shown in prOpenFeedbackModal (249).
   function prBuildWarmLine(name, relationship) {
     var rel = window.MemoireCore && typeof window.MemoireCore.normalizeRelationship === 'function'
       ? window.MemoireCore.normalizeRelationship(relationship)
@@ -504,6 +520,7 @@
     return name + ' is your ' + rel + ' \u2014 someone special in your life.';
   }
 
+  // Called from speakQuestionBtn click (176) in initPhotoRecall. Result is spoken via shared.speakSegments (shared.js, 113).
   function prBuildQuestionSpeech(cueEl, optionsEl) {
     var segments = [];
     var optionNames = [];
@@ -532,6 +549,7 @@
     return segments;
   }
 
+  // Called from prOpenFeedbackModal (759). Result (thumbEl) is passed to prSetModalThumbnail (770).
   function prEnsureModalBodyStructure(modalBodyEl, modalWarmEl) {
     var thumbEl = modalBodyEl.querySelector('.cst-pr-modal__thumb');
     if (!thumbEl) {
@@ -556,6 +574,7 @@
     };
   }
 
+  // Called from prOpenFeedbackModal (770). Puts the contact photo in the feedback modal.
   function prSetModalThumbnail(thumbEl, photoSrc) {
     if (!thumbEl) {
       return;
@@ -573,6 +592,7 @@
     thumbEl.appendChild(img);
   }
 
+  // Called from prOpenFeedbackModal (787) when revealPulse is true (miss). Highlights the correct name button.
   function prPulseCorrectButton(optionsEl, correctName) {
     if (!optionsEl || !correctName) {
       return;
@@ -592,6 +612,7 @@
     target.classList.add('cst-pr__option--reveal');
   }
 
+  // Called from prRenderPeopleRound (653) and prRenderMemoryRound (688). On error, onImageError (627) uses FLOWER_FALLBACK_SVG.
   function prRenderPhoto(imageEl, photoSrc) {
     if (!imageEl) {
       return;
@@ -602,6 +623,7 @@
     img.className = 'cst-wa__photo';
     img.src = photoSrc;
     img.alt = '';
+    // Called from img error in prRenderPhoto (627). Next: fills FLOWER_FALLBACK_SVG (629) from shared.js (9).
     img.addEventListener('error', function onImageError() {
       img.removeEventListener('error', onImageError);
       imageEl.innerHTML = FLOWER_FALLBACK_SVG;
@@ -609,6 +631,7 @@
     imageEl.appendChild(img);
   }
 
+  // Called from prRenderMemoryRound (699). Uses PR_DATE_ADJECTIVES (19); result goes in the date caption.
   function prFormatFriendlyDate(isoDate) {
     if (!isoDate) {
       return '';
@@ -622,6 +645,7 @@
     return 'a ' + adj + ' day in ' + month;
   }
 
+  // Called from resumeGame (126) and nextBtn (293). Next: prRenderPhoto (653), formatRelationshipCue (shared.js, 274), prBuildNameOptions (665).
   function prRenderPeopleRound(photoEl, cueEl, optionsEl, promptZoneEl, contact) {
     var relationship = String(contact.relationship || 'friend').trim();
     var cueText = shared.formatRelationshipCue(relationship);
@@ -657,6 +681,7 @@
     }
   }
 
+  // Called from resumeGame (131) and memoryNextBtn (321) in initPhotoRecall. Next: prRenderPhoto (688) and prFormatFriendlyDate (699).
   function prRenderMemoryRound(photoEl, captionEl, dateEl, promptZoneEl, memory) {
     var text = String(memory.text).trim();
 
@@ -683,6 +708,7 @@
     }
   }
 
+  // Called from optionsEl click (229) in initPhotoRecall (correct). Next: prSaveRound (236) → prOpenFeedbackModal (249).
   function prApplyCorrectFeedback(optionsEl, correctName, displayName) {
     var label = displayName || formatDisplayName(correctName) || correctName;
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
@@ -697,6 +723,7 @@
     });
   }
 
+  // Called from optionsEl click (233) in initPhotoRecall (miss). Next: prSaveRound (236) → prOpenFeedbackModal (249).
   function prApplyMissFeedback(optionsEl, correctName, selectedName, displayName) {
     var label = displayName || formatDisplayName(correctName) || correctName;
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
@@ -714,6 +741,7 @@
     });
   }
 
+  // Called from optionsEl click (236) and memoryNextBtn (310) in initPhotoRecall. Writes via prWriteLog (754) to localStorage.
   function prSaveRound(item, selected) {
     var log = prReadLog();
     var contactRef = item.text ? prMemoryRef(item) : prContactRef(item);
@@ -726,6 +754,7 @@
     prWriteLog(log);
   }
 
+  // Called from optionsEl click setTimeout (249) in initPhotoRecall. Next: prEnsureModalBodyStructure (759), prSetModalThumbnail (770), maybe prPulseCorrectButton (787).
   function prOpenFeedbackModal(config) {
     var bodyParts = prEnsureModalBodyStructure(config.modalBodyEl, config.modalWarmEl);
 
@@ -767,42 +796,52 @@
     }
   }
 
+  // Called from initPhotoRecall (59). If true, prClearTodayEntries (60) runs next. Wraps shared.isDebugReset (shared.js, 206).
   function prIsDebugReset() {
     return shared.isDebugReset();
   }
 
+  // Called from initPhotoRecall (60) when prIsDebugReset. Wraps shared.clearTodayEntries (shared.js, 197) with PR_STORAGE_KEY.
   function prClearTodayEntries() {
     shared.clearTodayEntries(PR_STORAGE_KEY);
   }
 
+  // Called from prSaveRound (749). Wraps shared.getTodayKey (shared.js, 157); date is stored on each log entry.
   function prGetTodayKey() {
     return shared.getTodayKey();
   }
 
+  // Called from prSaveRound (746). Wraps shared.readLog (shared.js, 165); result is pushed then prWriteLog (754).
   function prReadLog() {
     return shared.readLog(PR_STORAGE_KEY);
   }
 
+  // Called from prSaveRound (754). Wraps shared.writeLog (shared.js, 179) with PR_STORAGE_KEY.
   function prWriteLog(entries) {
     shared.writeLog(PR_STORAGE_KEY, entries);
   }
 
+  // Called from prPickContactEntry (395) and prPickMemoryEntry (419). Wraps shared.getTodayEntries (shared.js, 184).
   function prGetTodayEntries() {
     return shared.getTodayEntries(PR_STORAGE_KEY);
   }
 
+  // Called from isSessionComplete (100) and optionsEl click (238) in initPhotoRecall. Wraps shared.getRoundsCompletedToday (shared.js, 192).
   function prGetRoundsCompletedToday() {
     return shared.getRoundsCompletedToday(PR_STORAGE_KEY);
   }
 
+  // Called from prGetContactsWithPhotos (338). Wraps shared.getActiveProfile (shared.js, 214).
   function prGetActiveProfile() {
     return shared.getActiveProfile();
   }
 
+  // Called from prPickContactEntry (403) and prBuildNameOptions (507). Wraps shared.shuffleOptions (shared.js, 223).
   function prShuffle(items) {
     return shared.shuffleOptions(items);
   }
 
+  // Called from speakQuestionBtn (175) and speakFeedbackBtn (190) in initPhotoRecall. Next: shared.speakSegments (113) or shared.cancelSpeech (60).
   function prToggleSpeech(speakCallback) {
     if (!speechSupported) {
       return;
@@ -814,6 +853,7 @@
     speakCallback();
   }
 
+  // Called from goToSessionComplete (156), moreBtns (165), nextBtn (273). Wraps shared.closeFeedbackModal (shared.js, 255).
   function prCloseFeedbackModal(modalEl) {
     shared.closeFeedbackModal(modalEl);
     var revealButtons = document.querySelectorAll('.cst-pr__option--reveal');
@@ -822,10 +862,12 @@
     });
   }
 
+  // Called from goToSessionComplete (160), startup (204), nextBtn (279), memoryNextBtn (314). Wraps shared.showSessionComplete (shared.js, 235).
   function prShowSessionComplete(gameEl, doneEl) {
     shared.showSessionComplete(gameEl, doneEl);
   }
 
+  // Called from resumeGame (112) and moreBtns (167). Wraps shared.hideSessionComplete (shared.js, 245).
   function prHideSessionComplete(gameEl, doneEl) {
     shared.hideSessionComplete(gameEl, doneEl);
   }
