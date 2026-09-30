@@ -85,17 +85,18 @@
       <p class="dashboard-next-up__text" id="dashboard-next-up-text"></p>
     </aside>
 
-    <section class="dashboard-progress" id="dashboard-progress" aria-labelledby="dashboard-progress-title">
-      <div class="dashboard-progress__header">
-        <h2 class="dashboard-progress__title" id="dashboard-progress-title">Days you practised</h2>
-        <p class="dashboard-progress__month" id="dashboard-progress-month"></p>
-      </div>
-      <p class="dashboard-progress__hint">A soft tick appears on days you did an activity.</p>
-      <div class="dashboard-progress__weekdays" aria-hidden="true">
-        <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-      </div>
-      <div class="dashboard-progress__grid" id="dashboard-progress-grid" role="list" aria-label="Activity days this month"></div>
-    </section>
+    <div class="dashboard-week-row">
+      <button type="button" class="dashboard-my-week-btn" id="dashboard-my-week-btn" aria-haspopup="dialog" aria-controls="practice-week-modal">
+        <svg class="dashboard-my-week-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2"/>
+          <path d="M3 10h18"/>
+          <path d="M8 3v4"/>
+          <path d="M16 3v4"/>
+          <path d="M9 15l2 2 4-4"/>
+        </svg>
+        My week
+      </button>
+    </div>
 
     <div class="dashboard__grid">
       <a href="/activities" class="dashboard-card dashboard-card--activities" data-tour="activities">
@@ -400,6 +401,41 @@
         <div class="modal-actions">
           <button type="button" id="reminder-delete-keep" class="modal-btn modal-btn--secondary">Keep it</button>
           <button type="button" id="reminder-delete-confirm" class="modal-btn modal-btn--primary">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="practice-week-modal" class="modal-overlay practice-week-modal" role="dialog" aria-modal="true" aria-labelledby="practice-week-title" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <p class="modal-title" id="practice-week-title">Days you practised</p>
+        <p class="practice-week-modal__hint">A soft tick appears on days you did an activity.</p>
+      </div>
+      <div class="modal-body">
+        <div class="practice-week" id="practice-week-row" role="list" aria-label="This week"></div>
+        <button type="button" class="practice-week-modal__month-toggle" id="practice-month-toggle" aria-expanded="false" aria-controls="practice-month-panel">
+          See the month
+        </button>
+        <div class="practice-month" id="practice-month-panel" hidden>
+          <div class="practice-month__nav">
+            <button type="button" class="practice-month__nav-btn" id="practice-month-prev" aria-label="Previous month">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <p class="practice-month__label" id="practice-month-label"></p>
+            <button type="button" class="practice-month__nav-btn" id="practice-month-next" aria-label="Next month">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+          <div class="practice-month__weekdays" aria-hidden="true">
+            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+          </div>
+          <div class="practice-month__grid" id="practice-month-grid" role="list" aria-label="Month"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" id="practice-week-close" class="modal-btn modal-btn--primary">Close</button>
         </div>
       </div>
     </div>

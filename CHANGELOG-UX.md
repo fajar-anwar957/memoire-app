@@ -144,3 +144,36 @@ Usability-study changes. Architecture rules: localStorage-only, keep pseudonymis
 - `templates/profile.html` — replay tour button + tour CSS/JS
 - `static/js/profile.js` — replay button → `MemoireWelcomeTour.requestReplay` (preserves multi-item fields)
 - `static/css/pages/profile.css` — calm replay button style
+
+---
+
+## Fix — Welcome tour tooltip stacking
+
+### Feedback theme: Tour tips must stay readable above cards
+
+**What changed**
+- Tour tooltip is a separate element on `document.body` (not inside the dim overlay), with the highest tour z-index so it never sits behind the highlighted card or Reminders.
+- Tooltip is placed below the highlight when there is room, otherwise above, otherwise near the bottom of the screen — never covering the highlighted element.
+- Each step smooth-scrolls the target into view before the tip is positioned.
+- On phones under 480px, the tip is a fixed bottom card.
+
+**Files touched**
+- `static/js/welcome-tour.js` — split overlay/tooltip, position near target, scroll-then-place
+- `static/css/components/tour.css` — stacking and phone bottom placement
+
+---
+
+## Fix — My week practice popup
+
+### Feedback theme: Soft practice view without a large home calendar
+
+**What changed**
+- Removed the large “Days you practised” calendar from the home screen.
+- Added a calm **My week** button (calendar icon) above the home cards, near Activities.
+- Opens a reminder-style modal: this week as 7 compact chips (letter + date; soft green + tick when active; thin outline for today). **See the month** expands a compact month grid with prev/next. Full-width **Close**.
+- Still no streak counts, no missed-day marks, no red.
+
+**Files touched**
+- `templates/dashboard.html` — My week button + `#practice-week-modal`; removed inline calendar
+- `static/js/dashboard.js` — `initGentleProgress` week/month modal
+- `static/css/pages/dashboard.css` — button + week chips + compact month styles

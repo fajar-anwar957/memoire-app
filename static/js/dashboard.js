@@ -826,7 +826,7 @@
 
   var ACTIVITY_LOG_KEYS = ['cstDailyQuiz', 'cstWordAssociation', 'cstPhotoRecall'];
 
-  // Called from initGentleProgress. Reads activity logs; returns a set-like map of YYYY-MM-DD → true.
+  // Called from initGentleProgress. Reads activity logs; returns a map of YYYY-MM-DD → true.
   function collectActivityDays() {
     var days = {};
     var i;
@@ -868,70 +868,204 @@
     return year + '-' + pad2(monthIndex + 1) + '-' + pad2(day);
   }
 
-  // Called from DOMContentLoaded. Soft check marks on days with any activity; empty days stay blank.
+  function startOfWeekMonday(date) {
+    var d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    var day = d.getDay();
+    var offset = (day + 6) % 7;
+    d.setDate(d.getDate() - offset);
+    return d;
+  }
+
+  var CHECK_SVG =
+    '<svg class="practice-week__tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<polyline points="20 6 9 17 4 12"/>' +
+    '</svg>';
+
+  var MONTH_CHECK_SVG =
+    '<svg class="practice-month__tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<polyline points="20 6 9 17 4 12"/>' +
+    '</svg>';
+
+  // Called from DOMContentLoaded. My week button opens a calm week/month practice modal.
   function initGentleProgress() {
-    var gridEl = document.getElementById('dashboard-progress-grid');
-    var monthEl = document.getElementById('dashboard-progress-month');
-    if (!gridEl) {
+    var openBtn = document.getElementById('dashboard-my-week-btn');
+    var modal = document.getElementById('practice-week-modal');
+    var weekRow = document.getElementById('practice-week-row');
+    var closeBtn = document.getElementById('practice-week-close');
+    var monthToggle = document.getElementById('practice-month-toggle');
+    var monthPanel = document.getElementById('practice-month-panel');
+    var monthLabel = document.getElementById('practice-month-label');
+    var monthGrid = document.getElementById('practice-month-grid');
+    var prevBtn = document.getElementById('practice-month-prev');
+    var nextBtn = document.getElementById('practice-month-next');
+    if (!openBtn || !modal || !weekRow) {
       return;
     }
 
-    var now = new Date();
-    var year = now.getFullYear();
-    var monthIndex = now.getMonth();
-    var todayDay = now.getDate();
     var activityDays = collectActivityDays();
+    var viewYear = new Date().getFullYear();
+    var viewMonth = new Date().getMonth();
+    var monthExpanded = false;
+    var DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-    if (monthEl) {
-      monthEl.textContent = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    function todayKey() {
+      var now = new Date();
+      return toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
     }
 
-    /* Monday-first week (0 = Monday … 6 = Sunday). */
-    var firstDow = new Date(year, monthIndex, 1).getDay();
-    var mondayOffset = (firstDow + 6) % 7;
-    var daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-
-    var checkSvg =
-      '<svg class="dashboard-progress__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-        '<polyline points="20 6 9 17 4 12"/>' +
-      '</svg>';
-
-    var html = '';
-    var i;
-    for (i = 0; i < mondayOffset; i++) {
-      html += '<div class="dashboard-progress__day dashboard-progress__day--empty" aria-hidden="true"></div>';
+    function renderWeek() {
+      var monday = startOfWeekMonday(new Date());
+      var today = todayKey();
+      var html = '';
+      var i;
+      for (i = 0; i < 7; i++) {
+        var d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+        var key = toDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+        var isActive = !!activityDays[key];
+        var isToday = key === today;
+        var classes = 'practice-week__chip';
+        if (isActive) {
+          classes += ' practice-week__chip--active';
+        }
+        if (isToday) {
+          classes += ' practice-week__chip--today';
+        }
+        var label = DAY_LETTERS[i] + ' ' + d.getDate();
+        if (isActive) {
+          label += ', practised';
+        } else if (isToday) {
+          label += ', today';
+        }
+        html +=
+          '<div class="' + classes + '" role="listitem" aria-label="' + label + '">' +
+            '<span class="practice-week__letter">' + DAY_LETTERS[i] + '</span>' +
+            '<span class="practice-week__date">' + d.getDate() + '</span>' +
+            (isActive ? CHECK_SVG : '') +
+          '</div>';
+      }
+      weekRow.innerHTML = html;
     }
 
-    for (i = 1; i <= daysInMonth; i++) {
-      var key = toDateKey(year, monthIndex, i);
-      var isActive = !!activityDays[key];
-      var isToday = i === todayDay;
-      var classes = 'dashboard-progress__day';
-      if (isActive) {
-        classes += ' dashboard-progress__day--active';
+    function renderMonth() {
+      if (!monthGrid || !monthLabel) {
+        return;
       }
-      if (isToday) {
-        classes += ' dashboard-progress__day--today';
-      }
+      var now = new Date();
+      var today = todayKey();
+      monthLabel.textContent = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-GB', {
+        month: 'long',
+        year: 'numeric'
+      });
 
-      var label;
-      if (isActive) {
-        label = 'Practised on ' + key;
-      } else if (isToday) {
-        label = 'Today, ' + key;
-      } else {
-        label = key;
+      var firstDow = new Date(viewYear, viewMonth, 1).getDay();
+      var mondayOffset = (firstDow + 6) % 7;
+      var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      var html = '';
+      var i;
+      for (i = 0; i < mondayOffset; i++) {
+        html += '<div class="practice-month__cell practice-month__cell--empty" aria-hidden="true"></div>';
       }
-
-      html +=
-        '<div class="' + classes + '" role="listitem" aria-label="' + label + '">' +
-          (isActive
-            ? checkSvg
-            : '<span class="dashboard-progress__day-num">' + i + '</span>') +
-        '</div>';
+      for (i = 1; i <= daysInMonth; i++) {
+        var key = toDateKey(viewYear, viewMonth, i);
+        var isActive = !!activityDays[key];
+        var isToday = key === today;
+        var classes = 'practice-month__cell';
+        if (isActive) {
+          classes += ' practice-month__cell--active';
+        }
+        if (isToday) {
+          classes += ' practice-month__cell--today';
+        }
+        var aria;
+        if (isActive) {
+          aria = 'Practised on ' + key;
+        } else if (isToday) {
+          aria = 'Today, ' + key;
+        } else {
+          aria = key;
+        }
+        html +=
+          '<div class="' + classes + '" role="listitem" aria-label="' + aria + '">' +
+            (isActive
+              ? MONTH_CHECK_SVG
+              : '<span class="practice-month__num">' + i + '</span>') +
+          '</div>';
+      }
+      monthGrid.innerHTML = html;
     }
 
-    gridEl.innerHTML = html;
+    function setMonthExpanded(expanded) {
+      monthExpanded = !!expanded;
+      if (monthPanel) {
+        monthPanel.hidden = !monthExpanded;
+      }
+      if (monthToggle) {
+        monthToggle.setAttribute('aria-expanded', monthExpanded ? 'true' : 'false');
+        monthToggle.textContent = monthExpanded ? 'Hide the month' : 'See the month';
+      }
+      if (monthExpanded) {
+        renderMonth();
+      }
+    }
+
+    function openModal() {
+      activityDays = collectActivityDays();
+      viewYear = new Date().getFullYear();
+      viewMonth = new Date().getMonth();
+      renderWeek();
+      setMonthExpanded(false);
+      modal.hidden = false;
+      modal.classList.add('is-open');
+      if (closeBtn) {
+        closeBtn.focus();
+      }
+    }
+
+    function closeModal() {
+      modal.classList.remove('is-open');
+      modal.hidden = true;
+      openBtn.focus();
+    }
+
+    openBtn.addEventListener('click', openModal);
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeModal);
+    }
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+    if (monthToggle) {
+      monthToggle.addEventListener('click', function () {
+        setMonthExpanded(!monthExpanded);
+      });
+    }
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function () {
+        viewMonth -= 1;
+        if (viewMonth < 0) {
+          viewMonth = 11;
+          viewYear -= 1;
+        }
+        renderMonth();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function () {
+        viewMonth += 1;
+        if (viewMonth > 11) {
+          viewMonth = 0;
+          viewYear += 1;
+        }
+        renderMonth();
+      });
+    }
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+        closeModal();
+      }
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
