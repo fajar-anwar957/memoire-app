@@ -389,8 +389,26 @@
     return hour12 + ':' + padTimePart(minute) + ' ' + period;
   }
 
-  // Called from getReminders:452 and saveReminders:464 after dashboard.js form submit:517 (Flow E).
-  // Next: returns a clean reminder object or null; saveReminders:462 writes it and fires memoire:reminders-changed.
+  // Called from getReminders and saveReminders after dashboard.js form submit.
+  // Next: returns a clean reminder object or null; saveReminders writes it and fires memoire:reminders-changed.
+  var REMINDER_CATEGORIES = {
+    medicine: { id: 'medicine', label: 'Medicine', sort: 0 },
+    doctor: { id: 'doctor', label: 'Doctor or appointment', sort: 1 },
+    event: { id: 'event', label: 'Event', sort: 2 },
+    food: { id: 'food', label: 'Food', sort: 3 },
+    water: { id: 'water', label: 'Water', sort: 4 },
+    other: { id: 'other', label: 'Other', sort: 5 }
+  };
+
+  function normalizeReminderCategory(value) {
+    var key = String(value || '').trim().toLowerCase();
+    if (REMINDER_CATEGORIES[key]) {
+      return key;
+    }
+    /* Existing reminders without a category become Other. */
+    return 'other';
+  }
+
   function normalizeReminder(item) {
     if (!item || typeof item !== 'object') {
       return null;
@@ -414,13 +432,19 @@
       time: padTimePart(hour24) + ':' + padTimePart(minute),
       repeat: repeat,
       date: date,
-      completed: repeat === 'once' ? !!item.completed : false
+      completed: repeat === 'once' ? !!item.completed : false,
+      category: normalizeReminderCategory(item.category)
     };
   }
 
-  // Called from getReminders:454 and saveReminders:466 .sort().
-  // Next: orders incomplete first, then once-dates, then time; sorted list is stored or returned.
+  // Called from getReminders and saveReminders .sort().
+  // Next: medicine first, then incomplete, then once-dates, then time.
   function compareReminders(a, b) {
+    var catA = REMINDER_CATEGORIES[normalizeReminderCategory(a.category)] || REMINDER_CATEGORIES.other;
+    var catB = REMINDER_CATEGORIES[normalizeReminderCategory(b.category)] || REMINDER_CATEGORIES.other;
+    if (catA.sort !== catB.sort) {
+      return catA.sort - catB.sort;
+    }
     if (!!a.completed !== !!b.completed) {
       return a.completed ? 1 : -1;
     }
@@ -552,6 +576,10 @@
   var sharedAudioCtx = null; // used by unlockAudio:591 and playGentleReminderChime:610
   var activeReminderAlert = null; // set in showInAppReminderAlert:802; read by complete/acknowledge/reschedule; cleared in closeInAppReminderAlert:705
   var RESCHEDULE_STORAGE_KEY = 'memoireRescheduleReminder'; // written in requestRescheduleReminder:778; read by dashboard.js consumePendingReschedule:478
+  var reminderChimeTimer = null; // looping chime while alert is open
+  var reminderChimeStopRequested = true;
+  var toastHideTimer = null;
+  var toastActionHandler = null;
 
   // Called from ensureReminderAlertActions:579 and ensureReminderAlertDom:689.
   // Next: returns the Okay/Done/Reschedule button HTML; it is inserted into the alert footer.
@@ -599,9 +627,22 @@
     }
   }
 
-  // Called from fireReminder:855 after markReminderFired:854 (Flow E).
-  // Next: nested play:643 runs tone:617 three times; then showBrowserNotification:835 and showInAppReminderAlert:793 run.
+  // Called from closeInAppReminderAlert and before starting a new chime loop.
+  // Next: clears the repeat timer so sound stops when the user presses Okay / Done / Reschedule.
+  function stopGentleReminderChime() {
+    reminderChimeStopRequested = true;
+    if (reminderChimeTimer) {
+      clearTimeout(reminderChimeTimer);
+      reminderChimeTimer = null;
+    }
+  }
+
+  // Called from fireReminder after markReminderFired (Flow E).
+  // Next: plays a warm three-note chime and repeats until stopGentleReminderChime runs.
   function playGentleReminderChime() {
+    stopGentleReminderChime();
+    reminderChimeStopRequested = false;
+
     try {
       var AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) {
@@ -612,8 +653,6 @@
       }
       var ctx = sharedAudioCtx;
 
-      // Called from nested play:647-649 inside playGentleReminderChime:604.
-      // Next: starts oscillators; sound goes to the speakers; no return value.
       function tone(freq, start, duration, peak) {
         var osc = ctx.createOscillator();
         var partial = ctx.createOscillator();
@@ -638,9 +677,10 @@
         partial.stop(start + duration + 0.02);
       }
 
-      // Called from playGentleReminderChime:653 after ctx.resume(), or directly at :655 if the context is running.
-      // Next: calls tone:647-649 for the chime; then fireReminder:853 continues to the alert.
-      function play() {
+      function playOnce() {
+        if (reminderChimeStopRequested) {
+          return;
+        }
         var now = ctx.currentTime;
         /* Warm three-note chime (~1.4s), clearly audible but non-alarming.
            Mid-range pitches carry better for older hearing. */
@@ -649,14 +689,132 @@
         tone(659.25, now + 0.68, 0.58, 0.24);
       }
 
+      function scheduleNext() {
+        if (reminderChimeStopRequested) {
+          return;
+        }
+        reminderChimeTimer = setTimeout(function () {
+          reminderChimeTimer = null;
+          if (reminderChimeStopRequested) {
+            return;
+          }
+          if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+            ctx.resume().then(function () {
+              playOnce();
+              scheduleNext();
+            }).catch(function () {});
+          } else {
+            playOnce();
+            scheduleNext();
+          }
+        }, 2800);
+      }
+
+      function startLoop() {
+        playOnce();
+        scheduleNext();
+      }
+
       if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
-        ctx.resume().then(play).catch(function () {});
+        ctx.resume().then(startLoop).catch(function () {});
       } else {
-        play();
+        startLoop();
       }
     } catch (err) {
       /* Audio unavailable — silent fail */
     }
+  }
+
+  // Shared calm toast (Saved / Deleted. Undo) — used across dashboard, memories, profile.
+  function ensureToastDom() {
+    var existing = document.getElementById('memoire-toast');
+    if (existing) {
+      return existing;
+    }
+    var toast = document.createElement('div');
+    toast.id = 'memoire-toast';
+    toast.className = 'memoire-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.hidden = true;
+    toast.innerHTML =
+      '<span class="memoire-toast__message"></span>' +
+      '<button type="button" class="memoire-toast__action" hidden></button>';
+    document.body.appendChild(toast);
+    return toast;
+  }
+
+  function hideToast() {
+    var toast = document.getElementById('memoire-toast');
+    if (toastHideTimer) {
+      clearTimeout(toastHideTimer);
+      toastHideTimer = null;
+    }
+    toastActionHandler = null;
+    if (!toast) {
+      return;
+    }
+    toast.classList.remove('is-visible');
+    toast.hidden = true;
+    var actionBtn = toast.querySelector('.memoire-toast__action');
+    if (actionBtn) {
+      actionBtn.hidden = true;
+      actionBtn.onclick = null;
+    }
+  }
+
+  // options: { durationMs, actionLabel, onAction }
+  function showToast(message, options) {
+    options = options || {};
+    var toast = ensureToastDom();
+    var messageEl = toast.querySelector('.memoire-toast__message');
+    var actionBtn = toast.querySelector('.memoire-toast__action');
+    var durationMs = typeof options.durationMs === 'number' ? options.durationMs : 3000;
+
+    if (toastHideTimer) {
+      clearTimeout(toastHideTimer);
+      toastHideTimer = null;
+    }
+
+    if (messageEl) {
+      messageEl.textContent = message || '';
+    }
+
+    toastActionHandler = null;
+    if (actionBtn) {
+      if (options.actionLabel && typeof options.onAction === 'function') {
+        actionBtn.hidden = false;
+        actionBtn.textContent = options.actionLabel;
+        toastActionHandler = options.onAction;
+        actionBtn.onclick = function () {
+          var handler = toastActionHandler;
+          hideToast();
+          if (typeof handler === 'function') {
+            handler();
+          }
+        };
+      } else {
+        actionBtn.hidden = true;
+        actionBtn.onclick = null;
+      }
+    }
+
+    toast.hidden = false;
+    toast.classList.add('is-visible');
+    toastHideTimer = setTimeout(hideToast, durationMs);
+    return toast;
+  }
+
+  function showSavedToast() {
+    return showToast('Saved', { durationMs: 3000 });
+  }
+
+  function showUndoToast(onUndo) {
+    return showToast('Deleted.', {
+      durationMs: 8000,
+      actionLabel: 'Undo',
+      onAction: onUndo
+    });
   }
 
   // Called from showInAppReminderAlert:794 and bindReminderAlertUi:939.
@@ -693,9 +851,10 @@
     return alertEl;
   }
 
-  // Called from completeActiveReminder:737, acknowledgeActiveReminder:753, requestRescheduleReminder:760,764.
-  // Next: hides the overlay and clears activeReminderAlert; user is back on the page.
+  // Called from completeActiveReminder, acknowledgeActiveReminder, requestRescheduleReminder.
+  // Next: stops the repeating chime, hides the overlay, and clears activeReminderAlert.
   function closeInAppReminderAlert() {
+    stopGentleReminderChime();
     var alertEl = document.getElementById('reminder-alert');
     if (!alertEl) {
       return;
@@ -780,7 +939,8 @@
         text: reminder.text,
         time: reminder.time,
         repeat: reminder.repeat || 'daily',
-        date: reminder.date || null
+        date: reminder.date || null,
+        category: reminder.category || 'other'
       }));
     } catch (e) {
       /* sessionStorage unavailable */
@@ -804,7 +964,8 @@
       text: reminder.text,
       time: reminder.time,
       repeat: reminder.repeat || 'daily',
-      date: reminder.date || null
+      date: reminder.date || null,
+      category: reminder.category || 'other'
     };
     textEl.textContent = reminder.text;
     if (reminder.repeat === 'once' && reminder.date) {
@@ -1019,7 +1180,14 @@
     requestNotificationPermission: requestNotificationPermission,
     closeInAppReminderAlert: closeInAppReminderAlert,
     clearReminderFired: clearReminderFired,
-    unlockAudio: unlockAudio
+    unlockAudio: unlockAudio,
+    showToast: showToast,
+    showSavedToast: showSavedToast,
+    showUndoToast: showUndoToast,
+    hideToast: hideToast,
+    stopGentleReminderChime: stopGentleReminderChime,
+    REMINDER_CATEGORIES: REMINDER_CATEGORIES,
+    normalizeReminderCategory: normalizeReminderCategory
   };
 
   if (document.readyState === 'loading') {

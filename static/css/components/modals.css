@@ -280,3 +280,64 @@ p.modal-body {
   z-index: 2;
   font-size: 0;
 }
+
+/* Shared calm toast — Saved / Deleted. Undo */
+.memoire-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0));
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  max-width: min(92vw, 420px);
+  transform: translateX(-50%) translateY(1rem);
+  padding: 0.9rem 1.25rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: var(--font-family);
+  color: #ffffff;
+  background-color: var(--color-navy, var(--navy));
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(27, 58, 92, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.memoire-toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.memoire-toast__message {
+  flex: 1 1 auto;
+  line-height: 1.35;
+}
+
+.memoire-toast__action {
+  flex: 0 0 auto;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0.55rem 0.9rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: var(--font-family);
+  color: var(--color-navy, var(--navy));
+  background: #ffffff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.memoire-toast__action:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+}
+
+.memoire-toast__action[hidden] {
+  display: none !important;
+}

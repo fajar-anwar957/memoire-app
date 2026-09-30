@@ -2,22 +2,22 @@
   'use strict';
 
   var shared = window.MemoireActivities; // shared.js: speakSegments, shuffleOptions, maskMessage, unmaskReply, logs
-  var speechSupported = shared.speechSupported; // speak btn setup in initDailyQuiz, openFeedbackModal, toggleSpeech
+  var speechSupported = shared.speechSupported; // speak btn setup in initDailyQuiz, showInlineFeedback, toggleSpeech
 
-  var SESSION_LIMIT = 5; // loadTodaysQuiz (379, 396-402), loadMoreQuiz (432)
-  var MORE_BATCH_SIZE = 3; // loadMoreQuiz (443, 444, 446, 449, 460)
-  var STORAGE_KEY = 'cstDailyQuiz'; // initDailyQuiz (157), readQuizCacheObject (1002), saveRound (1181, 1189)
-  var QUIZ_CACHE_KEY = 'cstDailyQuizCache'; // readQuizCacheObject (983), writeQuizCacheObject (1031), clearQuizCache (1059)
-  var MEMORIES_STORAGE_KEY = 'dashboardMemories'; // fetchApiQuestions (481), getMaskedMemories (540+); written by add-memory.js saveMemory
-  var FEEDBACK_DELAY_MS = 1200; // optionsEl click setTimeout in initDailyQuiz (329)
-  var SPEECH_RATE = 0.95; // speakQuestionBtn (258), speakWarmBtn (272) → shared.js speakSegments
-  var TOKEN_LEFTOVER_RE = /\[PATIENT\]|\[FAMILY_\d+\]|\bPATIENT\b|\bFAMILY_\d+\b/; // hasLeftoverToken (636)
+  var SESSION_LIMIT = 9; // loadTodaysQuiz, loadMoreQuiz, buildFallbackQuiz
+  var MORE_BATCH_SIZE = 5; // loadMoreQuiz batch size for "a few more"
+  var STORAGE_KEY = 'cstDailyQuiz'; // initDailyQuiz, readQuizCacheObject, saveRound
+  var QUIZ_CACHE_KEY = 'cstDailyQuizCache'; // readQuizCacheObject, writeQuizCacheObject, clearQuizCache
+  var MEMORIES_STORAGE_KEY = 'dashboardMemories'; // fetchApiQuestions, getMaskedMemories; written by add-memory.js saveMemory
+  var AUTO_ADVANCE_MS = 3000; // auto-advance after inline feedback; Next clears this timer
+  var SPEECH_RATE = 0.95; // speakQuestionBtn, speakWarmBtn → shared.js speakSegments
+  var TOKEN_LEFTOVER_RE = /\[PATIENT\]|\[FAMILY_\d+\]|\bPATIENT\b|\bFAMILY_\d+\b/; // hasLeftoverToken
 
-  var MODAL_HEADINGS = ['Lovely!', 'Wonderful!', "That's a nice one!"]; // pickModalHeading (1194)
-  var EXHAUSTED_MESSAGE = // showCompleteScreen (202)
+  var FEEDBACK_HEADINGS = ['Lovely!', 'Wonderful!', "That's a nice one!"]; // pickFeedbackHeading
+  var EXHAUSTED_MESSAGE = // showCompleteScreen
     "We've had a lovely long session today — let's rest and play again tomorrow!";
 
-  var FALLBACK_GENERAL = [ // pickFallbackFillers (936)
+  var FALLBACK_GENERAL = [ // pickFallbackFillers
     {
       id: 'fallback-fruit',
       type: 'general',
@@ -113,6 +113,118 @@
       options: ['Music', 'Brick', 'Sock'],
       correct: 'Music',
       warm: 'A familiar tune can bring back such lovely feelings.'
+    },
+    {
+      id: 'fallback-orange',
+      type: 'general',
+      question: 'Which of these is a juicy fruit?',
+      options: ['Orange', 'Shoe', 'Window'],
+      correct: 'Orange',
+      warm: 'Oranges are bright and refreshing — a lovely treat.'
+    },
+    {
+      id: 'fallback-moon',
+      type: 'general',
+      question: 'What do we often see in the night sky?',
+      options: ['Moon', 'Toaster', 'Scissors'],
+      correct: 'Moon',
+      warm: 'A soft moon can make the evening feel peaceful.'
+    },
+    {
+      id: 'fallback-umbrella',
+      type: 'general',
+      question: 'What might you take with you when it rains?',
+      options: ['Umbrella', 'Pillow', 'Candle'],
+      correct: 'Umbrella',
+      warm: 'An umbrella keeps you dry on a rainy walk.'
+    },
+    {
+      id: 'fallback-garden',
+      type: 'general',
+      question: 'Where might you plant flowers?',
+      options: ['Garden', 'Cupboard', 'Oven'],
+      correct: 'Garden',
+      warm: 'A garden is a gentle place to enjoy fresh air.'
+    },
+    {
+      id: 'fallback-train',
+      type: 'general',
+      question: 'Which of these travels along tracks?',
+      options: ['Train', 'Sofa', 'Jumper'],
+      correct: 'Train',
+      warm: 'Trains can take us on lovely journeys.'
+    },
+    {
+      id: 'fallback-bicycle',
+      type: 'general',
+      question: 'Which of these has two wheels?',
+      options: ['Bicycle', 'Table', 'Coat'],
+      correct: 'Bicycle',
+      warm: 'A bicycle ride can feel free and breezy.'
+    },
+    {
+      id: 'fallback-book',
+      type: 'general',
+      question: 'Which of these might you read for pleasure?',
+      options: ['Book', 'Fork', 'Doormat'],
+      correct: 'Book',
+      warm: 'A good book can keep you company for hours.'
+    },
+    {
+      id: 'fallback-clock',
+      type: 'general',
+      question: 'Which of these helps us tell the time?',
+      options: ['Clock', 'Carrot', 'Blanket'],
+      correct: 'Clock',
+      warm: 'Noticing the time can help us settle into the day.'
+    },
+    {
+      id: 'fallback-sparrow',
+      type: 'general',
+      question: 'Which of these is a small bird?',
+      options: ['Sparrow', 'Shoe', 'Brush'],
+      correct: 'Sparrow',
+      warm: 'Little birds singing can lift the spirits.'
+    },
+    {
+      id: 'fallback-kite',
+      type: 'general',
+      question: 'Which of these might fly on a windy day?',
+      options: ['Kite', 'Plate', 'Jumper'],
+      correct: 'Kite',
+      warm: 'A kite dancing in the sky is a cheerful sight.'
+    },
+    {
+      id: 'fallback-sewing',
+      type: 'general',
+      question: 'Which of these might help mend clothes?',
+      options: ['Needle', 'Banana', 'Window'],
+      correct: 'Needle',
+      warm: 'Quiet sewing can feel calm and useful.'
+    },
+    {
+      id: 'fallback-radio',
+      type: 'general',
+      question: 'Which of these might play music at home?',
+      options: ['Radio', 'Leaf', 'Sock'],
+      correct: 'Radio',
+      warm: 'Familiar music on the radio can feel so comforting.'
+    },
+    {
+      id: 'fallback-mango',
+      type: 'general',
+      question: 'Which of these is a sweet fruit?',
+      options: ['Mango', 'Hammer', 'Curtain'],
+      correct: 'Mango',
+      warm: 'Mangoes are a lovely treat on a warm day.'
+    },
+    {
+      id: 'fallback-cricket',
+      type: 'general',
+      question: 'Which of these is a sport you might watch or play?',
+      options: ['Cricket', 'Toaster', 'Cushion'],
+      correct: 'Cricket',
+      warm: 'A gentle game can bring people together.'
     }
   ];
 
@@ -123,7 +235,7 @@
     initDailyQuiz();
   });
 
-  // Called from DOMContentLoaded (daily-quiz.js 123; page templates/daily-quiz.html).
+  // Called from DOMContentLoaded (daily-quiz.js; page templates/daily-quiz.html).
   // Next: setQuizState('loading'), loadTodaysQuiz → startSession or showCompleteScreen.
   function initDailyQuiz() {
     var loadingEl = document.getElementById('dq-loading');
@@ -136,12 +248,9 @@
     var motifEl = document.getElementById('dq-motif');
     var doneMessageEl = document.getElementById('dq-done-message');
     var doneActionsEl = document.getElementById('dq-done-actions');
-    var modalEl = document.getElementById('dq-feedback-modal');
-    var modalHeadingEl = document.getElementById('dq-modal-heading');
-    var modalWarmEl = document.getElementById('dq-modal-warm');
-    var modalBodyEl = document.getElementById('dq-modal-body');
-    var modalActionsEl = document.getElementById('dq-modal-actions');
-    var modalClosingEl = document.getElementById('dq-modal-closing');
+    var feedbackEl = document.getElementById('dq-inline-feedback');
+    var feedbackHeadingEl = document.getElementById('dq-feedback-heading');
+    var feedbackWarmEl = document.getElementById('dq-feedback-warm');
     var nextBtn = document.getElementById('dq-next-question');
     var exitFooterEl = document.getElementById('dq-exit-footer');
     var doneTodayBtn = document.getElementById('dq-done-today');
@@ -149,7 +258,7 @@
     var speakWarmBtn = document.getElementById('dq-speak-warm');
     var moreBtns = document.querySelectorAll('.cst-wa__more-btn');
 
-    if (!questionEl || !optionsEl || !modalEl) {
+    if (!questionEl || !optionsEl || !feedbackEl || !nextBtn) {
       return;
     }
 
@@ -165,19 +274,20 @@
       currentQuestion: null,
       answered: false,
       answersInSession: 0,
-      feedbackTimer: null,
+      advanceTimer: null,
       feedbackSegments: [],
-      exhausted: false
+      exhausted: false,
+      advancing: false
     };
 
-    // Called from setQuizState (line 193). Next: toggles exitFooterEl.hidden; nothing else runs.
+    // Called from setQuizState. Next: toggles exitFooterEl.hidden; nothing else runs.
     function setExitFooterVisible(visible) {
       if (exitFooterEl) {
         exitFooterEl.hidden = !visible;
       }
     }
 
-    // Called from showCompleteScreen (211), startSession (229), requestMoreQuestions (236), nextBtn click (344), initDailyQuiz (361).
+    // Called from showCompleteScreen, startSession, requestMoreQuestions, advanceAfterFeedback, initDailyQuiz.
     // Next: setExitFooterVisible when next==='question'; caller then continues.
     function setQuizState(next) {
       state.quizState = next;
@@ -193,9 +303,99 @@
       setExitFooterVisible(next === 'question');
     }
 
-    // Called from startSession (225), loadMoreQuiz.then (240), nextBtn click (337), doneTodayBtn click (357), loadTodaysQuiz.then (364).
+    function clearAdvanceTimer() {
+      if (state.advanceTimer) {
+        clearTimeout(state.advanceTimer);
+        state.advanceTimer = null;
+      }
+    }
+
+    function hideInlineFeedback() {
+      feedbackEl.hidden = true;
+      feedbackEl.classList.remove('is-visible', 'cst-dq__feedback--gentle', 'cst-dq__feedback--support');
+      if (feedbackHeadingEl) {
+        feedbackHeadingEl.textContent = '';
+      }
+      if (feedbackWarmEl) {
+        feedbackWarmEl.textContent = '';
+      }
+      if (speakWarmBtn) {
+        speakWarmBtn.hidden = true;
+      }
+      state.feedbackSegments = [];
+    }
+
+    // Called from optionsEl click after answer. Shows gentle inline copy; schedules auto-advance.
+    function showInlineFeedback(heading, warmLine, kind) {
+      state.feedbackSegments = [heading, warmLine].filter(function (part) {
+        return !!String(part || '').trim();
+      });
+
+      if (feedbackHeadingEl) {
+        feedbackHeadingEl.textContent = heading || pickFeedbackHeading();
+      }
+      if (feedbackWarmEl) {
+        feedbackWarmEl.textContent = warmLine || '';
+      }
+
+      feedbackEl.classList.remove('cst-dq__feedback--gentle', 'cst-dq__feedback--support');
+      feedbackEl.classList.add(
+        kind === 'support' ? 'cst-dq__feedback--support' : 'cst-dq__feedback--gentle'
+      );
+      feedbackEl.hidden = false;
+      feedbackEl.classList.add('is-visible');
+
+      if (speakWarmBtn) {
+        speakWarmBtn.hidden = !speechSupported || !state.feedbackSegments.length;
+      }
+
+      nextBtn.focus();
+    }
+
+    // Advances only after feedback (timer or Next). Never bumps currentIndex on answer click.
+    function advanceAfterFeedback() {
+      if (state.advancing || state.quizState !== 'question') {
+        return;
+      }
+      state.advancing = true;
+      clearAdvanceTimer();
+      shared.cancelSpeech();
+      hideInlineFeedback();
+
+      if (state.answersInSession >= state.quiz.length) {
+        state.advancing = false;
+        showCompleteScreen(false);
+        return;
+      }
+
+      var nextIndex = state.currentIndex + 1;
+      if (nextIndex >= state.quiz.length || !state.quiz[nextIndex]) {
+        state.advancing = false;
+        showCompleteScreen(false);
+        return;
+      }
+
+      state.answered = false;
+      state.currentIndex = nextIndex;
+      state.currentQuestion = state.quiz[state.currentIndex];
+      state.advancing = false;
+      setQuizState('question');
+      renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state, hideInlineFeedback);
+    }
+
+    function scheduleAutoAdvance() {
+      clearAdvanceTimer();
+      state.advanceTimer = setTimeout(function () {
+        state.advanceTimer = null;
+        advanceAfterFeedback();
+      }, AUTO_ADVANCE_MS);
+    }
+
+    // Called from startSession, loadMoreQuiz.then, advanceAfterFeedback, doneTodayBtn, loadTodaysQuiz.then.
     // Next: setQuizState('complete').
     function showCompleteScreen(exhausted) {
+      clearAdvanceTimer();
+      hideInlineFeedback();
       state.exhausted = !!exhausted;
       if (doneMessageEl) {
         doneMessageEl.textContent = exhausted
@@ -211,13 +411,16 @@
       setQuizState('complete');
     }
 
-    // Called from loadTodaysQuiz.then (367), requestMoreQuestions.then (243).
+    // Called from loadTodaysQuiz.then, requestMoreQuestions.then.
     // Next: setQuizState('question') then renderRound, or showCompleteScreen if no questions.
     function startSession(questions) {
+      clearAdvanceTimer();
+      hideInlineFeedback();
       state.quiz = questions || [];
       state.currentIndex = 0;
       state.answersInSession = 0;
       state.answered = false;
+      state.advancing = false;
       state.currentQuestion = state.quiz[0] || null;
       state.exhausted = false;
 
@@ -227,12 +430,13 @@
       }
 
       setQuizState('question');
-      renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state);
+      renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state, hideInlineFeedback);
     }
 
-    // Called from moreBtns click (line 249). Next: shared.closeFeedbackModal (shared.js), loadMoreQuiz → startSession or showCompleteScreen.
+    // Called from moreBtns click. Next: loadMoreQuiz → startSession or showCompleteScreen.
     function requestMoreQuestions() {
-      shared.closeFeedbackModal(modalEl);
+      clearAdvanceTimer();
+      hideInlineFeedback();
       setQuizState('loading');
 
       loadMoreQuiz().then(function (result) {
@@ -253,7 +457,7 @@
     if (speakQuestionBtn) {
       if (speechSupported) {
         speakQuestionBtn.addEventListener('click', function () {
-          if (state.currentQuestion) {
+          if (state.currentQuestion && !state.answered) {
             toggleSpeech(function () {
               shared.speakSegments(buildQuestionSpeech(state.currentQuestion, optionsEl), SPEECH_RATE);
             });
@@ -280,7 +484,7 @@
 
     optionsEl.addEventListener('click', function (event) {
       var button = event.target.closest('.cst-wa__option, .cst-dq__option');
-      if (!button || state.answered || !state.currentQuestion || state.quizState !== 'question') {
+      if (!button || state.answered || state.advancing || !state.currentQuestion || state.quizState !== 'question') {
         return;
       }
 
@@ -290,68 +494,42 @@
       var isCorrect = selected === correctText;
       var heading;
       var warmLine;
+      var feedbackKind;
 
       if (isCorrect) {
         applyCorrectFeedback(optionsEl, selected);
         heading = 'Wonderful! That\u2019s right \u2014 ' + correctText + '.';
         warmLine = state.currentQuestion.warm || '';
+        feedbackKind = 'gentle';
       } else {
         applyMissFeedback(optionsEl, selected, correctText);
         heading = 'Good try! It was ' + correctText + '.';
         warmLine = shared.GENTLE_SUPPORT_LINE;
+        feedbackKind = 'support';
       }
 
+      // Mark answered and update progress, but do NOT advance currentIndex yet.
       markQuestionAnswered(state.currentQuestion.id);
       saveRound(state.currentQuestion, selected);
       state.answersInSession += 1;
       updateProgress(progressEl, state);
 
-      if (state.feedbackTimer) {
-        clearTimeout(state.feedbackTimer);
-      }
-
-      state.feedbackTimer = setTimeout(function () {
-        state.feedbackSegments = [heading, warmLine].filter(function (part) {
-          return !!String(part || '').trim();
-        });
-        openFeedbackModal({
-          modalEl: modalEl,
-          modalHeadingEl: modalHeadingEl,
-          modalWarmEl: modalWarmEl,
-          modalBodyEl: modalBodyEl,
-          modalActionsEl: modalActionsEl,
-          modalClosingEl: modalClosingEl,
-          speakWarmBtn: speakWarmBtn,
-          heading: heading,
-          warmLine: warmLine,
-          feedbackSegments: state.feedbackSegments
-        });
-      }, FEEDBACK_DELAY_MS);
+      showInlineFeedback(heading, warmLine, feedbackKind);
+      scheduleAutoAdvance();
     });
 
     nextBtn.addEventListener('click', function () {
-      shared.closeFeedbackModal(modalEl);
-      state.feedbackSegments = [];
-
-      if (state.answersInSession >= state.quiz.length) {
-        showCompleteScreen(false);
+      if (!state.answered || state.advancing) {
         return;
       }
-
-      state.answered = false;
-      state.currentIndex += 1;
-      state.currentQuestion = state.quiz[state.currentIndex];
-      setQuizState('question');
-      renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state);
+      advanceAfterFeedback();
     });
 
     if (doneTodayBtn) {
       doneTodayBtn.addEventListener('click', function () {
-        if (state.feedbackTimer) {
-          clearTimeout(state.feedbackTimer);
-          state.feedbackTimer = null;
-        }
-        shared.closeFeedbackModal(modalEl);
+        clearAdvanceTimer();
+        shared.cancelSpeech();
+        hideInlineFeedback();
         state.feedbackSegments = [];
         // Answered questions are already in the quiz cache via markQuestionAnswered().
         showCompleteScreen(false);
@@ -385,9 +563,10 @@
       }
     }
 
-    var orientationCount = Math.random() < 0.5 ? 1 : 2;
-    var personalCount = orientationCount === 1 ? 3 : 2;
-    var generalCount = 1;
+    var orientationCount = 2;
+    var remaining = Math.max(SESSION_LIMIT - orientationCount, 2);
+    var personalCount = Math.min(4, remaining - 1);
+    var generalCount = remaining - personalCount;
     var orientationQuestions = buildOrientationQuestions(orientationCount);
 
     return fetchApiQuestions(personalCount, generalCount, [])
@@ -438,7 +617,7 @@
     }).filter(Boolean);
     var excludeIds = collectUsedIds(cache);
 
-    return fetchApiQuestions(2, 1, askedTexts)
+    return fetchApiQuestions(3, 2, askedTexts)
       .then(function (apiQuestions) {
         var batch = sanitizeQuestions(apiQuestions, excludeIds).slice(0, MORE_BATCH_SIZE);
         if (batch.length < MORE_BATCH_SIZE) {
@@ -894,11 +1073,12 @@
     return shared.shuffleOptions(options);
   }
 
-  // Called from loadTodaysQuiz catch (line 413). Next: buildOrientationQuestions + pickFallbackFillers; quiz is written via writeQuizCacheObject then returned to initDailyQuiz → startSession.
+  // Called from loadTodaysQuiz catch. Next: buildOrientationQuestions + pickFallbackFillers; quiz is written via writeQuizCacheObject then returned to initDailyQuiz → startSession.
   function buildFallbackQuiz() {
     var orientation = buildOrientationQuestions(2);
-    var fillers = pickFallbackFillers(3, orientation);
-    return shared.shuffleOptions(orientation.concat(fillers));
+    var need = Math.max(SESSION_LIMIT - orientation.length, 0);
+    var fillers = pickFallbackFillers(need, orientation);
+    return shared.shuffleOptions(orientation.concat(fillers).slice(0, SESSION_LIMIT));
   }
 
   // Called from loadTodaysQuiz (399), loadMoreQuiz (446, 460), sanitizeQuestions (724), buildFallbackQuiz (900).
@@ -1059,11 +1239,15 @@
     localStorage.removeItem(QUIZ_CACHE_KEY);
   }
 
-  // Called from startSession (230), nextBtn click (345). Next: updateProgress, renderMotif; option buttons wait for optionsEl click.
-  function renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state) {
+  // Called from startSession, advanceAfterFeedback. Next: updateProgress, renderMotif; option buttons wait for optionsEl click.
+  function renderRound(questionEl, promptZoneEl, optionsEl, progressEl, motifEl, state, hideFeedbackFn) {
     var question = state.currentQuestion;
     if (!question) {
       return;
+    }
+
+    if (typeof hideFeedbackFn === 'function') {
+      hideFeedbackFn();
     }
 
     if (promptZoneEl) {
@@ -1145,7 +1329,7 @@
     );
   }
 
-  // Called from optionsEl click in initDailyQuiz (line 295). Next: markQuestionAnswered, saveRound, then setTimeout → openFeedbackModal.
+  // Called from optionsEl click in initDailyQuiz. Next: markQuestionAnswered, saveRound, then showInlineFeedback.
   function applyCorrectFeedback(optionsEl, selected) {
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
     Array.prototype.forEach.call(buttons, function (button) {
@@ -1159,7 +1343,7 @@
     });
   }
 
-  // Called from optionsEl click in initDailyQuiz (line 299). Next: markQuestionAnswered, saveRound, then setTimeout → openFeedbackModal.
+  // Called from optionsEl click in initDailyQuiz. Next: markQuestionAnswered, saveRound, then showInlineFeedback.
   function applyMissFeedback(optionsEl, selected, correctText) {
     var buttons = optionsEl.querySelectorAll('.cst-wa__option');
     Array.prototype.forEach.call(buttons, function (button) {
@@ -1176,7 +1360,7 @@
     });
   }
 
-  // Called from optionsEl click in initDailyQuiz (line 305). Next: shared.writeLog (shared.js, no score stored); then setTimeout → openFeedbackModal.
+  // Called from optionsEl click in initDailyQuiz. Next: shared.writeLog (shared.js, no score stored); then showInlineFeedback.
   function saveRound(question, selected) {
     var log = shared.readLog(STORAGE_KEY);
     log.push({
@@ -1189,12 +1373,12 @@
     shared.writeLog(STORAGE_KEY, log);
   }
 
-  // Called from openFeedbackModal (line 1229) when heading is empty. Next: string is set on modalHeadingEl.
-  function pickModalHeading() {
-    return MODAL_HEADINGS[Math.floor(Math.random() * MODAL_HEADINGS.length)];
+  // Called from showInlineFeedback when heading is empty.
+  function pickFeedbackHeading() {
+    return FEEDBACK_HEADINGS[Math.floor(Math.random() * FEEDBACK_HEADINGS.length)];
   }
 
-  // Called from speakQuestionBtn click in initDailyQuiz (line 258). Next: shared.formatOptionsQuestion, then shared.speakSegments (shared.js).
+  // Called from speakQuestionBtn click in initDailyQuiz. Next: shared.formatOptionsQuestion, then shared.speakSegments (shared.js).
   function buildQuestionSpeech(question, optionsEl) {
     var segments = [];
     var optionTexts = [];
@@ -1221,28 +1405,7 @@
     return segments;
   }
 
-  // Called from optionsEl click setTimeout in initDailyQuiz (line 317). Next: pickModalHeading if needed; modal opens, user clicks nextBtn.
-  function openFeedbackModal(config) {
-    if (config.modalBodyEl) {
-      config.modalBodyEl.hidden = false;
-    }
-    config.modalHeadingEl.textContent = config.heading || pickModalHeading();
-    config.modalWarmEl.textContent = config.warmLine;
-    config.modalActionsEl.hidden = false;
-    config.modalClosingEl.hidden = true;
-    if (config.speakWarmBtn) {
-      var segments = config.feedbackSegments || [config.heading, config.warmLine].filter(function (part) {
-        return !!String(part || '').trim();
-      });
-      config.speakWarmBtn.hidden = !speechSupported || !segments.length;
-    }
-
-    config.modalEl.hidden = false;
-    config.modalEl.classList.add('is-open');
-    document.getElementById('dq-next-question').focus();
-  }
-
-  // Called from speakQuestionBtn click (257), speakWarmBtn click (271). Next: shared.cancelSpeech or the speakCallback (shared.speakSegments in shared.js).
+  // Called from speakQuestionBtn click, speakWarmBtn click. Next: shared.cancelSpeech or the speakCallback (shared.speakSegments in shared.js).
   function toggleSpeech(speakCallback) {
     if (!speechSupported) {
       return;

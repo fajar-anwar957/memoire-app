@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/cards.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/call-modal.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/tour.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/dashboard.css') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/memoire-icon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='assets/memoire-icon.png') }}">
@@ -84,8 +85,20 @@
       <p class="dashboard-next-up__text" id="dashboard-next-up-text"></p>
     </aside>
 
+    <section class="dashboard-progress" id="dashboard-progress" aria-labelledby="dashboard-progress-title">
+      <div class="dashboard-progress__header">
+        <h2 class="dashboard-progress__title" id="dashboard-progress-title">Days you practised</h2>
+        <p class="dashboard-progress__month" id="dashboard-progress-month"></p>
+      </div>
+      <p class="dashboard-progress__hint">A soft tick appears on days you did an activity.</p>
+      <div class="dashboard-progress__weekdays" aria-hidden="true">
+        <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+      </div>
+      <div class="dashboard-progress__grid" id="dashboard-progress-grid" role="list" aria-label="Activity days this month"></div>
+    </section>
+
     <div class="dashboard__grid">
-      <a href="/activities" class="dashboard-card dashboard-card--activities">
+      <a href="/activities" class="dashboard-card dashboard-card--activities" data-tour="activities">
         <span class="dashboard-card__accent" aria-hidden="true"></span>
         <span class="card-illustration" aria-hidden="true">
           <span class="card-illustration__tile card-illustration__tile--blue">
@@ -104,7 +117,7 @@
         </span>
       </a>
 
-      <a href="/companion" class="dashboard-card dashboard-card--companion">
+      <a href="/companion" class="dashboard-card dashboard-card--companion" data-tour="companion">
         <span class="dashboard-card__accent" aria-hidden="true"></span>
         <span class="card-illustration" aria-hidden="true">
           <span class="card-illustration__tile card-illustration__tile--blue">
@@ -120,7 +133,7 @@
         </span>
       </a>
 
-      <a href="/memory-log" class="dashboard-card dashboard-card--memories">
+      <a href="/memory-log" class="dashboard-card dashboard-card--memories" data-tour="memories">
         <span class="dashboard-card__accent" aria-hidden="true"></span>
         <span class="card-illustration" aria-hidden="true">
           <span class="card-illustration__tile card-illustration__tile--blue">
@@ -136,7 +149,7 @@
         </span>
       </a>
 
-      <section class="dashboard-card dashboard-card--reminders" aria-labelledby="dashboard-reminders-title">
+      <section class="dashboard-card dashboard-card--reminders" data-tour="reminders" aria-labelledby="dashboard-reminders-title">
         <span class="dashboard-card__accent" aria-hidden="true"></span>
         <span class="card-illustration" aria-hidden="true">
           <span class="card-illustration__tile card-illustration__tile--blue">
@@ -149,6 +162,15 @@
         <span class="dashboard-card__body">
           <h2 class="dashboard-card__title" id="dashboard-reminders-title">Reminders</h2>
           <p class="dashboard-card__subtext">See what's coming up today</p>
+          <div class="dashboard-reminders__filters" id="dashboard-reminders-filters" role="group" aria-label="Filter reminders by kind">
+            <button type="button" class="dashboard-reminders__filter is-active" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" class="dashboard-reminders__filter" data-filter="medicine" aria-pressed="false">Medicine</button>
+            <button type="button" class="dashboard-reminders__filter" data-filter="doctor" aria-pressed="false">Doctor</button>
+            <button type="button" class="dashboard-reminders__filter" data-filter="event" aria-pressed="false">Event</button>
+            <button type="button" class="dashboard-reminders__filter" data-filter="food" aria-pressed="false">Food</button>
+            <button type="button" class="dashboard-reminders__filter" data-filter="water" aria-pressed="false">Water</button>
+            <button type="button" class="dashboard-reminders__filter" data-filter="other" aria-pressed="false">Other</button>
+          </div>
           <ul class="dashboard-reminders" id="dashboard-reminders-list"></ul>
           <p class="dashboard-reminders__empty" id="dashboard-reminders-empty" hidden>No reminders yet</p>
           <button type="button" class="dashboard-reminders__add" id="dashboard-reminders-add" aria-haspopup="dialog" aria-controls="reminder-modal">
@@ -186,6 +208,47 @@
       </div>
       <form id="reminder-form" class="reminder-form modal-form" novalidate>
         <div class="modal-body">
+          <div class="reminder-form__field" id="reminder-category-field">
+            <p class="reminder-form__label" id="reminder-category-label">What kind of reminder?</p>
+            <div class="reminder-category-picker" role="group" aria-labelledby="reminder-category-label">
+              <button type="button" class="reminder-category-picker__btn" data-category="medicine" aria-pressed="false">
+                <span class="reminder-category-picker__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="8" rx="2"/><path d="M9 11v8a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-8"/><path d="M10 6h4"/></svg>
+                </span>
+                <span class="reminder-category-picker__label">Medicine</span>
+              </button>
+              <button type="button" class="reminder-category-picker__btn" data-category="doctor" aria-pressed="false">
+                <span class="reminder-category-picker__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 3h12v6a6 6 0 0 1-12 0V3z"/><path d="M9 8h6"/></svg>
+                </span>
+                <span class="reminder-category-picker__label">Doctor or appointment</span>
+              </button>
+              <button type="button" class="reminder-category-picker__btn" data-category="event" aria-pressed="false">
+                <span class="reminder-category-picker__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>
+                </span>
+                <span class="reminder-category-picker__label">Event</span>
+              </button>
+              <button type="button" class="reminder-category-picker__btn" data-category="food" aria-pressed="false">
+                <span class="reminder-category-picker__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16v2a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6v-2z"/><path d="M8 11V7a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2"/><path d="M14 11V8a1.5 1.5 0 0 1 3 0v3"/></svg>
+                </span>
+                <span class="reminder-category-picker__label">Food</span>
+              </button>
+              <button type="button" class="reminder-category-picker__btn" data-category="water" aria-pressed="false">
+                <span class="reminder-category-picker__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s5 6 5 10a5 5 0 0 1-10 0c0-4 5-10 5-10z"/></svg>
+                </span>
+                <span class="reminder-category-picker__label">Water</span>
+              </button>
+              <button type="button" class="reminder-category-picker__btn is-active" data-category="other" aria-pressed="true">
+                <span class="reminder-category-picker__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                </span>
+                <span class="reminder-category-picker__label">Other</span>
+              </button>
+            </div>
+          </div>
           <div class="reminder-form__field">
             <label class="reminder-form__label" for="reminder-text">What should we remember?</label>
             <input
@@ -318,7 +381,25 @@
       <div class="modal-footer">
         <div class="modal-actions reminder-alert__actions">
           <button type="button" class="modal-btn modal-btn--primary reminder-alert__dismiss" id="reminder-alert-dismiss">I'm Done</button>
+          <button type="button" class="modal-btn modal-btn--secondary reminder-alert__okay" id="reminder-alert-okay">Okay</button>
           <button type="button" class="modal-btn modal-btn--secondary reminder-alert__reschedule" id="reminder-alert-reschedule">Reschedule</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reminder-delete-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reminder-delete-title" aria-describedby="reminder-delete-body" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <p class="modal-title" id="reminder-delete-title">Delete this reminder?</p>
+      </div>
+      <div class="modal-body">
+        <p class="modal-copy" id="reminder-delete-body"></p>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" id="reminder-delete-keep" class="modal-btn modal-btn--secondary">Keep it</button>
+          <button type="button" id="reminder-delete-confirm" class="modal-btn modal-btn--primary">Delete</button>
         </div>
       </div>
     </div>
@@ -326,6 +407,7 @@
 
   <script src="{{ url_for('static', filename='js/core.js') }}"></script>
   <script src="{{ url_for('static', filename='js/quick-call.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/welcome-tour.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

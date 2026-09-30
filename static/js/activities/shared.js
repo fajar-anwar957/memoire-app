@@ -4,11 +4,70 @@
   var speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   var DEFAULT_SPEECH_RATE = 0.95; // used in speakSegments when no rate is passed; exported on MemoireActivities
   var DEFAULT_SPEECH_PITCH = 1.05; // warmer delivery; set on each utterance in applySpeechVoice
+  var SPEECH_VOICE_KEY = 'memoireSpeechVoice'; // localStorage preferred voice URI/name
+  var SPEECH_RATE_KEY = 'memoireSpeechRate'; // localStorage: slower | normal | faster
+  var SPEECH_RATE_MAP = { slower: 0.8, normal: 0.95, faster: 1.15 };
   var selectedSpeechVoice = null; // cached SpeechSynthesisVoice; applied in applySpeechVoice
   var voicesReady = false; // true once getVoices() has returned a non-empty list
   var pendingSpeak = null; // queued while getVoices() is still empty (Chrome first call)
   var voicesWaitTimer = null;
   var GENTLE_SUPPORT_LINE = 'That\u2019s alright \u2014 every try helps keep your mind active.'; // used in photo-recall.js (232) and daily-quiz.js (301)
+
+  function getStoredSpeechRateKey() {
+    try {
+      var stored = localStorage.getItem(SPEECH_RATE_KEY);
+      if (stored && SPEECH_RATE_MAP[stored] != null) {
+        return stored;
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    return 'normal';
+  }
+
+  function getStoredSpeechRate() {
+    return SPEECH_RATE_MAP[getStoredSpeechRateKey()] || DEFAULT_SPEECH_RATE;
+  }
+
+  function setStoredSpeechRateKey(key) {
+    var next = SPEECH_RATE_MAP[key] != null ? key : 'normal';
+    try {
+      localStorage.setItem(SPEECH_RATE_KEY, next);
+    } catch (e) {
+      /* ignore */
+    }
+    return next;
+  }
+
+  function getStoredSpeechVoicePref() {
+    try {
+      return String(localStorage.getItem(SPEECH_VOICE_KEY) || '').trim();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function setStoredSpeechVoicePref(pref) {
+    var next = String(pref || '').trim();
+    try {
+      if (next) {
+        localStorage.setItem(SPEECH_VOICE_KEY, next);
+      } else {
+        localStorage.removeItem(SPEECH_VOICE_KEY);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    selectSpeechVoice();
+    return next;
+  }
+
+  function listSpeechVoices() {
+    if (!speechSupported || typeof window.speechSynthesis.getVoices !== 'function') {
+      return [];
+    }
+    return (window.speechSynthesis.getVoices() || []).filter(Boolean);
+  }
 
   var FLOWER_FALLBACK_SVG = // used in word-association.js (636) and photo-recall.js (629)
     '<svg class="cst-wa__fallback-flower" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
@@ -44,12 +103,37 @@
       });
     }
 
+    function findByPref(pref) {
+      if (!pref) return null;
+      var needle = pref.toLowerCase();
+      return voices.find(function (voice) {
+        if (!voice) return false;
+        var uri = String(voice.voiceURI || '').toLowerCase();
+        var name = String(voice.name || '').toLowerCase();
+        return uri === needle || name === needle || name.indexOf(needle) !== -1;
+      }) || null;
+    }
+
+    var preferred = findByPref(getStoredSpeechVoicePref());
+    if (preferred) {
+      selectedSpeechVoice = preferred;
+      return;
+    }
+
+    // Prefer natural-sounding English voices by default.
     selectedSpeechVoice =
-      findByName('Hazel') ||
       findByName('Google UK English Female') ||
+      findByName('Samantha') ||
+      findByName('Hazel') ||
+      findByName('Karen') ||
+      findByName('Moira') ||
       voices.find(function (voice) {
         var lang = String((voice && voice.lang) || '').replace(/_/g, '-');
-        return /^en-GB/i.test(lang);
+        return /^en-GB/i.test(lang) && voice.localService !== false;
+      }) ||
+      voices.find(function (voice) {
+        var lang = String((voice && voice.lang) || '').replace(/_/g, '-');
+        return /^en-/i.test(lang);
       }) ||
       null;
   }
@@ -61,7 +145,7 @@
         utterance.lang = selectedSpeechVoice.lang;
       }
     }
-    utterance.rate = DEFAULT_SPEECH_RATE;
+    utterance.rate = getStoredSpeechRate();
     utterance.pitch = DEFAULT_SPEECH_PITCH;
   }
 
@@ -165,7 +249,7 @@
   }
 
   function enqueueUtterances(segments, rate) {
-    var speechRate = rate == null ? DEFAULT_SPEECH_RATE : rate;
+    var speechRate = rate == null ? getStoredSpeechRate() : rate;
     var list = Array.isArray(segments) ? segments : [segments];
     var i;
     for (i = 0; i < list.length; i++) {
@@ -445,6 +529,13 @@
     speakWarmLine: speakWarmLine,
     speakText: speakText,
     speakIdentityLines: speakIdentityLines,
+    listSpeechVoices: listSpeechVoices,
+    getStoredSpeechRate: getStoredSpeechRate,
+    getStoredSpeechRateKey: getStoredSpeechRateKey,
+    setStoredSpeechRateKey: setStoredSpeechRateKey,
+    getStoredSpeechVoicePref: getStoredSpeechVoicePref,
+    setStoredSpeechVoicePref: setStoredSpeechVoicePref,
+    selectSpeechVoice: selectSpeechVoice,
     getTodayKey: getTodayKey,
     readLog: readLog,
     writeLog: writeLog,

@@ -75,11 +75,20 @@ SYSTEM_PROMPT = (  # used in api_chat as the base system prompt sent to Claude
     "- Keep warmth, but express it through specificity about what the user "
     "actually said — not through generic affectionate adjectives.\n\n"
     "Reply length and format:\n"
-    "- Keep every reply to a maximum of 2-3 short sentences.\n"
+    "- Keep every reply warm and conversational: usually 2-4 short sentences. "
+    "Not curt, not a lecture.\n"
     "- Avoid long explanations, lists, or multiple questions in one reply.\n"
     "- Use simple, warm, plain language suitable for someone with early-stage dementia.\n"
-    "- Ask at most one gentle follow-up question per reply, not several.\n"
+    "- Sometimes end with one gentle follow-up question; often just sit with them. "
+    "Never ask several questions in one reply.\n"
     "- Never use markdown formatting, bullet points, or headers.\n\n"
+    "Personal context (use lightly and naturally):\n"
+    "- When Favourite Music, Book, Film, TV, Happy Memories, or Favourite Foods "
+    "are provided, you may mention them gently when it fits — never force them.\n"
+    "- When recent Memory Log snippets are provided, you may recall them warmly "
+    "if relevant.\n"
+    "- When Reminders For Today are provided, mention them when they ask about "
+    "their day or schedule.\n\n"
     "Crisis contacts (CRITICAL SAFETY — always follow):\n"
     "- NEVER state, invent, guess, or recall any phone number, helpline name, "
     "emergency service number, or crisis organisation.\n"
@@ -89,8 +98,10 @@ SYSTEM_PROMPT = (  # used in api_chat as the base system prompt sent to Claude
     "- This applies even if you believe you know a correct number.\n\n"
     "After your reply, on a new line, output exactly one safety verdict "
     "tag and nothing after it:\n"
-    "[[SAFETY:NONE]]   - ordinary conversation\n"
-    "[[SAFETY:DISTRESS]] - confused, frightened, disoriented, agitated\n"
+    "[[SAFETY:NONE]]   - ordinary conversation, including ordinary sadness "
+    "or low mood without crisis or physical illness\n"
+    "[[SAFETY:DISTRESS]] - confused, frightened, disoriented, agitated "
+    "(not mere sadness or loneliness alone)\n"
     "[[SAFETY:HEALTH]] - physical illness or injury: pain, a fall, "
     "breathing difficulty, feeling unwell\n"
     "[[SAFETY:CRISIS]] - any indication of intent to harm themselves or "
@@ -99,7 +110,9 @@ SYSTEM_PROMPT = (  # used in api_chat as the base system prompt sent to Claude
     "wanting to wake up, or being a burden.\n"
     "Judge meaning and tone, not keywords. When a message carries "
     "distress, respond to the distress first — never continue a previous "
-    "topic and never ask an unrelated question. Never mention the tag.\n\n"
+    "topic and never ask an unrelated question. For ordinary low mood, "
+    "respond with warmth and a gentle check-in; do not push them to call "
+    "someone. Never mention the tag.\n\n"
     "You may be given a list of people the person knows, with "
     "relationships. Never invent people, relationships, or shared events. "
     "If a person is not on the list and does not appear in the memories, "
@@ -196,6 +209,12 @@ DAILY_QUIZ_SYSTEM_PROMPT = (  # used in api_daily_quiz as the Haiku system promp
     "- If there is not enough personal data for the requested number of personal "
     "questions, make fewer personal questions and add extra gentle general questions "
     "instead — never invent personal facts to fill the quota.\n\n"
+    "Variety (important):\n"
+    "- Prefer a mix of themes across the batch: people, places, everyday objects, "
+    "nature, food and drink, weather, music, and home life — avoid repeating the "
+    "same theme or wording pattern back-to-back.\n"
+    "- General questions should feel fresh and pleasant, not the same fruit/colour "
+    "pair every time.\n\n"
     "Format rules:\n"
     "- Return STRICT JSON only: an array of question objects. No markdown, no code fences, "
     "no commentary before or after the JSON.\n"
@@ -206,8 +225,10 @@ DAILY_QUIZ_SYSTEM_PROMPT = (  # used in api_daily_quiz as the Haiku system promp
     '"correct" (must match one option exactly), '
     '"warm" (one short warm encouragement line for after they answer).\n'
     "- General questions must be simple, pleasant, everyday knowledge "
-    "(e.g. fruit, weather, colours, animals) — never distressing or medically complex.\n"
-    "- Never include scores, points, percentages, or judgemental language.\n"
+    "(e.g. fruit, weather, colours, animals, home, seasons) — never distressing or "
+    "medically complex.\n"
+    "- Never include scores, points, percentages, or judgemental language "
+    '(never say "wrong", "incorrect", or "score").\n'
     "- Keep language plain and dementia-friendly."
 )
 
@@ -233,11 +254,11 @@ def api_daily_quiz():
         personal_count = data.get('personalCount', 2)
         general_count = data.get('generalCount', 1)
         try:
-            personal_count = max(0, min(3, int(personal_count)))
+            personal_count = max(0, min(6, int(personal_count)))
         except (TypeError, ValueError):
             personal_count = 2
         try:
-            general_count = max(0, min(3, int(general_count)))
+            general_count = max(0, min(6, int(general_count)))
         except (TypeError, ValueError):
             general_count = 1
         if personal_count + general_count < 1:
@@ -311,7 +332,7 @@ def api_daily_quiz():
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model='claude-haiku-4-5',
-            max_tokens=800,
+            max_tokens=1600,
             system=DAILY_QUIZ_SYSTEM_PROMPT,
             messages=[{'role': 'user', 'content': user_message}],
         )
@@ -404,6 +425,8 @@ def api_chat():
             'recentMemoriesWithDates',
             'memoryDateGuidance',
             'timeOfDayGuidance',
+            'personalContextGuidance',
+            'peopleGuidance',
             'currentLocalDate',
             'currentLocalDateIso',
             'currentLocalTime',
@@ -411,7 +434,24 @@ def api_chat():
             'partOfDay',
         }
 
+        people_guidance = ''
+        personal_context_guidance = ''
+        memory_date_guidance = ''
+        time_of_day_guidance = ''
+
         for key, value in profile_facts.items():
+            if key == 'peopleGuidance':
+                people_guidance = _format_fact_value(value)
+                continue
+            if key == 'personalContextGuidance':
+                personal_context_guidance = _format_fact_value(value)
+                continue
+            if key == 'memoryDateGuidance':
+                memory_date_guidance = _format_fact_value(value)
+                continue
+            if key == 'timeOfDayGuidance':
+                time_of_day_guidance = _format_fact_value(value)
+                continue
             if key in ('topicsAvoid', 'topicsToAvoid'):
                 if isinstance(value, list):
                     topics_to_avoid.extend(
@@ -495,12 +535,20 @@ def api_chat():
                 'Facts about the patient — use naturally in conversation:\n'
                 + '\n'.join(fact_lines)
             )
+        if personal_context_guidance:
+            profile_sections.append(personal_context_guidance)
+        if people_guidance:
+            profile_sections.append(people_guidance)
         if memory_lines:
             profile_sections.append(
                 'Recent memories with their real recorded dates '
                 '(compare to today when talking about when they happened):\n'
                 + '\n'.join(memory_lines)
             )
+        if memory_date_guidance:
+            profile_sections.append(memory_date_guidance)
+        if time_of_day_guidance:
+            profile_sections.append(time_of_day_guidance)
         if topics_to_avoid:
             topics_joined = ', '.join(topics_to_avoid)
             profile_sections.append(
@@ -534,7 +582,7 @@ def api_chat():
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model='claude-sonnet-4-6',
-            max_tokens=200,
+            max_tokens=320,
             system=system_prompt,
             messages=[{'role': 'user', 'content': user_message.strip()}],
         )

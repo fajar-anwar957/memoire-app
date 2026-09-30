@@ -192,8 +192,13 @@
       <form id="add-memory-form" class="memory-form modal-form">
         <div class="modal-body">
           <div class="memory-form__field">
-            <label for="memory-text">What happened today?</label>
-            <textarea id="memory-text" name="memory-text" rows="3" placeholder="A short note about your day…" required></textarea>
+            <label for="memory-text">Add a memory, from today or any time in your life</label>
+            <textarea id="memory-text" name="memory-text" rows="3" placeholder="A short note about a memory…" required></textarea>
+          </div>
+          <div class="memory-form__field">
+            <label for="memory-date">When was this? <span class="memory-form__optional">(optional)</span></label>
+            <input type="date" id="memory-date" name="memory-date">
+            <p class="helper-text memory-form__info">Leave blank if you are not sure of the date.</p>
           </div>
           <div class="memory-form__field">
             <span class="memory-form__label">Photo <span class="memory-form__optional">(optional)</span></span>
@@ -223,15 +228,15 @@
   <div id="memory-confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="memory-confirm-title" hidden>
     <div class="modal-card">
       <div class="modal-header">
-        <p class="modal-title" id="memory-confirm-title">Remove this person?</p>
+        <p class="modal-title" id="memory-confirm-title">Delete this person?</p>
       </div>
       <div class="modal-body">
-        <p class="modal-copy" id="memory-confirm-body">Remove this person? This cannot be undone.</p>
+        <p class="modal-copy" id="memory-confirm-body"></p>
       </div>
       <div class="modal-footer">
         <div class="modal-actions">
-          <button type="button" id="memory-confirm-cancel" class="modal-btn modal-btn--secondary">Cancel</button>
-          <button type="button" id="memory-confirm-remove" class="modal-btn modal-btn--primary">Remove</button>
+          <button type="button" id="memory-confirm-cancel" class="modal-btn modal-btn--secondary">Keep it</button>
+          <button type="button" id="memory-confirm-remove" class="modal-btn modal-btn--primary">Delete</button>
         </div>
       </div>
     </div>

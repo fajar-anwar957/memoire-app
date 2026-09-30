@@ -650,8 +650,10 @@ body {
 
 /* Add-person modal — fields not covered by modals.css */
 .memory-form__field input[type="text"],
-.memory-form__field input[type="tel"] {
+.memory-form__field input[type="tel"],
+.memory-form__field input[type="date"] {
   width: 100%;
+  min-height: 48px;
   padding: 0.85rem 1rem;
   font-size: 1.1rem;
   font-family: var(--font-family);

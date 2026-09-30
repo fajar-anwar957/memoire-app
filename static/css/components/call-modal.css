@@ -174,14 +174,40 @@
   display: none !important;
 }
 
-.memoire-call-fab__icon {
-  width: 22px;
-  height: 22px;
+.memoire-call-fab__icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
   flex-shrink: 0;
+}
+
+.memoire-call-fab__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.memoire-call-fab__icon--person {
+  width: 18px;
+  height: 18px;
 }
 
 .memoire-call-fab__label {
   letter-spacing: 0.01em;
+  max-width: 11rem;
+  line-height: 1.2;
+  text-align: left;
+}
+
+@media (max-width: 360px) {
+  .memoire-call-fab {
+    max-width: calc(100vw - 2rem);
+    padding-right: 0.85rem;
+  }
+
+  .memoire-call-fab__label {
+    font-size: 0.95rem;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {

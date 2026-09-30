@@ -3,9 +3,46 @@
 
   var STORAGE_KEY = 'dashboardMemories'; // getMemories (20), writeMemories (33); also daily-quiz.js:11, memory-log.js:10
   var MIGRATION_KEY = 'memoireThinkingAboutMigrated'; // read/written by migrateThinkingAboutPrefixes
-  var DEFAULT_TEXT_PLACEHOLDER = 'A short note about your day…'; // setTextPlaceholder, normalizeOpenArgs, openEdit/close
+  var DEFAULT_TEXT_PLACEHOLDER = 'A short note about a memory…'; // setTextPlaceholder, normalizeOpenArgs, openEdit/close
   var SAVE_ERROR_MESSAGE = // shown by showSaveError (add-memory.js:196)
     "We couldn't save this photo — storage is full. Try removing an older memory first.";
+
+  // Called from handleMemorySave when #memory-date has a value.
+  // Next: ISO string stored on the memory.date field.
+  function dateInputToIso(value) {
+    var raw = String(value || '').trim();
+    if (!raw) {
+      return new Date().toISOString();
+    }
+    var parts = raw.split('-');
+    if (parts.length !== 3) {
+      return new Date().toISOString();
+    }
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var day = parseInt(parts[2], 10);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+      return new Date().toISOString();
+    }
+    var local = new Date(year, month - 1, day, 12, 0, 0, 0);
+    if (isNaN(local.getTime())) {
+      return new Date().toISOString();
+    }
+    return local.toISOString();
+  }
+
+  // Called from openEditMemoryModal to fill #memory-date.
+  function isoToDateInput(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1);
+    var day = String(d.getDate());
+    if (m.length < 2) m = '0' + m;
+    if (day.length < 2) day = '0' + day;
+    return y + '-' + m + '-' + day;
+  }
 
   var PHOTO_PREVIEW_DEFAULT = // used by resetMemoryForm (add-memory.js:164)
     '<svg class="photo-preview__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -93,16 +130,38 @@
     return writeMemories(memories);
   }
 
-  // Called from memory-log.js bindListActions confirm (memory-log.js:881). Exported as MemoireAddMemory.deleteMemory.
-  // Next: writeMemories; memory-log.js then setMemoriesEditMode(false).
+  // Called from memory-log.js bindListActions confirm. Exported as MemoireAddMemory.deleteMemory.
+  // Next: writeMemories; returns {ok, deleted, index} so callers can offer Undo.
   function deleteMemory(id) {
     var memories = getMemories();
-    var next = memories.filter(function (memory) {
-      return !memoryMatchesId(memory, id);
-    });
-    if (next.length === memories.length) {
+    var index = findMemoryIndex(memories, id);
+    if (index < 0) {
       return { ok: false, error: new Error('Memory not found') };
     }
+    var deleted = memories[index];
+    var next = memories.slice();
+    next.splice(index, 1);
+    var result = writeMemories(next);
+    if (!result.ok) {
+      return result;
+    }
+    return { ok: true, deleted: deleted, index: index };
+  }
+
+  // Called from memory-log.js undo toast after a delete.
+  // Next: inserts the memory back at its previous index (or end) via writeMemories.
+  function restoreMemory(memory, index) {
+    if (!memory) {
+      return { ok: false, error: new Error('Nothing to restore') };
+    }
+    var memories = getMemories();
+    var id = memory.id || memory.date;
+    if (id != null && findMemoryIndex(memories, id) >= 0) {
+      return { ok: true, alreadyPresent: true };
+    }
+    var next = memories.slice();
+    var insertAt = typeof index === 'number' ? Math.min(Math.max(0, index), next.length) : next.length;
+    next.splice(insertAt, 0, memory);
     return writeMemories(next);
   }
 
@@ -303,14 +362,16 @@
       memoryModal.classList.add('is-open');
       hideSaveError();
       var textInput = document.getElementById('memory-text');
+      var dateInput = document.getElementById('memory-date');
+      if (dateInput) dateInput.value = '';
       if (textInput) {
         textInput.value = '';
         textInput.focus();
       }
     }
 
-    // Called as memoryModalApi.openEdit from memory-log.js:869 (edit action).
-    // Next: fills text/photo, shows modal; save goes to handleMemorySave → updateMemory.
+    // Called as memoryModalApi.openEdit from memory-log.js edit action.
+    // Next: fills text/photo/date, shows modal; save goes to handleMemorySave → updateMemory.
     function openEditMemoryModal(memory, triggerEl) {
       if (!memory) return;
       editingId = memory.id || memory.date || null;
@@ -325,6 +386,10 @@
       var textInput = document.getElementById('memory-text');
       if (textInput) {
         textInput.value = String(memory.text || '');
+      }
+      var dateInput = document.getElementById('memory-date');
+      if (dateInput) {
+        dateInput.value = isoToDateInput(memory.date);
       }
       if (existingPhoto && memoryPhotoPreview) {
         memoryPhotoPreview.innerHTML =
@@ -354,9 +419,13 @@
       }
     }
 
-    // Called from handleMemorySave (add-memory.js:373) after a successful save.
-    // Next: shows the toast for 2.8s then hides it.
+    // Called from handleMemorySave (add-memory.js) after a successful save.
+    // Next: shows the calm Saved toast for 3s then hides it.
     function showToast(message) {
+      if (window.MemoireCore && typeof window.MemoireCore.showToast === 'function') {
+        window.MemoireCore.showToast(message || 'Saved', { durationMs: 3000 });
+        return;
+      }
       if (!memoryToast) return;
       memoryToast.textContent = message;
       memoryToast.hidden = false;
@@ -365,7 +434,7 @@
       toastTimer = setTimeout(function () {
         memoryToast.classList.remove('is-visible');
         memoryToast.hidden = true;
-      }, 2800);
+      }, 3000);
     }
 
     // Called from memorySaveBtn click (add-memory.js:466). Flow G: compressImageToDataURL (core.js:227) then saveMemory or updateMemory.
@@ -382,18 +451,25 @@
 
       compressImageToDataURL(memoryPhotoInput).then(function (photo) {
         var resolvedPhoto = photo || existingPhoto || '';
+        var dateInput = document.getElementById('memory-date');
+        var dateRaw = dateInput ? String(dateInput.value || '').trim() : '';
+        var resolvedDate = dateRaw ? dateInputToIso(dateRaw) : new Date().toISOString();
         var result;
 
         if (editingId) {
-          result = updateMemory(editingId, {
+          var updates = {
             text: text,
             photo: resolvedPhoto
-          });
+          };
+          if (dateRaw) {
+            updates.date = resolvedDate;
+          }
+          result = updateMemory(editingId, updates);
         } else {
           var entry = {
             text: text,
             photo: resolvedPhoto,
-            date: new Date().toISOString()
+            date: resolvedDate
           };
           if (pendingContext) {
             entry.context = pendingContext;
@@ -412,8 +488,7 @@
           options.onSaved(wasEdit);
         }
         showToast(
-          options.toastMessage ||
-          (wasEdit ? 'Memory updated!' : 'Memory saved!')
+          options.toastMessage || 'Saved'
         );
       });
     }
@@ -491,6 +566,7 @@
     saveMemory: saveMemory,
     updateMemory: updateMemory,
     deleteMemory: deleteMemory,
+    restoreMemory: restoreMemory,
     migrateThinkingAboutPrefixes: migrateThinkingAboutPrefixes
   };
 })(window);

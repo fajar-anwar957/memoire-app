@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/page-header.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/call-modal.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/tour.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/profile.css') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/memoire-icon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='assets/memoire-icon.png') }}">
@@ -84,8 +85,8 @@
                   <dt>Work</dt>
                   <dd id="summary-work">—</dd>
                 </div>
-                <div class="profile-summary__detail">
-                  <dt>Favourite Food</dt>
+                <div class="profile-summary__detail profile-summary__detail--wide profile-summary__detail--stacked">
+                  <dt>Favourite Foods</dt>
                   <dd id="summary-favourite-food">—</dd>
                 </div>
               </dl>
@@ -96,9 +97,21 @@
                   <dt>Hobbies</dt>
                   <dd id="summary-hobbies" class="profile-summary__hobby-tags">—</dd>
                 </div>
-                <div class="profile-summary__detail profile-summary__detail--wide profile-summary__detail--stacked">
-                  <dt>Favourite Music / TV</dt>
-                  <dd id="summary-favourite-media">—</dd>
+                <div class="profile-summary__detail">
+                  <dt>Favourite Music</dt>
+                  <dd id="summary-favourite-music">—</dd>
+                </div>
+                <div class="profile-summary__detail">
+                  <dt>Favourite Book</dt>
+                  <dd id="summary-favourite-book">—</dd>
+                </div>
+                <div class="profile-summary__detail">
+                  <dt>Favourite Film</dt>
+                  <dd id="summary-favourite-film">—</dd>
+                </div>
+                <div class="profile-summary__detail">
+                  <dt>Favourite TV Show</dt>
+                  <dd id="summary-favourite-tv">—</dd>
                 </div>
                 <div class="profile-summary__detail">
                   <dt>Pets</dt>
@@ -108,7 +121,7 @@
             </div>
 
             <dl class="profile-summary__happy-memory">
-              <dt>Happy Memory</dt>
+              <dt>Happy Memories</dt>
               <dd id="summary-happy-memory">—</dd>
             </dl>
           </section>
@@ -121,6 +134,7 @@
       </div>
       <div class="profile-summary__actions">
         <button type="button" id="btn-edit-profile" class="btn profile-summary-btn">Edit Profile</button>
+        <button type="button" id="btn-replay-welcome-tour" class="btn profile-summary-btn profile-summary-btn--tour">Watch welcome tour again</button>
         <button type="button" id="btn-switch-profile" class="btn profile-summary-btn" hidden>Switch Profile</button>
         <button type="button" id="btn-delete-profile" class="save-btn profile-summary-btn profile-summary-btn--delete">Delete Profile</button>
       </div>
@@ -199,12 +213,14 @@
             <div class="field">
               <label for="hometown">Hometown</label>
               <input type="text" id="hometown" name="hometown">
+              <div class="profile-examples" data-example-for="hometown" aria-label="Example hometowns"></div>
             </div>
 
             <div class="field">
               <label for="work">Work</label>
               <input type="text" id="work" name="work">
               <p class="helper-text">Past or present job, role, or how you spent your days.</p>
+              <div class="profile-examples" data-example-for="work" aria-label="Example work"></div>
             </div>
 
             <div class="field">
@@ -243,42 +259,90 @@
             </div>
 
             <div class="field">
-              <label for="favourite-media">Favourite Music / TV</label>
-              <input type="text" id="favourite-media" name="favourite-media">
-              <p class="helper-text">Songs, shows, or programmes you enjoy.</p>
+              <label for="favourite-music">Favourite Music</label>
+              <input type="text" id="favourite-music" name="favourite-music" placeholder="e.g. The Beatles, classical…">
+              <div class="profile-examples" data-example-for="favourite-music" aria-label="Example music"></div>
             </div>
 
             <div class="field">
-              <label for="happy-memory">Happy Memory</label>
-              <textarea id="happy-memory" name="happy-memory" rows="4" placeholder="A moment that always makes you smile…"></textarea>
+              <label for="favourite-book">Favourite Book</label>
+              <input type="text" id="favourite-book" name="favourite-book" placeholder="e.g. a novel, poems…">
+              <div class="profile-examples" data-example-for="favourite-book" aria-label="Example books"></div>
+            </div>
+
+            <div class="field">
+              <label for="favourite-film">Favourite Film</label>
+              <input type="text" id="favourite-film" name="favourite-film" placeholder="e.g. a film you love…">
+              <div class="profile-examples" data-example-for="favourite-film" aria-label="Example films"></div>
+            </div>
+
+            <div class="field">
+              <label for="favourite-tv">Favourite TV Show</label>
+              <input type="text" id="favourite-tv" name="favourite-tv" placeholder="e.g. a programme you enjoy…">
+              <div class="profile-examples" data-example-for="favourite-tv" aria-label="Example TV shows"></div>
+            </div>
+
+            <div class="field">
+              <label for="happy-memory-input">Happy Memories</label>
+              <div class="multi-item" id="happy-memories" data-multi-item="happyMemories">
+                <div class="multi-item__chips" id="happy-memories-list" role="list" aria-label="Happy memories"></div>
+                <div class="multi-item__add-row">
+                  <input
+                    type="text"
+                    id="happy-memory-input"
+                    name="happy-memory-input"
+                    placeholder="A moment that always makes you smile…"
+                    autocomplete="off"
+                  >
+                  <button type="button" class="multi-item__add-btn" id="happy-memory-add">Add</button>
+                </div>
+              </div>
+              <div class="profile-examples" data-example-for="happy-memory-input" data-example-mode="multi" aria-label="Example happy memories"></div>
+              <p class="helper-text">Add as many as you like. Tap Add after each one.</p>
             </div>
 
             <div class="field">
               <label for="topics-avoid-input">Topics to Avoid</label>
-              <div class="topics-avoid" id="topics-avoid">
-                <div class="topics-avoid__chips" id="topics-avoid-list" role="list" aria-label="Topics to avoid"></div>
-                <div class="topics-avoid__add-row">
+              <div class="multi-item" id="topics-avoid" data-multi-item="topicsToAvoid">
+                <div class="multi-item__chips" id="topics-avoid-list" role="list" aria-label="Topics to avoid"></div>
+                <div class="multi-item__add-row">
                   <input
                     type="text"
                     id="topics-avoid-input"
                     name="topics-avoid-input"
-                    placeholder="e.g. Laptops, Cats, Late Wife Mary…"
+                    placeholder="e.g. Politics, hospitals…"
                     autocomplete="off"
                   >
-                  <button type="button" class="topics-avoid__add-btn" id="topics-avoid-add">Add</button>
+                  <button type="button" class="multi-item__add-btn" id="topics-avoid-add">Add</button>
                 </div>
               </div>
+              <div class="profile-examples" data-example-for="topics-avoid-input" data-example-mode="multi" aria-label="Example topics to avoid"></div>
               <p class="helper-text">Add each topic separately. We'll never bring these up in conversation.</p>
             </div>
 
             <div class="field">
-              <label for="favourite-food">Favourite Food</label>
-              <input type="text" id="favourite-food" name="favourite-food" placeholder="e.g. shepherd's pie, rice pudding…">
+              <label for="favourite-food-input">Favourite Foods</label>
+              <div class="multi-item" id="favourite-foods" data-multi-item="favouriteFoods">
+                <div class="multi-item__chips" id="favourite-foods-list" role="list" aria-label="Favourite foods"></div>
+                <div class="multi-item__add-row">
+                  <input
+                    type="text"
+                    id="favourite-food-input"
+                    name="favourite-food-input"
+                    placeholder="e.g. shepherd's pie, rice pudding…"
+                    autocomplete="off"
+                  >
+                  <button type="button" class="multi-item__add-btn" id="favourite-food-add">Add</button>
+                </div>
+              </div>
+              <div class="profile-examples" data-example-for="favourite-food-input" data-example-mode="multi" aria-label="Example foods"></div>
+              <p class="helper-text">Add as many as you like.</p>
             </div>
 
             <div class="field">
               <label for="pets">Pets</label>
               <input type="text" id="pets" name="pets" placeholder="e.g. a dog named Biscuit, or none">
+              <div class="profile-examples" data-example-for="pets" aria-label="Example pets"></div>
             </div>
 
             <div class="field">
@@ -445,6 +509,7 @@
   </div>
   <script src="{{ url_for('static', filename='js/core.js') }}"></script>
   <script src="{{ url_for('static', filename='js/quick-call.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/welcome-tour.js') }}"></script>
   <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
   <script>
     (function () {

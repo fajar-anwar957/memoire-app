@@ -11,6 +11,27 @@
   var getNextUpcomingReminder = window.MemoireCore.getNextUpcomingReminder;
   var checkDueReminders = window.MemoireCore.checkDueReminders;
   var requestNotificationPermission = window.MemoireCore.requestNotificationPermission;
+  var showSavedToast = window.MemoireCore.showSavedToast;
+  var showUndoToast = window.MemoireCore.showUndoToast;
+  var normalizeReminderCategory = window.MemoireCore.normalizeReminderCategory;
+  var REMINDER_CATEGORIES = window.MemoireCore.REMINDER_CATEGORIES || {};
+
+  var CATEGORY_ICONS = {
+    medicine:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="8" rx="2"/><path d="M9 11v8a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-8"/><path d="M10 6h4"/></svg>',
+    doctor:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 3h12v6a6 6 0 0 1-12 0V3z"/><path d="M9 8h6"/></svg>',
+    event:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>',
+    food:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11h16v2a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6v-2z"/><path d="M8 11V7a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2"/><path d="M14 11V8a1.5 1.5 0 0 1 3 0v3"/></svg>',
+    water:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s5 6 5 10a5 5 0 0 1-10 0c0-4 5-10 5-10z"/></svg>',
+    other:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>'
+  };
+
+  var activeReminderFilter = 'all';
 
   // Called from initDashboardHeader:41.
   // Next: returns preferredName or 'Friend'; formatDisplayName then puts it in the greeting.
@@ -63,11 +84,11 @@
     }
   }
 
-  var FEELING_SEED_KEY = 'memoireCompanionPrefill'; // set in initFeelingButton click:79; read by companion.js applyFeelingPrefill:2510
-  var FEELING_SEED_TEXT = "Today I'm feeling "; // written with FEELING_SEED_KEY in initFeelingButton:79
+  var FEELING_SEED_KEY = 'memoireCompanionPrefill'; // set in initFeelingButton click; read by companion.js feeling gate
+  var FEELING_SEED_FLAG = '1'; // companion opens the dedicated feeling screen when this is set
 
-  // Called from DOMContentLoaded:630.
-  // Next: click:79 stores FEELING_SEED_KEY; companion.js applyFeelingPrefill:2505 reads it on the companion page.
+  // Called from DOMContentLoaded.
+  // Next: click stores FEELING_SEED_KEY; companion.js shows the feeling gate (separate from naming).
   function initFeelingButton() {
     var feelingBtn = document.getElementById('dashboard-feeling-btn');
     if (!feelingBtn) {
@@ -76,9 +97,9 @@
 
     feelingBtn.addEventListener('click', function () {
       try {
-        sessionStorage.setItem(FEELING_SEED_KEY, FEELING_SEED_TEXT);
+        sessionStorage.setItem(FEELING_SEED_KEY, FEELING_SEED_FLAG);
       } catch (e) {
-        /* sessionStorage unavailable — companion still opens without seed */
+        /* sessionStorage unavailable — companion still opens without feeling gate */
       }
     });
   }
@@ -113,8 +134,8 @@
     textEl.textContent = 'Next up · ' + scheduleBit + ': ' + next.text;
   }
 
-  // Called from initRemindersCard on load:622, after save:580 / delete:599, and memoire:reminders-changed:613.
-  // Next: fills #dashboard-reminders-list HTML; delete clicks go back to saveReminders:598.
+  // Called from initRemindersCard on load, after save / delete, filter change, and memoire:reminders-changed.
+  // Next: fills #dashboard-reminders-list HTML; medicine first (via core sort); delete opens confirm.
   function renderRemindersList() {
     var listEl = document.getElementById('dashboard-reminders-list');
     var emptyEl = document.getElementById('dashboard-reminders-empty');
@@ -123,10 +144,20 @@
     }
 
     var reminders = getReminders();
-    if (!reminders.length) {
+    var filtered = reminders;
+    if (activeReminderFilter && activeReminderFilter !== 'all') {
+      filtered = reminders.filter(function (item) {
+        return normalizeReminderCategory(item.category) === activeReminderFilter;
+      });
+    }
+
+    if (!filtered.length) {
       listEl.innerHTML = '';
       if (emptyEl) {
         emptyEl.hidden = false;
+        emptyEl.textContent = reminders.length
+          ? 'No reminders in this group'
+          : 'No reminders yet';
       }
       return;
     }
@@ -135,7 +166,9 @@
       emptyEl.hidden = true;
     }
 
-    listEl.innerHTML = reminders.map(function (item) {
+    listEl.innerHTML = filtered.map(function (item) {
+      var category = normalizeReminderCategory(item.category);
+      var categoryMeta = REMINDER_CATEGORIES[category] || REMINDER_CATEGORIES.other || { label: 'Other' };
       var displayTime = formatReminderDisplayTime(item.time);
       var scheduleLabel = item.repeat === 'once'
         ? (item.completed
@@ -143,11 +176,15 @@
           : formatReminderDateLabel(item.date))
         : 'Every day';
       var doneClass = item.completed ? ' dashboard-reminders__item--done' : '';
+      var medicineClass = category === 'medicine' ? ' dashboard-reminders__item--medicine' : '';
+      var icon = CATEGORY_ICONS[category] || CATEGORY_ICONS.other;
       return (
-        '<li class="dashboard-reminders__item' + doneClass + '" data-reminder-id="' + escapeHtml(item.id) + '">' +
+        '<li class="dashboard-reminders__item dashboard-reminders__item--' + escapeHtml(category) + doneClass + medicineClass + '" data-reminder-id="' + escapeHtml(item.id) + '" data-category="' + escapeHtml(category) + '">' +
+          '<span class="dashboard-reminders__cat-icon" aria-hidden="true">' + icon + '</span>' +
           '<span class="dashboard-reminders__meta">' +
             '<span class="dashboard-reminders__time">' + escapeHtml(displayTime) + '</span>' +
             '<span class="dashboard-reminders__schedule">' + escapeHtml(scheduleLabel) + '</span>' +
+            '<span class="dashboard-reminders__category">' + escapeHtml(categoryMeta.label) + '</span>' +
           '</span>' +
           '<span class="dashboard-reminders__text">' + escapeHtml(item.text) + '</span>' +
           '<button type="button" class="dashboard-reminders__delete" data-delete-id="' + escapeHtml(item.id) + '" aria-label="Delete reminder: ' + escapeHtml(item.text) + '">' +
@@ -244,13 +281,47 @@
     var yearInput = document.getElementById('reminder-year-input');
     var titleEl = document.getElementById('reminder-modal-title');
     var hintEl = modal ? modal.querySelector('.reminder-modal__hint') : null;
+    var categoryField = document.getElementById('reminder-category-field');
+    var categoryButtons = modal
+      ? Array.prototype.slice.call(modal.querySelectorAll('.reminder-category-picker__btn[data-category]'))
+      : [];
+    var filterBar = document.getElementById('dashboard-reminders-filters');
     if (!listEl || !addBtn || !modal || !form || !textInput || !hourInput || !minuteInput ||
         !dailyBtn || !onceBtn || !dateField || !dayInput || !monthInput || !yearInput) {
       return;
     }
 
     var editingReminderId = null;
-    var RESCHEDULE_KEY = 'memoireRescheduleReminder'; // same as core.js RESCHEDULE_STORAGE_KEY:554; read in consumePendingReschedule:478
+    var selectedCategory = 'other';
+    var RESCHEDULE_KEY = 'memoireRescheduleReminder'; // same as core.js RESCHEDULE_STORAGE_KEY; read in consumePendingReschedule
+
+    function setSelectedCategory(category) {
+      selectedCategory = normalizeReminderCategory(category);
+      categoryButtons.forEach(function (btn) {
+        var isActive = btn.getAttribute('data-category') === selectedCategory;
+        btn.classList.toggle('is-active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+    }
+
+    function setCategoryFieldVisible(visible) {
+      if (categoryField) {
+        categoryField.hidden = !visible;
+      }
+    }
+
+    function setActiveFilter(filter) {
+      activeReminderFilter = filter || 'all';
+      if (!filterBar) {
+        return;
+      }
+      Array.prototype.forEach.call(filterBar.querySelectorAll('[data-filter]'), function (btn) {
+        var isActive = btn.getAttribute('data-filter') === activeReminderFilter;
+        btn.classList.toggle('is-active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+      renderRemindersList();
+    }
 
     // Called from setTimeFields:320, and AM/PM button clicks:511,514 in initRemindersCard.
     // Next: toggles AM/PM button state; readTimeFields:325 later reads isPm from the PM button.
@@ -430,6 +501,9 @@
       var isOnce = opts.repeat === 'once';
       setRepeatMode(isOnce);
       setDateFieldsFromIso(opts.date || todayKey());
+      setSelectedCategory(opts.category || 'other');
+      /* Category is chosen when adding; reschedule keeps existing category without re-asking. */
+      setCategoryFieldVisible(!editingReminderId);
 
       modal.hidden = false;
       modal.classList.add('is-open');
@@ -437,6 +511,8 @@
       setTimeout(function () {
         if (editingReminderId) {
           hourInput.focus();
+        } else if (categoryButtons[0]) {
+          categoryButtons[0].focus();
         } else {
           textInput.focus();
         }
@@ -451,12 +527,12 @@
       editingReminderId = null;
       textInput.readOnly = false;
       setRepeatMode(false);
+      setSelectedCategory('other');
+      setCategoryFieldVisible(true);
       setModalCopy(false);
       addBtn.focus();
     }
 
-    // Called from consumePendingReschedule:490 and memoire:reschedule-reminder listener:619.
-    // Next: openReminderModal:464 with the existing reminder; submit then saveReminders:564 (Flow E).
     function openRescheduleForReminder(reminder) {
       if (!reminder || !reminder.id) {
         return;
@@ -466,7 +542,8 @@
         text: reminder.text,
         time: reminder.time,
         repeat: reminder.repeat || 'daily',
-        date: reminder.date || null
+        date: reminder.date || null,
+        category: reminder.category || 'other'
       });
     }
 
@@ -491,6 +568,22 @@
       } catch (err) {
         /* ignore malformed pending state */
       }
+    }
+
+    categoryButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setSelectedCategory(btn.getAttribute('data-category'));
+      });
+    });
+
+    if (filterBar) {
+      filterBar.addEventListener('click', function (event) {
+        var filterBtn = event.target.closest('[data-filter]');
+        if (!filterBtn) {
+          return;
+        }
+        setActiveFilter(filterBtn.getAttribute('data-filter'));
+      });
     }
 
     addBtn.addEventListener('click', function () {
@@ -554,7 +647,8 @@
             time: time24,
             repeat: repeat,
             date: dateIso,
-            completed: false
+            completed: false,
+            category: normalizeReminderCategory(item.category || selectedCategory)
           };
         });
         if (!updated) {
@@ -572,7 +666,8 @@
           time: time24,
           repeat: repeat,
           date: dateIso,
-          completed: false
+          completed: false,
+          category: selectedCategory
         });
         saveReminders(reminders);
       }
@@ -580,11 +675,105 @@
       renderRemindersList();
       updateNextUpBanner();
       closeReminderModal();
+      if (typeof showSavedToast === 'function') {
+        showSavedToast();
+      }
 
       requestNotificationPermission().then(function () {
         checkDueReminders();
       });
     });
+
+    var deleteModal = document.getElementById('reminder-delete-modal');
+    var deleteBodyEl = document.getElementById('reminder-delete-body');
+    var deleteKeepBtn = document.getElementById('reminder-delete-keep');
+    var deleteConfirmBtn = document.getElementById('reminder-delete-confirm');
+    var pendingDeleteId = null;
+
+    function closeDeleteModal() {
+      if (!deleteModal) {
+        return;
+      }
+      deleteModal.classList.remove('is-open');
+      deleteModal.hidden = true;
+      pendingDeleteId = null;
+    }
+
+    function openDeleteModal(reminder) {
+      if (!deleteModal || !reminder) {
+        return;
+      }
+      pendingDeleteId = reminder.id;
+      if (deleteBodyEl) {
+        deleteBodyEl.textContent = reminder.text || '';
+      }
+      deleteModal.hidden = false;
+      deleteModal.classList.add('is-open');
+      if (deleteKeepBtn) {
+        deleteKeepBtn.focus();
+      }
+    }
+
+    function performReminderDelete(deleteId) {
+      var reminders = getReminders();
+      var removed = null;
+      var removedIndex = -1;
+      var i;
+      for (i = 0; i < reminders.length; i++) {
+        if (reminders[i].id === deleteId) {
+          removed = reminders[i];
+          removedIndex = i;
+          break;
+        }
+      }
+      if (!removed) {
+        return;
+      }
+      var next = reminders.filter(function (item) {
+        return item.id !== deleteId;
+      });
+      saveReminders(next);
+      renderRemindersList();
+      updateNextUpBanner();
+
+      if (typeof showUndoToast === 'function') {
+        showUndoToast(function () {
+          var current = getReminders();
+          var alreadyThere = current.some(function (item) {
+            return item.id === removed.id;
+          });
+          if (alreadyThere) {
+            return;
+          }
+          var restored = current.slice();
+          var insertAt = Math.min(removedIndex, restored.length);
+          restored.splice(insertAt, 0, removed);
+          saveReminders(restored);
+          renderRemindersList();
+          updateNextUpBanner();
+        });
+      }
+    }
+
+    if (deleteKeepBtn) {
+      deleteKeepBtn.addEventListener('click', closeDeleteModal);
+    }
+    if (deleteConfirmBtn) {
+      deleteConfirmBtn.addEventListener('click', function () {
+        var id = pendingDeleteId;
+        closeDeleteModal();
+        if (id) {
+          performReminderDelete(id);
+        }
+      });
+    }
+    if (deleteModal) {
+      deleteModal.addEventListener('click', function (event) {
+        if (event.target === deleteModal) {
+          closeDeleteModal();
+        }
+      });
+    }
 
     listEl.addEventListener('click', function (event) {
       var deleteBtn = event.target.closest('[data-delete-id]');
@@ -592,16 +781,26 @@
         return;
       }
       var deleteId = deleteBtn.getAttribute('data-delete-id');
-      var next = getReminders().filter(function (item) {
-        return item.id !== deleteId;
-      });
-      saveReminders(next);
-      renderRemindersList();
-      updateNextUpBanner();
+      var reminders = getReminders();
+      var target = null;
+      var i;
+      for (i = 0; i < reminders.length; i++) {
+        if (reminders[i].id === deleteId) {
+          target = reminders[i];
+          break;
+        }
+      }
+      if (target) {
+        openDeleteModal(target);
+      }
     });
 
     document.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape') {
+        return;
+      }
+      if (deleteModal && deleteModal.classList.contains('is-open')) {
+        closeDeleteModal();
         return;
       }
       if (modal.classList.contains('is-open')) {
@@ -625,10 +824,124 @@
     consumePendingReschedule();
   }
 
+  var ACTIVITY_LOG_KEYS = ['cstDailyQuiz', 'cstWordAssociation', 'cstPhotoRecall'];
+
+  // Called from initGentleProgress. Reads activity logs; returns a set-like map of YYYY-MM-DD → true.
+  function collectActivityDays() {
+    var days = {};
+    var i;
+    var j;
+    for (i = 0; i < ACTIVITY_LOG_KEYS.length; i++) {
+      var raw = null;
+      try {
+        raw = localStorage.getItem(ACTIVITY_LOG_KEYS[i]);
+      } catch (e) {
+        raw = null;
+      }
+      if (!raw) {
+        continue;
+      }
+      var parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (err) {
+        continue;
+      }
+      if (!Array.isArray(parsed)) {
+        continue;
+      }
+      for (j = 0; j < parsed.length; j++) {
+        var entry = parsed[j];
+        if (entry && typeof entry.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(entry.date)) {
+          days[entry.date] = true;
+        }
+      }
+    }
+    return days;
+  }
+
+  function pad2(n) {
+    return n < 10 ? '0' + n : String(n);
+  }
+
+  function toDateKey(year, monthIndex, day) {
+    return year + '-' + pad2(monthIndex + 1) + '-' + pad2(day);
+  }
+
+  // Called from DOMContentLoaded. Soft check marks on days with any activity; empty days stay blank.
+  function initGentleProgress() {
+    var gridEl = document.getElementById('dashboard-progress-grid');
+    var monthEl = document.getElementById('dashboard-progress-month');
+    if (!gridEl) {
+      return;
+    }
+
+    var now = new Date();
+    var year = now.getFullYear();
+    var monthIndex = now.getMonth();
+    var todayDay = now.getDate();
+    var activityDays = collectActivityDays();
+
+    if (monthEl) {
+      monthEl.textContent = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    }
+
+    /* Monday-first week (0 = Monday … 6 = Sunday). */
+    var firstDow = new Date(year, monthIndex, 1).getDay();
+    var mondayOffset = (firstDow + 6) % 7;
+    var daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+    var checkSvg =
+      '<svg class="dashboard-progress__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<polyline points="20 6 9 17 4 12"/>' +
+      '</svg>';
+
+    var html = '';
+    var i;
+    for (i = 0; i < mondayOffset; i++) {
+      html += '<div class="dashboard-progress__day dashboard-progress__day--empty" aria-hidden="true"></div>';
+    }
+
+    for (i = 1; i <= daysInMonth; i++) {
+      var key = toDateKey(year, monthIndex, i);
+      var isActive = !!activityDays[key];
+      var isToday = i === todayDay;
+      var classes = 'dashboard-progress__day';
+      if (isActive) {
+        classes += ' dashboard-progress__day--active';
+      }
+      if (isToday) {
+        classes += ' dashboard-progress__day--today';
+      }
+
+      var label;
+      if (isActive) {
+        label = 'Practised on ' + key;
+      } else if (isToday) {
+        label = 'Today, ' + key;
+      } else {
+        label = key;
+      }
+
+      html +=
+        '<div class="' + classes + '" role="listitem" aria-label="' + label + '">' +
+          (isActive
+            ? checkSvg
+            : '<span class="dashboard-progress__day-num">' + i + '</span>') +
+        '</div>';
+    }
+
+    gridEl.innerHTML = html;
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initDashboardHeader();
     initFeelingButton();
     initRemindersCard();
+    initGentleProgress();
     updateNextUpBanner();
+    if (window.MemoireWelcomeTour && typeof window.MemoireWelcomeTour.maybeAutoStart === 'function') {
+      window.MemoireWelcomeTour.maybeAutoStart();
+    }
   });
 })();

@@ -1,0 +1,123 @@
+/* Welcome tour — calm overlay + step card (dashboard first-run guidance) */
+
+.memoire-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgba(22, 41, 63, 0.42);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem 1rem calc(1.25rem + env(safe-area-inset-bottom, 0));
+  box-sizing: border-box;
+}
+
+.memoire-tour-overlay[hidden] {
+  display: none !important;
+}
+
+.memoire-tour-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface, #ffffff);
+  border-radius: 18px;
+  box-shadow:
+    0 12px 32px rgba(34, 54, 74, 0.22),
+    0 2px 6px rgba(34, 54, 74, 0.08);
+  padding: 1.35rem 1.35rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.memoire-tour-card__eyebrow {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-muted, #56697c);
+  letter-spacing: 0.01em;
+}
+
+.memoire-tour-card__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--navy, #1e3a5f);
+}
+
+.memoire-tour-card__body {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.45;
+  color: var(--text, #22364a);
+}
+
+.memoire-tour-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.memoire-tour-card__btn {
+  flex: 1 1 8rem;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0.75rem 1.1rem;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  font-family: inherit;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.memoire-tour-card__btn--primary {
+  background: var(--navy, #1e3a5f);
+  color: #ffffff;
+  border-color: var(--navy, #1e3a5f);
+}
+
+.memoire-tour-card__btn--secondary {
+  background: #ffffff;
+  color: var(--navy, #1e3a5f);
+  border-color: rgba(30, 58, 95, 0.22);
+}
+
+.memoire-tour-card__btn:focus-visible {
+  outline: 3px solid rgba(30, 58, 95, 0.4);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .memoire-tour-card__btn--primary:hover {
+    background: var(--navy-deep, #16293f);
+  }
+
+  .memoire-tour-card__btn--secondary:hover {
+    background: var(--surface-tint, #f4fafe);
+  }
+}
+
+/* Soft spotlight on the highlighted home card */
+.memoire-tour-target {
+  position: relative;
+  z-index: 12001;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.95),
+    0 0 0 8px rgba(176, 87, 15, 0.35),
+    0 10px 28px rgba(34, 54, 74, 0.18) !important;
+  border-radius: 18px;
+  scroll-margin-bottom: 12rem;
+  scroll-margin-top: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .memoire-tour-overlay {
+    align-items: center;
+    padding: 1.5rem;
+  }
+}

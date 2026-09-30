@@ -14,10 +14,16 @@
   var lastTrigger = null;
   var initialized = false; // set true in initQuickCall (line 258) so click listeners bind once
 
-  var FAB_SVG = // phone icon HTML used by ensureCallFabDom (line 190)
-    '<svg class="memoire-call-fab__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-      '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>' +
-    '</svg>';
+  var FAB_SVG = // phone + person icons used by ensureCallFabDom
+    '<span class="memoire-call-fab__icons" aria-hidden="true">' +
+      '<svg class="memoire-call-fab__icon memoire-call-fab__icon--person" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>' +
+        '<circle cx="12" cy="7" r="4"/>' +
+      '</svg>' +
+      '<svg class="memoire-call-fab__icon memoire-call-fab__icon--phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>' +
+      '</svg>' +
+    '</span>';
 
   // Called from initQuickCall (line 261).
   // Next: if false, initQuickCall returns; if true, ensureCallModalDom runs.
@@ -190,6 +196,14 @@
   function ensureCallFabDom() {
     var existing = document.getElementById('memoire-call-fab');
     if (existing) {
+      existing.setAttribute('aria-label', 'Call someone I trust');
+      var existingLabel = existing.querySelector('.memoire-call-fab__label');
+      if (existingLabel) {
+        existingLabel.textContent = 'Call someone I trust';
+      }
+      if (!existing.querySelector('.memoire-call-fab__icons')) {
+        existing.innerHTML = FAB_SVG + '<span class="memoire-call-fab__label">Call someone I trust</span>';
+      }
       return existing;
     }
 
@@ -197,11 +211,11 @@
     fab.type = 'button';
     fab.id = 'memoire-call-fab';
     fab.className = 'memoire-call-fab';
-    fab.setAttribute('aria-label', 'Call someone');
+    fab.setAttribute('aria-label', 'Call someone I trust');
     fab.setAttribute('aria-haspopup', 'dialog');
     fab.setAttribute('aria-controls', 'call-contacts-modal');
     fab.hidden = true;
-    fab.innerHTML = FAB_SVG + '<span class="memoire-call-fab__label">Call</span>';
+    fab.innerHTML = FAB_SVG + '<span class="memoire-call-fab__label">Call someone I trust</span>';
     document.body.appendChild(fab);
     return fab;
   }

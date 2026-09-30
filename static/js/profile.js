@@ -42,12 +42,10 @@
     localStorage.setItem('patientProfiles', JSON.stringify(profiles));
   }
 
-  // Topics to Avoid — stored as topicsToAvoid: string[]. Migrates legacy topicsAvoid string.
-  var topicsToAvoidList = [];
-
-  // Called from getTopicsToAvoidFromProfile (profile.js:64) and setTopicsToAvoid (profile.js:128).
-  // Next: returns a trimmed string array used as topicsToAvoidList / chips.
-  function normalizeTopicsToAvoid(raw) {
+  // Multi-item fields share one chip pattern (happy memories, foods, topics to avoid).
+  // Called from createMultiItemField helpers and migration readers.
+  // Next: returns a trimmed unique-capable string array.
+  function normalizeStringList(raw) {
     if (Array.isArray(raw)) {
       return raw
         .map(function (item) { return typeof item === 'string' ? item.trim() : ''; })
@@ -59,39 +57,26 @@
     return [];
   }
 
-  // Called from populateWizardFromProfile (profile.js:550).
-  // Next: result goes to setTopicsToAvoid, then renderTopicsToAvoidChips.
-  function getTopicsToAvoidFromProfile(profile) {
-    if (!profile) return [];
-    if (profile.topicsToAvoid != null) {
-      return normalizeTopicsToAvoid(profile.topicsToAvoid);
-    }
-    return normalizeTopicsToAvoid(profile.topicsAvoid);
-  }
-
-  // Called from addTopicToAvoid (profile.js:105), clearTopicsToAvoid, setTopicsToAvoid, and chip remove click.
-  // Next: redraws #topics-avoid-list chips on the wizard.
-  function renderTopicsToAvoidChips() {
-    var listEl = document.getElementById('topics-avoid-list');
+  // Called from createMultiItemField (below). Renders removable chips into listEl.
+  function renderMultiItemChips(listEl, items, onRemove) {
     if (!listEl) return;
     listEl.innerHTML = '';
-    topicsToAvoidList.forEach(function (topic, index) {
+    items.forEach(function (item, index) {
       var chip = document.createElement('span');
-      chip.className = 'topics-avoid__chip';
+      chip.className = 'multi-item__chip';
       chip.setAttribute('role', 'listitem');
 
       var label = document.createElement('span');
-      label.className = 'topics-avoid__chip-label';
-      label.textContent = topic;
+      label.className = 'multi-item__chip-label';
+      label.textContent = item;
 
       var removeBtn = document.createElement('button');
       removeBtn.type = 'button';
-      removeBtn.className = 'topics-avoid__chip-remove';
-      removeBtn.setAttribute('aria-label', 'Remove ' + topic);
+      removeBtn.className = 'multi-item__chip-remove';
+      removeBtn.setAttribute('aria-label', 'Remove ' + item);
       removeBtn.textContent = '\u00d7';
       removeBtn.addEventListener('click', function () {
-        topicsToAvoidList.splice(index, 1);
-        renderTopicsToAvoidChips();
+        onRemove(index);
       });
 
       chip.appendChild(label);
@@ -100,34 +85,208 @@
     });
   }
 
-  // Called from commitTopicFromInput (profile.js:843).
-  // Next: pushes onto topicsToAvoidList then renderTopicsToAvoidChips.
-  function addTopicToAvoid(rawValue) {
-    var topic = (rawValue || '').trim();
-    if (!topic) return;
-    var lower = topic.toLowerCase();
-    var exists = topicsToAvoidList.some(function (item) {
-      return item.toLowerCase() === lower;
+  // Called once per multi-item field during initProfilePage.
+  // Next: returns { getItems, setItems, clear, add, commitFromInput, wire }.
+  function createMultiItemField(config) {
+    var items = [];
+    var listEl = document.getElementById(config.listId);
+    var inputEl = document.getElementById(config.inputId);
+    var addBtn = document.getElementById(config.addBtnId);
+
+    function redraw() {
+      renderMultiItemChips(listEl, items, function (index) {
+        items.splice(index, 1);
+        redraw();
+      });
+    }
+
+    function add(rawValue) {
+      var value = (rawValue || '').trim();
+      if (!value) return false;
+      var lower = value.toLowerCase();
+      var exists = items.some(function (item) {
+        return item.toLowerCase() === lower;
+      });
+      if (exists) return false;
+      items.push(value);
+      redraw();
+      return true;
+    }
+
+    function commitFromInput() {
+      if (!inputEl) return;
+      add(inputEl.value);
+      inputEl.value = '';
+      inputEl.focus();
+    }
+
+    function setItems(next) {
+      items = normalizeStringList(next);
+      redraw();
+      if (inputEl) inputEl.value = '';
+    }
+
+    function clear() {
+      setItems([]);
+    }
+
+    function wire() {
+      if (addBtn) {
+        addBtn.addEventListener('click', commitFromInput);
+      }
+      if (inputEl) {
+        inputEl.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            commitFromInput();
+          }
+        });
+      }
+    }
+
+    return {
+      getItems: function () { return items.slice(); },
+      setItems: setItems,
+      clear: clear,
+      add: add,
+      commitFromInput: commitFromInput,
+      wire: wire,
+      getInputEl: function () { return inputEl; }
+    };
+  }
+
+  var happyMemoriesField = createMultiItemField({
+    listId: 'happy-memories-list',
+    inputId: 'happy-memory-input',
+    addBtnId: 'happy-memory-add'
+  });
+  var favouriteFoodsField = createMultiItemField({
+    listId: 'favourite-foods-list',
+    inputId: 'favourite-food-input',
+    addBtnId: 'favourite-food-add'
+  });
+  var topicsToAvoidField = createMultiItemField({
+    listId: 'topics-avoid-list',
+    inputId: 'topics-avoid-input',
+    addBtnId: 'topics-avoid-add'
+  });
+
+  // Called from populateWizardFromProfile. Migrates topicsToAvoid / topicsAvoid.
+  function getTopicsToAvoidFromProfile(profile) {
+    if (!profile) return [];
+    if (profile.topicsToAvoid != null) {
+      return normalizeStringList(profile.topicsToAvoid);
+    }
+    return normalizeStringList(profile.topicsAvoid);
+  }
+
+  // Called from populateWizardFromProfile. Migrates happyMemories / happyMemory.
+  function getHappyMemoriesFromProfile(profile) {
+    if (!profile) return [];
+    if (profile.happyMemories != null) {
+      return normalizeStringList(profile.happyMemories);
+    }
+    if (typeof profile.happyMemory === 'string' && profile.happyMemory.trim()) {
+      return [profile.happyMemory.trim()];
+    }
+    return [];
+  }
+
+  // Called from populateWizardFromProfile. Migrates favouriteFoods / favouriteFood.
+  function getFavouriteFoodsFromProfile(profile) {
+    if (!profile) return [];
+    if (profile.favouriteFoods != null) {
+      return normalizeStringList(profile.favouriteFoods);
+    }
+    if (typeof profile.favouriteFood === 'string' && profile.favouriteFood.trim()) {
+      return [profile.favouriteFood.trim()];
+    }
+    return [];
+  }
+
+  // Called from populateWizardFromProfile / renderSummary.
+  // Migrates favouriteMedia → favouriteMusic when new fields are empty.
+  function getFavouriteMediaFieldsFromProfile(profile) {
+    var music = profile && typeof profile.favouriteMusic === 'string' ? profile.favouriteMusic.trim() : '';
+    var book = profile && typeof profile.favouriteBook === 'string' ? profile.favouriteBook.trim() : '';
+    var film = profile && typeof profile.favouriteFilm === 'string' ? profile.favouriteFilm.trim() : '';
+    var tv = profile && typeof profile.favouriteTv === 'string' ? profile.favouriteTv.trim() : '';
+    var legacy = profile && typeof profile.favouriteMedia === 'string' ? profile.favouriteMedia.trim() : '';
+
+    if (!music && !book && !film && !tv && legacy) {
+      music = legacy;
+    }
+
+    return {
+      favouriteMusic: music,
+      favouriteBook: book,
+      favouriteFilm: film,
+      favouriteTv: tv,
+      favouriteMedia: music || legacy
+    };
+  }
+
+  var PROFILE_EXAMPLES = {
+    hometown: ['London', 'A small village', 'By the sea', 'Manchester'],
+    work: ['Teacher', 'Nurse', 'Homemaker', 'Engineer', 'Shopkeeper'],
+    'favourite-music': ['Classical music', 'Jazz', 'The Beatles', 'Frank Sinatra'],
+    'favourite-book': ['Pride and Prejudice', 'Agatha Christie', 'Poetry', 'The Bible'],
+    'favourite-film': ['The Sound of Music', 'Casablanca', 'A comedy', 'Gone with the Wind'],
+    'favourite-tv': ['Coronation Street', 'Nature programmes', 'The news', 'Bake Off'],
+    'happy-memory-input': ['A family holiday', 'My wedding day', 'Walking in the park', 'A birthday party'],
+    'topics-avoid-input': ['Politics', 'Hospitals', 'Loss', 'Money worries'],
+    'favourite-food-input': ["Shepherd's pie", 'Roast dinner', 'Rice pudding', 'Fish and chips'],
+    pets: ['A dog', 'A cat', 'None', 'A budgie']
+  };
+
+  // Called from initProfilePage. Fills example chip buttons under wizard fields.
+  function initProfileExamples() {
+    document.querySelectorAll('.profile-examples[data-example-for]').forEach(function (wrap) {
+      var targetId = wrap.getAttribute('data-example-for');
+      var mode = wrap.getAttribute('data-example-mode') || 'fill';
+      var examples = PROFILE_EXAMPLES[targetId] || [];
+      if (!examples.length) return;
+
+      wrap.innerHTML = '';
+      var hint = document.createElement('p');
+      hint.className = 'profile-examples__hint';
+      hint.textContent = 'Or tap an example:';
+      wrap.appendChild(hint);
+
+      var row = document.createElement('div');
+      row.className = 'profile-examples__row';
+      wrap.appendChild(row);
+
+      examples.forEach(function (example) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'profile-examples__chip';
+        btn.textContent = example;
+        btn.addEventListener('click', function () {
+          if (mode === 'multi') {
+            if (targetId === 'happy-memory-input') {
+              happyMemoriesField.add(example);
+            } else if (targetId === 'favourite-food-input') {
+              favouriteFoodsField.add(example);
+            } else if (targetId === 'topics-avoid-input') {
+              topicsToAvoidField.add(example);
+            }
+            return;
+          }
+          var input = document.getElementById(targetId);
+          if (!input) return;
+          input.value = example;
+          input.focus();
+        });
+        row.appendChild(btn);
+      });
     });
-    if (exists) return;
-    topicsToAvoidList.push(topic);
-    renderTopicsToAvoidChips();
   }
 
-  // Called from resetWizardForm (profile.js:499).
-  // Next: empties topicsToAvoidList, renderTopicsToAvoidChips, clears the input.
-  function clearTopicsToAvoid() {
-    topicsToAvoidList = [];
-    renderTopicsToAvoidChips();
-    var input = document.getElementById('topics-avoid-input');
-    if (input) input.value = '';
-  }
-
-  // Called from populateWizardFromProfile (profile.js:550).
-  // Next: normalizeTopicsToAvoid then renderTopicsToAvoidChips.
-  function setTopicsToAvoid(topics) {
-    topicsToAvoidList = normalizeTopicsToAvoid(topics);
-    renderTopicsToAvoidChips();
+  // Called from renderSummary for list-backed fields.
+  function formatListDisplay(items) {
+    var list = normalizeStringList(items);
+    return list.length ? list.join(', ') : '—';
   }
 
   // Called from isProfileSourcedContact (profile.js:144) and getMemoryLogContacts (profile.js:150).
@@ -364,9 +523,18 @@
     setText('summary-hometown', displayValue(profile.hometown));
     setText('summary-work', displayValue(profile.work));
     setText('summary-hobbies', formatHobbies(profile));
-    setText('summary-favourite-food', displayValue(profile.favouriteFood));
-    setText('summary-favourite-media', displayValue(profile.favouriteMedia));
-    setText('summary-happy-memory', displayValue(profile.happyMemory));
+
+    var mediaFields = getFavouriteMediaFieldsFromProfile(profile);
+    setText('summary-favourite-music', displayValue(mediaFields.favouriteMusic));
+    setText('summary-favourite-book', displayValue(mediaFields.favouriteBook));
+    setText('summary-favourite-film', displayValue(mediaFields.favouriteFilm));
+    setText('summary-favourite-tv', displayValue(mediaFields.favouriteTv));
+
+    var foods = getFavouriteFoodsFromProfile(profile);
+    setText('summary-favourite-food', foods.length ? formatListDisplay(foods) : displayValue(profile.favouriteFood));
+
+    var memories = getHappyMemoriesFromProfile(profile);
+    setText('summary-happy-memory', memories.length ? formatListDisplay(memories) : displayValue(profile.happyMemory));
     setText('summary-pets', displayValue(profile.pets));
 
     var contactsWrap = document.getElementById('summary-contacts-wrap');
@@ -454,6 +622,9 @@
         statusEl.hidden = false;
         statusEl.textContent = 'Saved — your companion is called ' + name + '.';
       }
+      if (window.MemoireCore && typeof window.MemoireCore.showSavedToast === 'function') {
+        window.MemoireCore.showSavedToast();
+      }
     });
   }
 
@@ -494,18 +665,21 @@
     if (actions) actions.hidden = !visible;
   }
 
-  // Called from populateWizardFromProfile, initProfilePage (mode=new), and delete confirm (profile.js:805).
-  // Next: clearTopicsToAvoid and resetPersonCards; step 1 selected.
+  // Called from populateWizardFromProfile, initProfilePage (mode=new), and delete confirm.
+  // Next: clear multi-item fields and resetPersonCards; step 1 selected.
   function resetWizardForm() {
     document.getElementById('full-name').value = '';
     document.getElementById('preferred-name').value = '';
     document.getElementById('age').value = '';
     document.getElementById('hometown').value = '';
     document.getElementById('work').value = '';
-    document.getElementById('favourite-media').value = '';
-    document.getElementById('happy-memory').value = '';
-    clearTopicsToAvoid();
-    document.getElementById('favourite-food').value = '';
+    document.getElementById('favourite-music').value = '';
+    document.getElementById('favourite-book').value = '';
+    document.getElementById('favourite-film').value = '';
+    document.getElementById('favourite-tv').value = '';
+    happyMemoriesField.clear();
+    topicsToAvoidField.clear();
+    favouriteFoodsField.clear();
     document.getElementById('pets').value = '';
     document.getElementById('hobby-other-text').value = '';
 
@@ -545,8 +719,8 @@
     if (step1) step1.checked = true;
   }
 
-  // Called from openImportantPeopleWizard (profile.js:648) and edit-modal-continue click (profile.js:724).
-  // Next: resetWizardForm, setTopicsToAvoid, ensurePersonCardCount, fills fields.
+  // Called from openImportantPeopleWizard and edit-modal-continue click.
+  // Next: resetWizardForm, fills fields including migrated media / multi-item lists.
   function populateWizardFromProfile(profile) {
     resetWizardForm();
 
@@ -555,10 +729,16 @@
     document.getElementById('age').value = profile.age || '';
     document.getElementById('hometown').value = profile.hometown || '';
     document.getElementById('work').value = profile.work || '';
-    document.getElementById('favourite-media').value = profile.favouriteMedia || '';
-    document.getElementById('happy-memory').value = profile.happyMemory || '';
-    setTopicsToAvoid(getTopicsToAvoidFromProfile(profile));
-    document.getElementById('favourite-food').value = profile.favouriteFood || '';
+
+    var mediaFields = getFavouriteMediaFieldsFromProfile(profile);
+    document.getElementById('favourite-music').value = mediaFields.favouriteMusic || '';
+    document.getElementById('favourite-book').value = mediaFields.favouriteBook || '';
+    document.getElementById('favourite-film').value = mediaFields.favouriteFilm || '';
+    document.getElementById('favourite-tv').value = mediaFields.favouriteTv || '';
+
+    happyMemoriesField.setItems(getHappyMemoriesFromProfile(profile));
+    topicsToAvoidField.setItems(getTopicsToAvoidFromProfile(profile));
+    favouriteFoodsField.setItems(getFavouriteFoodsFromProfile(profile));
     document.getElementById('pets').value = profile.pets || '';
 
     if (profile.hobbies && profile.hobbies.length) {
@@ -714,6 +894,23 @@
     });
   }
 
+  var btnReplayTour = document.getElementById('btn-replay-welcome-tour');
+  if (btnReplayTour) {
+    btnReplayTour.addEventListener('click', function () {
+      if (window.MemoireWelcomeTour && typeof window.MemoireWelcomeTour.requestReplay === 'function') {
+        window.MemoireWelcomeTour.requestReplay();
+        return;
+      }
+      try {
+        sessionStorage.setItem('memoireWelcomeTourForce', '1');
+        localStorage.removeItem('memoireWelcomeTourSeen');
+      } catch (e) {
+        /* ignore */
+      }
+      window.location.href = '/dashboard';
+    });
+  }
+
   var editModalCancel = document.getElementById('edit-modal-cancel');
   if (editModalCancel) {
     editModalCancel.addEventListener('click', function () {
@@ -836,27 +1033,10 @@
     });
   }
 
-  var topicsAvoidInput = document.getElementById('topics-avoid-input');
-  var topicsAvoidAddBtn = document.getElementById('topics-avoid-add');
-  // Called from topics-avoid-add click (profile.js:850) and topics-avoid-input Enter keydown.
-  // Next: addTopicToAvoid then clears and refocuses the input.
-  function commitTopicFromInput() {
-    if (!topicsAvoidInput) return;
-    addTopicToAvoid(topicsAvoidInput.value);
-    topicsAvoidInput.value = '';
-    topicsAvoidInput.focus();
-  }
-  if (topicsAvoidAddBtn) {
-    topicsAvoidAddBtn.addEventListener('click', commitTopicFromInput);
-  }
-  if (topicsAvoidInput) {
-    topicsAvoidInput.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        commitTopicFromInput();
-      }
-    });
-  }
+  happyMemoriesField.wire();
+  favouriteFoodsField.wire();
+  topicsToAvoidField.wire();
+  initProfileExamples();
 
   // Same photo-upload path as Step 3 contacts.
   setupContactPhoto('profile-photo', 'profile-photo-preview');
@@ -1031,6 +1211,14 @@
           }
         }
 
+        var happyMemories = happyMemoriesField.getItems();
+        var favouriteFoods = favouriteFoodsField.getItems();
+        var topicsToAvoid = topicsToAvoidField.getItems();
+        var favouriteMusic = document.getElementById('favourite-music').value.trim();
+        var favouriteBook = document.getElementById('favourite-book').value.trim();
+        var favouriteFilm = document.getElementById('favourite-film').value.trim();
+        var favouriteTv = document.getElementById('favourite-tv').value.trim();
+
         var profile = {
           id: profileId,
           fullName: document.getElementById('full-name').value.trim(),
@@ -1041,10 +1229,17 @@
           work: document.getElementById('work').value.trim(),
           hobbies: hobbies,
           hobbyOther: document.getElementById('hobby-other-text').value.trim(),
-          favouriteMedia: document.getElementById('favourite-media').value.trim(),
-          happyMemory: document.getElementById('happy-memory').value.trim(),
-          topicsToAvoid: topicsToAvoidList.slice(),
-          favouriteFood: document.getElementById('favourite-food').value.trim(),
+          favouriteMusic: favouriteMusic,
+          favouriteBook: favouriteBook,
+          favouriteFilm: favouriteFilm,
+          favouriteTv: favouriteTv,
+          // Legacy key kept for older readers; mirror music (or a short join).
+          favouriteMedia: favouriteMusic || [favouriteBook, favouriteFilm, favouriteTv].filter(Boolean).join(', '),
+          happyMemories: happyMemories,
+          happyMemory: happyMemories[0] || '',
+          topicsToAvoid: topicsToAvoid,
+          favouriteFoods: favouriteFoods,
+          favouriteFood: favouriteFoods[0] || '',
           pets: document.getElementById('pets').value.trim(),
           timePreference: (document.querySelector('input[name="time-preference"]:checked') || { value: '' }).value,
           contacts: memoryLogContacts.concat(
@@ -1074,6 +1269,9 @@
 
         if (wasEditing) {
           showSummaryView(profile);
+          if (window.MemoireCore && typeof window.MemoireCore.showSavedToast === 'function') {
+            window.MemoireCore.showSavedToast();
+          }
         } else {
           window.location.href = '/dashboard';
         }

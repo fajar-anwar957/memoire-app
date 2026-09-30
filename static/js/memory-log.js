@@ -185,12 +185,25 @@
     });
   }
 
-  // Called from bindListActions delete confirm (line 845).
+  // Called from bindListActions delete confirm.
   // Next: updateActiveProfileContacts then saveProfiles, then setPeopleEditMode(false) redraws the list.
   function deleteContactFromActiveProfile(index) {
     return updateActiveProfileContacts(function (contacts) {
       if (index < 0 || index >= contacts.length) return null;
       contacts.splice(index, 1);
+      return contacts;
+    });
+  }
+
+  // Called from undo toast after a person delete.
+  // Next: inserts the contact back at its previous index via updateActiveProfileContacts.
+  function insertContactAtActiveProfile(index, contact) {
+    if (!contact) return false;
+    return updateActiveProfileContacts(function (contacts) {
+      var insertAt = typeof index === 'number'
+        ? Math.min(Math.max(0, index), contacts.length)
+        : contacts.length;
+      contacts.splice(insertAt, 0, contact);
       return contacts;
     });
   }
@@ -591,8 +604,8 @@
     });
   }
 
-  // Called from bindListActions people-delete and memory-delete (lines 840, 875).
-  // Next: confirm modal opens. Confirm click in initConfirmModal runs pending.onConfirm (delete, then re-render).
+  // Called from bindListActions people-delete and memory-delete.
+  // Next: confirm modal opens. Confirm click in initConfirmModal runs pending.onConfirm (delete, then undo toast).
   function openConfirmModal(config) {
     var state = confirmModalState;
     if (!state.modal) return;
@@ -600,10 +613,13 @@
     state.pending = config;
     if (state.titleEl) state.titleEl.textContent = config.title || 'Please confirm';
     if (state.bodyEl) {
-      state.bodyEl.textContent = config.body || 'This cannot be undone.';
+      state.bodyEl.textContent = config.body || '';
+    }
+    if (state.cancelBtn) {
+      state.cancelBtn.textContent = config.cancelLabel || 'Keep it';
     }
     if (state.confirmBtn) {
-      state.confirmBtn.textContent = config.confirmLabel || 'Remove';
+      state.confirmBtn.textContent = config.confirmLabel || 'Delete';
     }
     state.modal.hidden = false;
     state.modal.classList.add('is-open');
@@ -781,6 +797,9 @@
         } else {
           renderPeople();
         }
+        if (window.MemoireCore && typeof window.MemoireCore.showSavedToast === 'function') {
+          window.MemoireCore.showSavedToast();
+        }
       });
     }
 
@@ -837,14 +856,28 @@
           }
 
           if (action === 'delete') {
+            var profile = getActiveProfile();
+            var contacts = profile && Array.isArray(profile.contacts) ? profile.contacts : [];
+            var contactToRemove = contacts[actionIndex] || null;
+            var personLabel = contactToRemove && contactToRemove.name
+              ? String(contactToRemove.name)
+              : 'this person';
             openConfirmModal({
-              title: 'Remove this person?',
-              body: 'Remove this person? This cannot be undone.',
-              confirmLabel: 'Remove',
-              // Called from confirm-modal Confirm after delete on a person card. Next: deleteContactFromActiveProfile then setPeopleEditMode(false).
+              title: 'Delete this person?',
+              body: personLabel,
+              cancelLabel: 'Keep it',
+              confirmLabel: 'Delete',
               onConfirm: function () {
+                var snapshot = contactToRemove ? Object.assign({}, contactToRemove) : null;
+                var snapshotIndex = actionIndex;
                 deleteContactFromActiveProfile(actionIndex);
                 setPeopleEditMode(false);
+                if (snapshot && window.MemoireCore && typeof window.MemoireCore.showUndoToast === 'function') {
+                  window.MemoireCore.showUndoToast(function () {
+                    insertContactAtActiveProfile(snapshotIndex, snapshot);
+                    renderPeople();
+                  });
+                }
               }
             });
           }
@@ -873,16 +906,35 @@
         }
 
         if (action === 'delete') {
+          var memoryForDelete = findMemoryByKey(memoryId);
+          var memoryLabel = memoryForDelete && memoryForDelete.text
+            ? String(memoryForDelete.text)
+            : 'this memory';
           openConfirmModal({
-            title: 'Remove this memory?',
-            body: 'Remove this memory? This cannot be undone.',
-            confirmLabel: 'Remove',
-            // Called from confirm-modal Confirm after delete on a memory card. Next: add-memory.js deleteMemory then setMemoriesEditMode(false).
+            title: 'Delete this memory?',
+            body: memoryLabel,
+            cancelLabel: 'Keep it',
+            confirmLabel: 'Delete',
             onConfirm: function () {
+              var result = null;
               if (window.MemoireAddMemory && window.MemoireAddMemory.deleteMemory) {
-                window.MemoireAddMemory.deleteMemory(memoryId);
+                result = window.MemoireAddMemory.deleteMemory(memoryId);
               }
               setMemoriesEditMode(false);
+              if (
+                result &&
+                result.ok &&
+                result.deleted &&
+                window.MemoireCore &&
+                typeof window.MemoireCore.showUndoToast === 'function'
+              ) {
+                window.MemoireCore.showUndoToast(function () {
+                  if (window.MemoireAddMemory && window.MemoireAddMemory.restoreMemory) {
+                    window.MemoireAddMemory.restoreMemory(result.deleted, result.index);
+                  }
+                  renderMemories();
+                });
+              }
             }
           });
         }

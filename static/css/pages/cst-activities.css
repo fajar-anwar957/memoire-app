@@ -1055,7 +1055,8 @@ body[data-cst-activity="word-association"] .cst-wa__option--selected {
 @media (prefers-reduced-motion: reduce) {
   .cst-dq__prompt-zone,
   .cst-dq__progress-fill,
-  .cst-dq__option {
+  .cst-dq__option,
+  .cst-dq__feedback {
     transition: none;
   }
 
@@ -1064,8 +1065,83 @@ body[data-cst-activity="word-association"] .cst-wa__option--selected {
     transform: none;
   }
 
+  .cst-dq__feedback.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
   .cst-dq__option:hover:not(:disabled),
   .cst-dq__option:active:not(:disabled) {
     transform: none;
   }
+}
+
+/* Inline post-answer feedback (replaces tap-OK modal) */
+.cst-dq__feedback {
+  margin-top: 1.15rem;
+  padding: 1.1rem 1.15rem 1.2rem;
+  border-radius: 18px;
+  border: 2px solid rgba(46, 125, 82, 0.28);
+  background: color-mix(in srgb, var(--color-success) 10%, #ffffff);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.cst-dq__feedback.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cst-dq__feedback--support {
+  border-color: rgba(154, 152, 147, 0.55);
+  background: #eef1f4;
+}
+
+.cst-dq__feedback-heading {
+  margin: 0 0 0.4rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  line-height: 1.35;
+}
+
+.cst-dq__feedback-warm {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: var(--color-text-muted, #5a6570);
+}
+
+.cst-dq__feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.cst-dq__feedback-next {
+  min-height: 52px;
+  min-width: 140px;
+  padding: 0.85rem 1.5rem;
+  font-family: var(--font-family);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--color-navy, #1b3a5c);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.cst-dq__feedback-next:focus-visible {
+  outline: 3px solid rgba(217, 114, 44, 0.55);
+  outline-offset: 3px;
+}
+
+.cst-dq__feedback .cst-wa__replay {
+  min-height: 48px;
+  min-width: 48px;
 }

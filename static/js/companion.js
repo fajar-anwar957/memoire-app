@@ -5,7 +5,6 @@
   var memoireConversationHistory = 'memoireConversationHistory'; // localStorage key — saveHistoryToStorage, loadHistoryFromStorage
   var memoireChatSession = 'memoireChatSession'; // sessionStorage key — loadChatSessionFromStorage, saveChatSessionToStorage
   var CHAT_SESSION_MAX = 40; // cap in saveChatSessionToStorage
-  var SPEECH_RATE = 0.95; // speakSegments in handleCompanionReply, createSpeakButton
   var DISTRESS_GROUNDING_REPLY =
     'I am right here with you. Everything is okay. Let\'s sit together for a moment.'; // triggerDistressResponse
   var CALL_OFFER_DECLINE_REPLY =
@@ -21,6 +20,14 @@
   // Sequences of digits, optionally grouped with spaces/dashes or a leading +.
   // Years (1900–2099) are preserved; only 7+ digit runs are stripped as phone-like.
   var PHONE_LIKE_PATTERN = /\+?[\d][\d\s\-.]{1,}\d/g; // stripHallucinatedPhoneNumbers match/replace
+  var EXPLICIT_CALL_REQUEST_PHRASES = [ // detectExplicitCallRequest — offer call card only when asked
+    'call someone', 'call anybody', 'phone someone',
+    'can you call', 'could you call', 'please call', 'i want to call',
+    'i need to call', 'help me call', 'call my', 'phone my',
+    'ring someone', 'ring my', 'make a call', 'place a call',
+    'call them', 'call him', 'call her', 'call a friend', 'call family'
+  ];
+  var MIC_STATUS_CLEAR_MS = 5000;
 
   // Called from sendMessage (line 2357) after unmaskReply (line 1187), cleanResponseText (text-utils.js line 16), stripCompanionSelfNaming (line 74).
   // Result is the on-screen reply. Next: highestLevel (line 2047), then streamCompanionMessage (line 1376) → offerSafetyCardAfterReply (line 2374).
@@ -111,12 +118,6 @@
     { text: "I'd like some company" },
     { text: 'Can we talk for a bit?' }
   ];
-  var NAMING_OPENERS = [ // maybeSeedOpeningMessage when needsCompanionNaming
-    "Hello, I hope you're doing well today. I'm your friend, and you can call me whatever you like. What would you like to name me?",
-    "Hello — it's lovely to see you. I'm here as your friend. You can give me any name you like. What shall I be called?",
-    "Hi there. I hope your day is going gently. I'm your companion — what would you like to name me?",
-    "Hello. I'm glad you're here. I'm your friend, and I'd like a name from you. What would you like to call me?"
-  ];
   var NAMING_CONFIRMATIONS = [ // finishNaming via formatNamingTemplate
     '{name} — that\'s a lovely name. I\'ll answer to {name} from now on.',
     'I\'ll answer to {name}. Thank you for naming me.',
@@ -133,7 +134,13 @@
     'Hello. Would you like to share something from your day?'
   ];
 
-  var namingMode = false; // bootstrapCompanionUi, finishNaming, abandonNamingSilently, submitCompanionText
+  var FEELING_SEED_KEY = 'memoireCompanionPrefill';
+  var nameGateEl = document.getElementById('companion-name-gate');
+  var feelingGateEl = document.getElementById('companion-feeling-gate');
+  var nameGateInput = document.getElementById('companion-name-gate-input');
+  var feelingGateInput = document.getElementById('companion-feeling-gate-input');
+  var pendingFeelingAfterNaming = false; // set when feeling seed waits behind the name gate
+  var namingMode = false; // legacy chat naming path kept inactive; gates handle name + feeling
 
   // Called from finishNaming (line 411), maybeSeedOpeningMessage (line 437). Result is spoken/shown as the opener or confirmation.
   function pickRandom(list) {
@@ -225,7 +232,7 @@
       talkBtn.setAttribute('aria-label', talkText);
     }
     if (dictateLabel) {
-      dictateLabel.textContent = 'Speak to type';
+      dictateLabel.textContent = 'Speak';
     }
     if (dictateBtn) {
       dictateBtn.setAttribute('aria-label', 'Speak to type');
@@ -243,6 +250,15 @@
   var activeSpeakBtn = null; // createSpeakButton click, clearSpeakActiveState, watchSpeechEnd
   var speechWatchTimer = null; // watchSpeechEnd, clearSpeakActiveState
   var presenceState = 'idle'; // setPresenceState, hideLoadingIndicator, clearSpeakActiveState
+  var micStatusClearTimer = null;
+
+  // Prefer MemoireActivities speech settings (memoireSpeechRate).
+  function getCompanionSpeechRate() {
+    if (typeof speechApi.getStoredSpeechRate === 'function') {
+      return speechApi.getStoredSpeechRate();
+    }
+    return 0.95;
+  }
 
   // Called from showLoadingIndicator (line 1409), hideLoadingIndicator (line 1414), setListeningUi (line 2463), createSpeakButton (line 1271) click, clearSpeakActiveState (line 1237).
   // Next: updates #companion-presence data-state and the Thinking/Speaking/Listening label.
@@ -402,12 +418,12 @@
     return /^[A-Za-z][A-Za-z'\-]*(?:\s+[A-Za-z][A-Za-z'\-]*){0,2}$/.test(raw);
   }
 
-  // Called from finishNaming (line 411). Result is the confirmation bubble text.
+  // Called from finishNaming. Result is the confirmation bubble text.
   function formatNamingTemplate(template, name) {
     return String(template || '').split('{name}').join(name);
   }
 
-  // Called from submitCompanionText (line 2527) when the user typed a name. Next: setStoredCompanionName (line 158), appendCompanionMessage (line 1368), starters shown.
+  // Called from name-gate save. Next: setStoredCompanionName, confirmation bubble (starters deferred to continueAfterNamingGate).
   function finishNaming(chosenName) {
     var name = setStoredCompanionName(chosenName);
     if (!name) {
@@ -420,11 +436,12 @@
     appendCompanionMessage(confirmText, false);
     conversationHistory.push({ role: 'assistant', content: confirmText });
     saveHistoryToStorage();
-    renderConversationStarterChips();
-    setStartersVisible(true);
+    if (window.MemoireCore && typeof window.MemoireCore.showSavedToast === 'function') {
+      window.MemoireCore.showSavedToast();
+    }
   }
 
-  // Called from submitCompanionText (line 2527) when the reply is not a name (or safety preflight fires). Next: sendMessage (line 2357) with the same text.
+  // Called from name-gate skip. Next: skipNamingThisSession, then chat or feeling gate.
   function abandonNamingSilently() {
     skipNamingThisSession();
     namingMode = false;
@@ -433,16 +450,173 @@
     renderConversationStarterChips();
   }
 
-  // Called from bootstrapCompanionUi (line 455). Next: appendCompanionMessage (line 1368) with a naming opener or a COMPANION_OPENERS line.
+  function showGate(el) {
+    if (!el) return;
+    el.hidden = false;
+    el.setAttribute('aria-hidden', 'false');
+  }
+
+  function hideGate(el) {
+    if (!el) return;
+    el.hidden = true;
+    el.setAttribute('aria-hidden', 'true');
+  }
+
+  // Called after naming gate closes, or at bootstrap when already named.
+  function continueAfterNamingGate() {
+    hideGate(nameGateEl);
+    namingMode = false;
+    if (pendingFeelingAfterNaming || peekFeelingSeed()) {
+      pendingFeelingAfterNaming = false;
+      showFeelingGate();
+      return;
+    }
+    maybeSeedOpeningMessage();
+    renderConversationStarterChips();
+    setStartersVisible(!sessionHasUserMessage());
+  }
+
+  function peekFeelingSeed() {
+    try {
+      return !!sessionStorage.getItem(FEELING_SEED_KEY);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function consumeFeelingSeed() {
+    try {
+      var seed = sessionStorage.getItem(FEELING_SEED_KEY);
+      if (seed) {
+        sessionStorage.removeItem(FEELING_SEED_KEY);
+      }
+      return seed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function showNameGate() {
+    showGate(nameGateEl);
+    hideGate(feelingGateEl);
+    namingMode = false;
+    setStartersVisible(false);
+    if (nameGateInput) {
+      nameGateInput.value = '';
+      nameGateInput.focus();
+    }
+  }
+
+  function showFeelingGate() {
+    consumeFeelingSeed();
+    showGate(feelingGateEl);
+    if (feelingGateInput) {
+      feelingGateInput.value = '';
+      feelingGateInput.focus();
+    }
+  }
+
+  function hideFeelingGate() {
+    hideGate(feelingGateEl);
+  }
+
+  function completeFeelingGate(feelingText) {
+    hideFeelingGate();
+    var trimmed = String(feelingText || '').trim();
+    if (!trimmed) {
+      maybeSeedOpeningMessage();
+      renderConversationStarterChips();
+      setStartersVisible(!sessionHasUserMessage());
+      return;
+    }
+    var message = /^today\s+i('m| am)\s+feeling\b/i.test(trimmed)
+      ? trimmed
+      : ("Today I'm feeling " + trimmed);
+    maybeSeedOpeningMessage();
+    renderConversationStarterChips();
+    setStartersVisible(false);
+    submitCompanionText(message);
+  }
+
+  function initCompanionGates() {
+    var saveBtn = document.getElementById('companion-name-gate-save');
+    var skipNameBtn = document.getElementById('companion-name-gate-skip');
+    var continueFeelingBtn = document.getElementById('companion-feeling-gate-continue');
+    var skipFeelingBtn = document.getElementById('companion-feeling-gate-skip');
+    var feelingExamples = document.getElementById('companion-feeling-examples');
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function () {
+        var name = nameGateInput ? String(nameGateInput.value || '').trim() : '';
+        if (!name) {
+          if (nameGateInput) nameGateInput.focus();
+          return;
+        }
+        finishNaming(name);
+        continueAfterNamingGate();
+      });
+    }
+
+    if (skipNameBtn) {
+      skipNameBtn.addEventListener('click', function () {
+        abandonNamingSilently();
+        continueAfterNamingGate();
+      });
+    }
+
+    if (nameGateInput) {
+      nameGateInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (saveBtn) saveBtn.click();
+        }
+      });
+    }
+
+    if (continueFeelingBtn) {
+      continueFeelingBtn.addEventListener('click', function () {
+        var feeling = feelingGateInput ? String(feelingGateInput.value || '').trim() : '';
+        if (!feeling) {
+          if (feelingGateInput) feelingGateInput.focus();
+          return;
+        }
+        completeFeelingGate(feeling);
+      });
+    }
+
+    if (skipFeelingBtn) {
+      skipFeelingBtn.addEventListener('click', function () {
+        completeFeelingGate('');
+      });
+    }
+
+    if (feelingGateInput) {
+      feelingGateInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (continueFeelingBtn) continueFeelingBtn.click();
+        }
+      });
+    }
+
+    if (feelingExamples) {
+      feelingExamples.addEventListener('click', function (event) {
+        var chip = event.target.closest('[data-feeling]');
+        if (!chip || !feelingExamples.contains(chip)) return;
+        if (feelingGateInput) {
+          feelingGateInput.value = chip.getAttribute('data-feeling') || '';
+          feelingGateInput.focus();
+        }
+      });
+    }
+  }
+
+  // Called from bootstrapCompanionUi. Next: appendCompanionMessage with a COMPANION_OPENERS line.
   function maybeSeedOpeningMessage() {
     if (chatSessionMessages.length > 0) {
       return;
     }
     if (needsCompanionNaming()) {
-      var namingOpener = pickRandom(NAMING_OPENERS);
-      appendCompanionMessage(namingOpener, false);
-      conversationHistory.push({ role: 'assistant', content: namingOpener });
-      saveHistoryToStorage();
       return;
     }
     var opener = pickRandom(COMPANION_OPENERS);
@@ -451,21 +625,79 @@
     saveHistoryToStorage();
   }
 
-  // Called at page load (line 2684). Next: updateCompanionHeader (line 200), renderStoredChatSession (line 475), maybeSeedOpeningMessage (line 437).
+  // When sessionStorage is empty but long-term history exists, restore visible bubbles.
+  function hydrateChatFromHistoryIfNeeded() {
+    if (chatSessionMessages.length > 0) {
+      return;
+    }
+    if (!conversationHistory.length) {
+      return;
+    }
+    var restored = conversationHistory.slice(-CHAT_SESSION_MAX).map(function (entry) {
+      return {
+        role: entry.role === 'assistant' ? 'assistant' : 'user',
+        text: String(entry.content || ''),
+        time: new Date().toISOString()
+      };
+    }).filter(function (entry) {
+      return entry.text;
+    });
+    if (!restored.length) {
+      return;
+    }
+    chatSessionMessages = restored;
+    saveChatSessionToStorage();
+  }
+
+  // Clears history + visible chat and offers a fresh opener.
+  function startFreshConversation() {
+    if (typeof speechApi.cancelSpeech === 'function') {
+      speechApi.cancelSpeech();
+    }
+    conversationHistory = [];
+    chatSessionMessages = [];
+    try {
+      localStorage.removeItem(memoireConversationHistory);
+    } catch (e) { /* ignore */ }
+    try {
+      sessionStorage.removeItem(memoireChatSession);
+    } catch (e2) { /* ignore */ }
+    if (chat) {
+      chat.innerHTML = '';
+    }
+    closeMorePanel();
+    setStartersVisible(false);
+    if (!needsCompanionNaming()) {
+      maybeSeedOpeningMessage();
+      renderConversationStarterChips();
+      setStartersVisible(true);
+    }
+  }
+
+  // Called at page load. Next: updateCompanionHeader, renderStoredChatSession, name/feeling gates or chat.
   function bootstrapCompanionUi() {
     updateCompanionHeader();
+    hydrateChatFromHistoryIfNeeded();
     renderStoredChatSession();
+    initCompanionGates();
+    initMorePanel();
+    resizeCompanionInput();
+
+    var wantsFeeling = peekFeelingSeed();
 
     if (needsCompanionNaming()) {
-      namingMode = true;
-      if (chatSessionMessages.length === 0) {
-        maybeSeedOpeningMessage();
-      }
-      setStartersVisible(false);
+      pendingFeelingAfterNaming = wantsFeeling;
+      showNameGate();
       return;
     }
 
     namingMode = false;
+
+    if (wantsFeeling) {
+      showFeelingGate();
+      return;
+    }
+
     maybeSeedOpeningMessage();
     renderConversationStarterChips();
     setStartersVisible(!sessionHasUserMessage());
@@ -490,10 +722,31 @@
 
   conversationHistory = loadHistoryFromStorage();
   var chatSessionMessages = loadChatSessionFromStorage(); // this-visit bubbles — renderStoredChatSession, appendToChatSession, seedUserMessageBuffer
+  // Restore visible chat from long-term history when this tab session is empty.
+  (function earlyHydrateFromHistory() {
+    if (chatSessionMessages.length > 0 || !conversationHistory.length) {
+      return;
+    }
+    chatSessionMessages = conversationHistory.slice(-CHAT_SESSION_MAX).map(function (entry) {
+      return {
+        role: entry.role === 'assistant' ? 'assistant' : 'user',
+        text: String(entry.content || ''),
+        time: new Date().toISOString()
+      };
+    }).filter(function (entry) {
+      return entry.text;
+    });
+    if (chatSessionMessages.length) {
+      try {
+        sessionStorage.setItem(memoireChatSession, JSON.stringify(chatSessionMessages.slice(-CHAT_SESSION_MAX)));
+      } catch (e) { /* ignore */ }
+    }
+  })();
   var isWaitingForReply = false; // sendMessage, submitCompanionText, setListeningUi, startListening
   var recognition = null; // setupSpeechRecognition; startListening, stopRecognitionQuietly, mic click
   var isListening = false; // setListeningUi, voiceMode.enter, mic click
   var voiceSpeechWatchTimer = null; // watchSpeechThenListen, clearSpeechWatch
+  var speechRecognitionSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   var voiceMode = {
     isActive: false,
     phase: 'idle',
@@ -826,7 +1079,7 @@
         window.speechSynthesis.cancel();
       }
 
-      speechApi.speakSegments(textToSpeechSegments(text), SPEECH_RATE);
+      speechApi.speakSegments(textToSpeechSegments(text), getCompanionSpeechRate());
       this.watchSpeechThenListen();
     },
 
@@ -866,7 +1119,7 @@
       }, 120);
     },
 
-    // Called from setupSpeechRecognition (line 2481) error handler. After 2 errors: exit (line 1001).
+    // Called from setupSpeechRecognition error handler. After 2 errors: exit with a friendly message.
     onRecognitionError: function (errorName) {
       if (!this.isActive) {
         return;
@@ -875,14 +1128,27 @@
         return;
       }
       this.consecutiveErrors += 1;
+      if (errorName === 'not-allowed' || errorName === 'service-not-allowed' ||
+          errorName === 'audio-capture') {
+        showMicFriendlyMessage(describeRecognitionError(errorName));
+        this.exit();
+        return;
+      }
       if (this.consecutiveErrors >= 2) {
+        showMicFriendlyMessage(describeRecognitionError(errorName));
         this.exit();
       }
     },
 
-    // Called from #voice-mode-enter click (line 2612). Next: acquireBargeInAudio (line 696) then startListening (line 763).
+    // Called from #voice-mode-enter click. Next: acquireBargeInAudio then startListening.
     enter: function () {
-      if (this.isActive || !recognition) {
+      if (this.isActive) {
+        return;
+      }
+      if (!recognition || !speechRecognitionSupported) {
+        showMicFriendlyMessage(
+          'Voice chat is not supported in this browser. You can type your message instead.'
+        );
         return;
       }
 
@@ -924,6 +1190,11 @@
           return;
         }
         self.startListening();
+      }).catch(function () {
+        showMicFriendlyMessage(
+          'Microphone access is blocked. You can type your message instead.'
+        );
+        self.exit();
       });
     },
 
@@ -1306,7 +1577,7 @@
       btn.classList.add('companion-message__speak--active');
       btn.setAttribute('aria-pressed', 'true');
       setPresenceState('speaking');
-      speechApi.speakSegments(textToSpeechSegments(text), SPEECH_RATE);
+      speechApi.speakSegments(textToSpeechSegments(text), getCompanionSpeechRate());
       watchSpeechEnd(btn);
     });
 
@@ -1479,14 +1750,16 @@
         var timeB = b.date ? new Date(b.date).getTime() : 0;
         return timeB - timeA;
       })
-      .slice(0, 12);
+      .slice(0, 8);
 
     return memories.map(function (memory) {
       var rawDate = memory.date ? new Date(memory.date) : null;
       var hasValidDate = rawDate && !isNaN(rawDate.getTime());
       var dateLabel = hasValidDate ? formatLocalDateLabel(rawDate) : 'Unknown date';
       var isoDate = hasValidDate ? rawDate.toISOString().slice(0, 10) : '';
-      var text = maskMessage(String(memory.text || '').trim(), nameTokens);
+      var fullText = String(memory.text || '').trim();
+      var snippet = fullText.length > 120 ? fullText.slice(0, 117).trim() + '…' : fullText;
+      var text = maskMessage(snippet, nameTokens);
       return {
         date: isoDate,
         dateLabel: dateLabel,
@@ -1546,6 +1819,53 @@
           return maskMessage(topic, nameTokens);
         });
       }
+
+      // Migrate legacy single media / memory / food fields into the new keys for Claude.
+      var music = typeof profile.favouriteMusic === 'string' ? profile.favouriteMusic.trim() : '';
+      var book = typeof profile.favouriteBook === 'string' ? profile.favouriteBook.trim() : '';
+      var film = typeof profile.favouriteFilm === 'string' ? profile.favouriteFilm.trim() : '';
+      var tv = typeof profile.favouriteTv === 'string' ? profile.favouriteTv.trim() : '';
+      var legacyMedia = typeof profile.favouriteMedia === 'string' ? profile.favouriteMedia.trim() : '';
+      if (!music && !book && !film && !tv && legacyMedia) {
+        music = legacyMedia;
+      }
+      if (music) profileFacts.favouriteMusic = maskMessage(music, nameTokens);
+      if (book) profileFacts.favouriteBook = maskMessage(book, nameTokens);
+      if (film) profileFacts.favouriteFilm = maskMessage(film, nameTokens);
+      if (tv) profileFacts.favouriteTv = maskMessage(tv, nameTokens);
+      if (music || legacyMedia) {
+        profileFacts.favouriteMedia = maskMessage(music || legacyMedia, nameTokens);
+      }
+
+      var happyList = [];
+      if (Array.isArray(profile.happyMemories)) {
+        happyList = profile.happyMemories
+          .map(function (item) { return typeof item === 'string' ? item.trim() : ''; })
+          .filter(Boolean);
+      } else if (typeof profile.happyMemory === 'string' && profile.happyMemory.trim()) {
+        happyList = [profile.happyMemory.trim()];
+      }
+      if (happyList.length) {
+        profileFacts.happyMemories = happyList.map(function (item) {
+          return maskMessage(item, nameTokens);
+        });
+        profileFacts.happyMemory = maskMessage(happyList[0], nameTokens);
+      }
+
+      var foodList = [];
+      if (Array.isArray(profile.favouriteFoods)) {
+        foodList = profile.favouriteFoods
+          .map(function (item) { return typeof item === 'string' ? item.trim() : ''; })
+          .filter(Boolean);
+      } else if (typeof profile.favouriteFood === 'string' && profile.favouriteFood.trim()) {
+        foodList = [profile.favouriteFood.trim()];
+      }
+      if (foodList.length) {
+        profileFacts.favouriteFoods = foodList.map(function (item) {
+          return maskMessage(item, nameTokens);
+        });
+        profileFacts.favouriteFood = maskMessage(foodList[0], nameTokens);
+      }
     }
 
     var now = new Date();
@@ -1575,6 +1895,10 @@
     }
 
     profileFacts.companionName = getCompanionNameForApi();
+    profileFacts.personalContextGuidance =
+      'Favourite music/book/film/TV, happy memories, favourite foods, ' +
+      'recent Memory Log snippets, and today\'s reminders may be listed above. ' +
+      'Mention them naturally only when it fits — never force a list.';
 
     var roster = buildPeopleRoster(nameTokens);
     if (roster.length) {
@@ -1783,6 +2107,15 @@
       return false;
     }
     return containsAnyPhrase(normalized, MENTAL_HEALTH_CRISIS_PHRASES);
+  }
+
+  // True when the user explicitly asks to call someone — offer call card after reply.
+  function detectExplicitCallRequest(text) {
+    var normalized = normalizeDistressText(text);
+    if (!normalized) {
+      return false;
+    }
+    return containsAnyPhrase(normalized, EXPLICIT_CALL_REQUEST_PHRASES);
   }
 
   // Called from intentSimilarity (line 1811), matchIntentFamily (line 1849), extractIntentSignature (line 1880). Result is content words for Jaccard / family cues.
@@ -2211,7 +2544,9 @@
     });
   }
 
-  // Called from sendMessage (line 2357) when analyzeDistressState (line 1986) returns STATE_IMPLICIT_DISTRESS. Next: streamCompanionMessage (line 1376) then showCallConfirmCard (line 2121).
+  // Called from sendMessage when analyzeDistressState returns STATE_IMPLICIT_DISTRESS.
+  // Grounding only — do NOT auto-offer a call card for disorientation alone.
+  // Call cards still appear for health, repetition, or an explicit call request.
   function triggerDistressResponse(userText, state, signature) {
     if (voiceMode.isActive) {
       voiceMode.suspendForSafety();
@@ -2223,16 +2558,15 @@
     setTimeout(function () {
       hideLoadingIndicator();
       streamCompanionMessage(safetyMessage, false, function () {
-        showCallConfirmCard({
-          variant: 'distress',
-          signature: signature
-        });
+        if (voiceMode.isActive) {
+          voiceMode.resume();
+        }
       });
       conversationHistory.push({ role: 'user', content: userText });
       conversationHistory.push({ role: 'assistant', content: safetyMessage });
       saveHistoryToStorage();
       isWaitingForReply = false;
-      input.focus();
+      // Do not force-focus the input — that opens the mobile keyboard unexpectedly.
     }, 500);
   }
 
@@ -2356,9 +2690,11 @@
   // Distress → triggerDistressResponse (line 2215). Else: maskMessage (line 1154) → buildApiPayload (line 1499) → fetch /api/chat (app.py api_chat line 330) → extractSafetyVerdict (line 2038) → streamCompanionMessage (line 1376) → offerSafetyCardAfterReply (line 2374).
   function sendMessage(userText, preflight) {
     // SAFETY / DISTRESS:
-    // - Mental-health crisis and physical health: warm LLM reply first, then card.
-    // - Disorientation: short grounding bypass, then call confirmation card.
-    // - Repetition (3+): warm LLM reply first, then call confirmation card.
+    // - Mental-health crisis: warm LLM reply first, then crisis helpline card.
+    // - Physical health: warm LLM reply first, then call confirmation card.
+    // - Soft distress / low mood / [[SAFETY:DISTRESS]]: warm reply only — no call card.
+    // - Disorientation: short grounding bypass, no auto call card.
+    // - Repetition (3+) or explicit "please call…": warm reply, then call card.
     // - Model [[SAFETY:...]] tags merge with client preflight (highest wins).
     preflight = preflight || preflightSafety(userText);
     var distress = analyzeDistressState(userText);
@@ -2367,34 +2703,43 @@
       return;
     }
 
+    var explicitCallRequest = detectExplicitCallRequest(userText);
     var shouldOfferCallAfterReply =
-      shouldOfferRepetitionCall(distress.signature, distress.repetitionCount);
+      shouldOfferRepetitionCall(distress.signature, distress.repetitionCount) ||
+      explicitCallRequest;
 
-    // Called from sendMessage (line 2357) after streamCompanionMessage (line 1376) finishes. Next: showCrisisSupportCard (line 2283) or showCallConfirmCard (line 2121).
+    // Called from sendMessage after streamCompanionMessage finishes.
+    // DISTRESS alone must NOT open the call card (warmth only).
     function offerSafetyCardAfterReply(finalLevel) {
       if (finalLevel === 'crisis') {
         showCrisisSupportCard();
       } else if (finalLevel === 'health') {
         showCallConfirmCard({ variant: 'health', signature: distress.signature });
-      } else if (finalLevel === 'distress') {
-        if (!wasIntentDeclined(distress.signature)) {
-          showCallConfirmCard({ variant: 'distress', signature: distress.signature });
-        }
       } else if (shouldOfferCallAfterReply) {
-        showCallConfirmCard({ variant: 'repetition', signature: distress.signature });
-      }
-    }
-
-    // Called from sendMessage (line 2357) when fetch fails or has no reply. Next: showCrisisSupportCard (line 2283) or showCallConfirmCard (line 2121) from preflight.level.
-    function offerPreflightFailSafe() {
-      if (preflight.level === 'crisis') {
-        showCrisisSupportCard();
-      } else if (preflight.level === 'health' || preflight.level === 'distress') {
         showCallConfirmCard({
-          variant: preflight.level,
+          variant: explicitCallRequest ? 'health' : 'repetition',
           signature: distress.signature
         });
       }
+      // finalLevel === 'distress' (sad / soft distress): warm reply only — no call card.
+    }
+
+    // Called from sendMessage when fetch fails or has no reply.
+    function offerPreflightFailSafe() {
+      if (preflight.level === 'crisis') {
+        showCrisisSupportCard();
+      } else if (preflight.level === 'health') {
+        showCallConfirmCard({
+          variant: 'health',
+          signature: distress.signature
+        });
+      } else if (explicitCallRequest) {
+        showCallConfirmCard({
+          variant: 'health',
+          signature: distress.signature
+        });
+      }
+      // Soft distress fail-safe: no call card.
     }
 
     isWaitingForReply = true;
@@ -2455,20 +2800,25 @@
       })
       .finally(function () {
         isWaitingForReply = false;
-        input.focus();
+        // Do not force-focus the input after send — that opens the mobile keyboard.
       });
   }
 
-  // Called from mic click (line 2593), setupSpeechRecognition (line 2481) end/error, enter (line 884). Next: mic button + setPresenceState (line 249) listening/idle.
+  // Called from mic click, setupSpeechRecognition end/error, enter. Next: mic button + setPresenceState listening/idle.
   function setListeningUi(listening) {
     isListening = listening;
     if (!mic) {
       return;
     }
     mic.classList.toggle('companion__mic--active', listening);
+    mic.classList.toggle('companion__voice-enter--active', listening);
     mic.setAttribute('aria-pressed', listening ? 'true' : 'false');
-    if (micStatus) {
-      micStatus.hidden = !listening;
+    if (micStatus && listening) {
+      clearMicStatusTimer();
+      micStatus.hidden = false;
+      micStatus.textContent = 'Listening…';
+    } else if (micStatus && !listening && micStatus.textContent === 'Listening…') {
+      micStatus.hidden = true;
     }
     if (listening) {
       setPresenceState('listening');
@@ -2477,16 +2827,58 @@
     }
   }
 
-  // Called at page load (line 2683). Next: result → onFinalTranscript (line 834) or fills input; end/error → setListeningUi (line 2463) or voiceMode handlers.
+  function clearMicStatusTimer() {
+    if (micStatusClearTimer) {
+      clearTimeout(micStatusClearTimer);
+      micStatusClearTimer = null;
+    }
+  }
+
+  // Friendly mic / voice-input messages; always fall back to typing.
+  function showMicFriendlyMessage(message) {
+    var text = String(message || '').trim() ||
+      'Voice typing is not available right now. You can type your message instead.';
+    clearMicStatusTimer();
+    if (micStatus) {
+      micStatus.hidden = false;
+      micStatus.textContent = text;
+      micStatusClearTimer = setTimeout(function () {
+        if (micStatus && !isListening) {
+          micStatus.hidden = true;
+        }
+      }, MIC_STATUS_CLEAR_MS);
+    }
+    if (window.MemoireCore && typeof window.MemoireCore.showToast === 'function') {
+      window.MemoireCore.showToast(text, { durationMs: MIC_STATUS_CLEAR_MS });
+    }
+  }
+
+  function describeRecognitionError(errorName) {
+    var name = String(errorName || '');
+    if (name === 'not-allowed' || name === 'service-not-allowed') {
+      return 'Microphone access is blocked. You can type your message instead.';
+    }
+    if (name === 'audio-capture') {
+      return 'No microphone was found. You can type your message instead.';
+    }
+    if (name === 'network') {
+      return 'Voice typing needs a network connection. You can type instead.';
+    }
+    if (name === 'no-speech') {
+      return 'I did not catch that. Try again, or type your message.';
+    }
+    return 'Voice typing is not available right now. You can type your message instead.';
+  }
+
+  // Called at page load. Next: result → onFinalTranscript or fills input; end/error → setListeningUi or voiceMode handlers.
   function setupSpeechRecognition() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      if (voiceEnterBtn) {
-        voiceEnterBtn.hidden = true;
-      }
+      speechRecognitionSupported = false;
       return;
     }
 
+    speechRecognitionSupported = true;
     recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -2501,8 +2893,11 @@
         voiceMode.onFinalTranscript(transcript);
         return;
       }
-      input.value = transcript;
-      input.focus();
+      if (input) {
+        input.value = transcript;
+        resizeCompanionInput();
+        input.focus();
+      }
     });
 
     recognition.addEventListener('end', function () {
@@ -2514,12 +2909,153 @@
     });
 
     recognition.addEventListener('error', function (event) {
+      var errName = event && event.error;
       if (voiceMode.isActive) {
-        voiceMode.onRecognitionError(event && event.error);
+        voiceMode.onRecognitionError(errName);
         return;
       }
       setListeningUi(false);
+      if (errName === 'aborted') {
+        return;
+      }
+      showMicFriendlyMessage(describeRecognitionError(errName));
     });
+  }
+
+  function resizeCompanionInput() {
+    if (!input || !input.style) {
+      return;
+    }
+    input.style.height = 'auto';
+    var next = Math.min(Math.max(input.scrollHeight, 48), 144);
+    input.style.height = next + 'px';
+  }
+
+  function openMorePanel() {
+    var panel = document.getElementById('companion-more-panel');
+    var btn = document.getElementById('companion-more-btn');
+    if (!panel) return;
+    panel.hidden = false;
+    panel.setAttribute('aria-hidden', 'false');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    refreshSpeechSettingsUi();
+  }
+
+  function closeMorePanel() {
+    var panel = document.getElementById('companion-more-panel');
+    var btn = document.getElementById('companion-more-btn');
+    if (!panel) return;
+    panel.hidden = true;
+    panel.setAttribute('aria-hidden', 'true');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+
+  function refreshSpeechSettingsUi() {
+    var select = document.getElementById('companion-voice-select');
+    var rateBtns = document.querySelectorAll('.companion-more__rate-btn');
+    var preferred = typeof speechApi.getStoredSpeechVoicePref === 'function'
+      ? speechApi.getStoredSpeechVoicePref()
+      : '';
+    var rateKey = typeof speechApi.getStoredSpeechRateKey === 'function'
+      ? speechApi.getStoredSpeechRateKey()
+      : 'normal';
+
+    if (select && typeof speechApi.listSpeechVoices === 'function') {
+      var voices = speechApi.listSpeechVoices();
+      var english = voices.filter(function (voice) {
+        return /^en/i.test(String(voice.lang || ''));
+      });
+      var list = english.length ? english : voices;
+      var options = '<option value="">Default (natural)</option>';
+      list.forEach(function (voice) {
+        var value = voice.voiceURI || voice.name || '';
+        var label = (voice.name || 'Voice') + (voice.lang ? ' (' + voice.lang + ')' : '');
+        options += '<option value="' + escapeAttr(value) + '">' + escapeHtmlText(label) + '</option>';
+      });
+      select.innerHTML = options;
+      select.value = preferred;
+      if (preferred && select.value !== preferred) {
+        // Try matching by name if URI differed across browsers.
+        for (var i = 0; i < select.options.length; i++) {
+          if (String(select.options[i].text || '').indexOf(preferred) !== -1) {
+            select.selectedIndex = i;
+            break;
+          }
+        }
+      }
+    }
+
+    rateBtns.forEach(function (btn) {
+      var key = btn.getAttribute('data-rate');
+      btn.classList.toggle('is-active', key === rateKey);
+      btn.setAttribute('aria-pressed', key === rateKey ? 'true' : 'false');
+    });
+  }
+
+  function initMorePanel() {
+    var moreBtn = document.getElementById('companion-more-btn');
+    var closeBtn = document.getElementById('companion-more-close');
+    var backdrop = document.getElementById('companion-more-backdrop');
+    var startFreshBtn = document.getElementById('companion-start-fresh');
+    var toggleStartersBtn = document.getElementById('companion-toggle-starters');
+    var voiceSelect = document.getElementById('companion-voice-select');
+    var rateBtns = document.querySelectorAll('.companion-more__rate-btn');
+
+    if (moreBtn) {
+      moreBtn.addEventListener('click', function () {
+        var panel = document.getElementById('companion-more-panel');
+        if (panel && !panel.hidden) {
+          closeMorePanel();
+        } else {
+          openMorePanel();
+        }
+      });
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeMorePanel);
+    }
+    if (backdrop) {
+      backdrop.addEventListener('click', closeMorePanel);
+    }
+    if (startFreshBtn) {
+      startFreshBtn.addEventListener('click', function () {
+        startFreshConversation();
+      });
+    }
+    if (toggleStartersBtn) {
+      toggleStartersBtn.addEventListener('click', function () {
+        if (namingMode || needsCompanionNaming()) {
+          closeMorePanel();
+          return;
+        }
+        var show = !!(startersEl && startersEl.hidden);
+        if (show) {
+          renderConversationStarterChips();
+        }
+        setStartersVisible(show);
+        closeMorePanel();
+      });
+    }
+    if (voiceSelect) {
+      voiceSelect.addEventListener('change', function () {
+        if (typeof speechApi.setStoredSpeechVoicePref === 'function') {
+          speechApi.setStoredSpeechVoicePref(voiceSelect.value || '');
+        }
+      });
+    }
+    rateBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.getAttribute('data-rate') || 'normal';
+        if (typeof speechApi.setStoredSpeechRateKey === 'function') {
+          speechApi.setStoredSpeechRateKey(key);
+        }
+        refreshSpeechSettingsUi();
+      });
+    });
+
+    if (speechSupported && typeof window.speechSynthesis !== 'undefined') {
+      window.speechSynthesis.addEventListener('voiceschanged', refreshSpeechSettingsUi);
+    }
   }
 
   // Called from form submit (line 2563), onFinalTranscript (line 834). Next: preflightSafety (line 2021).
@@ -2555,6 +3091,7 @@
     appendPatientMessage(text);
     if (input) {
       input.value = '';
+      resizeCompanionInput();
     }
     sendMessage(text, preflight);
     return true;
@@ -2569,7 +3106,18 @@
     }
 
     submitCompanionText(text);
+    resizeCompanionInput();
   });
+
+  if (input) {
+    input.addEventListener('input', resizeCompanionInput);
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }
+    });
+  }
 
   if (startersEl) {
     startersEl.addEventListener('click', function (event) {
@@ -2586,30 +3134,45 @@
       input.value = text;
       appendPatientMessage(text);
       input.value = '';
+      resizeCompanionInput();
       sendMessage(text, preflightSafety(text));
     });
   }
 
-  mic.addEventListener('click', function () {
-    if (!recognition || voiceMode.isActive) {
-      return;
-    }
+  if (mic) {
+    mic.addEventListener('click', function () {
+      if (voiceMode.isActive) {
+        return;
+      }
+      if (!speechRecognitionSupported || !recognition) {
+        showMicFriendlyMessage(
+          'Voice typing is not supported in this browser. You can type your message instead.'
+        );
+        return;
+      }
 
-    if (isListening) {
-      recognition.stop();
-      return;
-    }
+      if (isListening) {
+        try {
+          recognition.stop();
+        } catch (e) { /* ignore */ }
+        return;
+      }
 
-    setListeningUi(true);
-    try {
-      recognition.start();
-    } catch (e) {
-      setListeningUi(false);
-    }
-  });
+      setListeningUi(true);
+      try {
+        recognition.start();
+      } catch (err) {
+        setListeningUi(false);
+        showMicFriendlyMessage(
+          'Voice typing is not available right now. You can type your message instead.'
+        );
+      }
+    });
+  }
 
   if (voiceEnterBtn) {
     voiceEnterBtn.addEventListener('click', function () {
+      closeMorePanel();
       voiceMode.enter();
     });
   }
@@ -2644,34 +3207,9 @@
     voiceMode.exit();
   });
 
-  // Called at page load (line 2685). Reads memoireCompanionPrefill set by dashboard.js (line 62). Next: input filled; user still submits via form.
+  // Feeling uses a dedicated gate screen (showFeelingGate), not chat input prefill.
   function applyFeelingPrefill() {
-    if (!input) {
-      return;
-    }
-
-    var seedKey = 'memoireCompanionPrefill';
-    var seed = null;
-
-    try {
-      seed = sessionStorage.getItem(seedKey);
-      if (seed) {
-        sessionStorage.removeItem(seedKey);
-      }
-    } catch (e) {
-      seed = null;
-    }
-
-    if (!seed) {
-      return;
-    }
-
-    input.value = seed;
-    input.focus();
-    var caret = seed.length;
-    if (typeof input.setSelectionRange === 'function') {
-      input.setSelectionRange(caret, caret);
-    }
+    /* no-op: feeling seed is handled in bootstrapCompanionUi / name-gate flow */
   }
 
   if (window.MemoireQuickCall && typeof window.MemoireQuickCall.init === 'function') {
